@@ -1,0 +1,19 @@
+[package]
+name = "shoesafari-checkout"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[profile.release]
+opt-level = 3
+overflow-checks = true
+debug-assertions = false
+lto = true
+codegen-units = 1
+
+[dependencies]
+soroban-sdk = { version = "27.0.5", features = ["testutils"] }

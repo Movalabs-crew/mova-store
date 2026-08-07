@@ -8,7 +8,7 @@ const Catalogue3 = () => {
         <div className="w-full md:w-1/2 flex justify-center md:justify-start mb-8 md:mb-0 md:pr-8">
           <Image
             src={shoeImage4}
-            alt="World best professional"
+            alt="A pair from the ShoeSafari catalog"
             width={400}
             height={350}
             className="rounded-lg"
@@ -16,12 +16,15 @@ const Catalogue3 = () => {
         </div>
         <div className="w-full md:w-1/2 text-center md:text-left">
           <div className="flex flex-col justify-center md:justify-start">
-            <span className="text-2xl my-2"> Our Story</span>
-            ShoeSafari was founded with a simple vision: to create a haven for
-            shoe enthusiasts where they can find a diverse collection of
-            footwear that meets their needs and exceeds their expectations.
-            Since our inception, we have been committed to offering shoes that
-            combine craftsmanship, innovation, and elegance.
+            <h2 className="text-2xl my-2">Our Story</h2>
+            <p>
+              ShoeSafari started the way most good ideas do — out of
+              frustration. We were tired of ordering shoes online and receiving
+              the wrong size, or knock-offs that fell apart within a month. So
+              we built the store we wished existed: a tight, honest catalog of
+              quality footwear, photographed truthfully, with straightforward
+              pricing and a checkout that works for everyone.
+            </p>
           </div>
         </div>
       </div>

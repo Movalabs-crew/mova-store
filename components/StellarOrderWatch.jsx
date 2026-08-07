@@ -1,0 +1,107 @@
+import { useEffect, useRef, useState } from "react";
+
+import { PaymentEventIndexer } from "../lib/stellar/indexer";
+import { bytesToHex, hashOrderId } from "../lib/stellar/scval";
+
+/**
+ * Live on-chain order monitor.
+ *
+ * Starts a `getEvents`-based indexer for the checkout contract and watches for
+ * the `pay` event matching `orderId`. Shows a decoded, real-time confirmation
+ * the moment the payment lands on-chain (independent of the classic
+ * getTransaction polling used during submission).
+ */
+const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState("");
+  const [matched, setMatched] = useState(null);
+  const indexerRef = useRef(null);
+
+  useEffect(() => {
+    if (!enabled || !orderId) return undefined;
+
+    let cancelled = false;
+    let indexer = null;
+
+    const start = async () => {
+      const bytes = await hashOrderId(orderId);
+      if (cancelled) return;
+      const expected = bytesToHex(bytes).toLowerCase();
+
+      indexer = new PaymentEventIndexer();
+      indexerRef.current = indexer;
+
+      indexer.start({
+        onStatus: (s) => {
+          setConnected(s.running);
+          if (s.lastError) setError(s.lastError);
+        },
+        onError: (err) => setError(err.message),
+        onEvent: (event) => {
+          if (event.symbol !== "pay") return;
+          const orderHex = (event.fields.topic4 || "").toLowerCase();
+          if (orderHex !== expected) return;
+          setMatched(event);
+          if (onEvent) onEvent(event);
+          indexer.stop();        },
+      });
+    };
+
+    void start();
+
+    return () => {
+      cancelled = true;
+      if (indexer) indexer.stop();
+      indexerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, orderId]);
+
+  return (
+    <div className="w-full text-xs bg-white/70 border border-[#7b2ff7]/30 rounded-md p-3">
+      <div className="flex items-center gap-2 font-semibold text-[#7b2ff7]">
+        <span
+          className={`w-2 h-2 rounded-full ${
+            matched ? "bg-green-500" : connected ? "bg-[#7b2ff7] animate-pulse" : "bg-gray-400"
+          }`}
+        />
+        Stellar order monitor
+      </div>
+
+      {matched ? (
+        <div className="mt-2 text-green-700 bg-green-50 border border-green-200 rounded p-2">
+          <span className="font-semibold">Payment detected on-chain ✓</span>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
+            <span>Ledger</span>
+            <span className="text-right font-mono">{matched.ledger}</span>
+            <span>Amount</span>
+            <span className="text-right font-mono">{matched.fields.amount ?? "—"}</span>
+            <span>Token</span>
+            <span className="text-right font-mono truncate">{matched.fields.topic1 ?? "—"}</span>
+            <span>Tx</span>
+            <span className="text-right font-mono truncate">{matched.txHash}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 flex items-center gap-2 text-gray-600">
+          {connected ? (
+            <>
+              <span className="w-3 h-3 border-2 border-[#7b2ff7] border-t-transparent rounded-full animate-spin" />
+              Listening for on-chain events for order {orderId}…
+            </>
+          ) : (
+            "Starting…"
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-2 text-amber-700">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default StellarOrderWatch;

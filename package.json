@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@stellar/freighter-api": "^6.0.1",
+    "@stellar/stellar-sdk": "^16.2.0",
     "@vercel/og": "^0.6.2",
     "firebase": "^10.12.4",
     "fs": "^0.0.1-security",

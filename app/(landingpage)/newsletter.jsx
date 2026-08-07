@@ -12,9 +12,9 @@ export default function Newsletter() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (email.length !== 0) {
-      showToast("Thank you for subscribing");
+      showToast("Thank you for subscribing!");
     } else {
-      showToast("Please enter your email !!!");
+      showToast("Please enter your email!");
     }
     e.target.reset();
   };
@@ -22,10 +22,11 @@ export default function Newsletter() {
   return (
     <div className="flex flex-col justify-center items-center bg-white py-10 px-4 sm:px-0">
       <h2 className="font-extrabold text-4xl sm:text-6xl mb-6 text-center">
-        Subscribe to our newsletter
+        Join the ShoeSafari List
       </h2>
       <p className="text-lg sm:text-xl text-gray-600 mb-6 text-center">
-        Get the latest updates and offers.
+        New drops, restocks and Stellar payment updates — straight to your
+        inbox.
       </p>
       <form
         className="w-full max-w-md"

@@ -23,11 +23,11 @@ const ContactUs = () => {
     setIsLoading(true);
     try {
       await sendMail(formData);
-      showToast("Message sent successfully 😎😎😎!");
+      showToast("Message sent successfully!");
       setFormData({ name: "", email: "", message: "" });
     } catch (error) {
       setError("Failed to send message.");
-      showToast("Unable to send message, please try agin later 😢😢😢");
+      showToast("Unable to send message, please try again later");
     }
     setIsLoading(false);
   };
@@ -47,8 +47,8 @@ const ContactUs = () => {
           Contact Us
         </h2>
         <p className="text-lg text-gray-600 mb-8 text-center">
-          We would love to hear from you! Please fill out the form below and we
-          will get back to you as soon as possible.
+          Questions about sizing, an order, or the Stellar checkout? Send a note
+          below and we will get back to you quickly.
         </p>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 mb-4">

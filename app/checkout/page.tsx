@@ -21,6 +21,10 @@ import {
 import { BsBank, BsCalendarDate } from "react-icons/bs";
 import { SiKlarna } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
+import StellarCheckoutButton from "../../components/StellarCheckoutButton";
+import StellarWalletButton from "../../components/StellarWalletButton";
+import StellarOrderWatch from "../../components/StellarOrderWatch";
+import { SiStellar } from "react-icons/si";
 
 const Checkout = () => {
 
@@ -45,6 +49,18 @@ const Checkout = () => {
   const showToast = (message) => {
     setToast({ show: true, message });
     setTimeout(() => setToast({ show: false, message: "" }), 5000);
+  };
+
+  const [orderId] = useState(() =>
+    `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+  );
+
+  const handleStellarSuccess = (result) => {
+    showToast(
+      `USDC payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
+    );
+    setStage(3);
+    localStorage.clear();
   };
 
   const handleChange = (e) => {
@@ -306,6 +322,31 @@ const Checkout = () => {
                   )}
                 </button>
               </form>
+            )}
+            {stage === 1 && (
+              <div className="mt-4 bg-white p-4 rounded shadow-md flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-gray-300" />
+                  <span className="text-xs uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                    <SiStellar size={16} className="text-[#7b2ff7]" />
+                    or pay with Stellar (USDC)
+                  </span>
+                  <span className="h-px flex-1 bg-gray-300" />
+                </div>
+                <StellarWalletButton />
+                <StellarCheckoutButton
+                  amountUsd={totalPrice}
+                  orderId={orderId}
+                  disabled={isSubmitting || totalPrice <= 0}
+                  onSuccess={handleStellarSuccess}
+                />
+                <StellarOrderWatch orderId={orderId} enabled={stage === 1} />
+                <p className="text-[11px] text-gray-400 text-center">
+                  Order #{orderId} · USDC (testnet) is escrowed by a Soroban smart
+                  contract until we ship, then released to our merchant wallet. Refunds
+                  go straight back on-chain. No card needed.
+                </p>
+              </div>
             )}
             {stage === 2 && (
               <form

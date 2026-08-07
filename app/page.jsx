@@ -7,6 +7,7 @@ import Catalogue2 from "./(landingpage)/Catalogue2";
 import Catalogue3 from "./(landingpage)/Catalogue3";
 import Catalogue4 from "./(landingpage)/Catalogue4";
 import Catalogue5 from "./(landingpage)/Catalogue5";
+import Stellar from "./(landingpage)/Stellar";
 import Newsletter from "./(landingpage)/newsletter";
 import AboutUs from "./(landingpage)/Aboutus";
 import ContactUs from "./(landingpage)/ContactUs";
@@ -23,6 +24,7 @@ export default function FirstPage() {
       <Catalogue3 />
       <Catalogue4 />
       <Catalogue5 />
+      <Stellar />
       <Newsletter />
       <AboutUs/>
       <ContactUs/>

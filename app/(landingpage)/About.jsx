@@ -10,27 +10,24 @@ const About = () => {
             Why ShoeSafari
           </h2>
           <div className="flex flex-col gap-4 justify-center md:justify-start">
-            Quality craftsmanship is at the core of everything we do. We partner
-            with the finest manufacturers and artisans to bring you shoes that
-            are made to last. Our rigorous quality control process ensures that
-            every pair meets our high standards. We offer a diverse selection
-            that caters to every taste and occasion, from trendy sneakers and
-            stylish boots to elegant heels and comfortable flats.
-            <div>
-              Our customer-centric approach means that our customers are at the
-              heart of everything we do. We are dedicated to providing an
-              exceptional shopping experience, from easy navigation on our
-              website to hassle-free returns and exchanges. Additionally, we are
-              committed to sustainability and strive to minimize our
-              environmental footprint by choosing eco-friendly materials and
-              ethical manufacturing processes.
-            </div>
+            <p>
+              We built ShoeSafari around one idea: buying the right pair should
+              be easy, honest and dependable. Every style we list is hand-picked
+              from vetted manufacturers and photographed as it really looks, so
+              what you see is what arrives at your door.
+            </p>
+            <p>
+              Prices are transparent — no phantom markdowns, no surprise fees at
+              checkout. And because you should be able to pay the way you want,
+              we accept cards as well as USDC on the Stellar network, settled
+              directly and instantly to our merchant wallet.
+            </p>
           </div>
         </div>
         <div className="w-full md:w-1/2 flex justify-center md:justify-end">
           <Image
             src={shoeImage1}
-            alt="World best professional"
+            alt="Curated sneakers at ShoeSafari"
             width={400}
             height={350}
             className="rounded-lg"

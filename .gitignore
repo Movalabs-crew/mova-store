@@ -32,3 +32,5 @@ yarn-error.log*
 # Miscellaneous
 *.log
 *.lock
+target/
+tsconfig.tsbuildinfo

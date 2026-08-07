@@ -5,23 +5,21 @@ const Catalogue4 = () => {
   return (
     <section className="px-4 md:px-10 bg-red-700 py-12">
       <div className="flex flex-wrap justify-center md:justify-between items-center sm:mx-[100px] mx-none">
-        <div className="w-full md:w-1/2 text-center md:text-left">
+        <div className="w-full md:w-1/2 text-center md:text-left text-white">
           <div className="flex flex-col  justify-center md:justify-start">
-            <span className="text-2xl my-2">Customer-Centric Approach </span>Our customers are at the
-            heart of everything we do at ShoeSafari. We are dedicated to
-            providing an exceptional shopping experience, both online and
-            in-store. Our website is designed for easy navigation, allowing you
-            to browse through our collections effortlessly. We also offer
-            hassle-free returns and exchanges, so you can shop with confidence.
-            Our customer service team is always ready to assist you with any
-            queries or concerns, ensuring that your experience with ShoeSafari
-            is nothing short of excellent.
+            <h2 className="text-2xl my-2">Shopping That Works Around You</h2>
+            <p>
+              Browse by size, category or style, add to cart in one click, and
+              check out the way you prefer — card, or USDC on Stellar. If a pair
+              does not work out, returns and exchanges are straightforward, and
+              our support team actually answers when you reach out.
+            </p>
           </div>
         </div>
         <div className="w-full md:w-1/2 flex justify-center md:justify-end mb-8 md:mb-0 md:pr-8 pt-10 sm:pt-0">
           <Image
             src={shoeImage2}
-            alt="World best professional"
+            alt="Simple shopping experience at ShoeSafari"
             width={400}
             height={350}
             className="rounded-lg"
