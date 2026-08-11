@@ -4,7 +4,7 @@
 
 **An open-source retail storefront built on the Stellar network**
 
-[![CI](https://github.com/yourusername/shoesafari/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/shoesafari/actions/workflows/ci.yml)
+[![CI](https://github.com/ShoeSafari-Hub/ShoeSafari/actions/workflows/ci.yml/badge.svg)](https://github.com/ShoeSafari-Hub/ShoeSafari/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-%237b2ff7?logo=stellar)](https://developers.stellar.org)
@@ -249,8 +249,8 @@ stellar --version   # latest
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-org>/shoesafari.git
-cd shoesafari
+git clone https://github.com/ShoeSafari-Hub/ShoeSafari.git
+cd ShoeSafari
 ```
 
 ### 2. Install dependencies
