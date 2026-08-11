@@ -62,7 +62,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
           type="button"
           onClick={handleConnect}
           disabled={loading}
-          className="w-full flex justify-center items-center gap-2 border-2 border-[#7b2ff7] text-[#7b2ff7] bg-white py-2 rounded hover:bg-[#f3efff] transition-colors disabled:opacity-60"
+          className="w-full flex justify-center items-center gap-2 border-2 border-red-600 text-red-600 bg-white py-2 rounded hover:bg-red-50 transition-colors disabled:opacity-60"
         >
           {loading ? (
             <span className="animate-pulse">Connecting…</span>
@@ -71,7 +71,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
                   d="M12 2l2.5 5.5L20 9l-4 3.5 1.2 5.5L12 15.5 6.8 18 8 12.5 4 9l5.5-1.5L12 2z"
-                  fill="#7b2ff7"
+                  fill="#dc2626"
                 />
               </svg>
               Connect Freighter

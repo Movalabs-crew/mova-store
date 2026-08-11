@@ -1,31 +1,38 @@
 import Image from "next/image";
-import shoeImage4 from "/public/images/shoe4.png";
 
 const Catalogue3 = () => {
   return (
-    <section className="px-4 md:px-10 bg-white py-12">
-      <div className="flex flex-wrap justify-center md:justify-between items-center sm:mx-[100px] mx-none">
-        <div className="w-full md:w-1/2 flex justify-center md:justify-start mb-8 md:mb-0 md:pr-8">
-          <Image
-            src={shoeImage4}
-            alt="A pair from the ShoeSafari catalog"
-            width={400}
-            height={350}
-            className="rounded-lg"
-          />
-        </div>
-        <div className="w-full md:w-1/2 text-center md:text-left">
-          <div className="flex flex-col justify-center md:justify-start">
-            <h2 className="text-2xl my-2">Our Story</h2>
+    <section className="bg-[#fafafa] py-16 px-4 md:px-10">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10">
+        <div className="w-full md:w-1/2">
+          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-2">
+            Our story
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Where quality meets innovation
+          </h2>
+          <div className="flex flex-col gap-4 text-gray-600 leading-relaxed">
             <p>
-              ShoeSafari started the way most good ideas do — out of
-              frustration. We were tired of ordering shoes online and receiving
-              the wrong size, or knock-offs that fell apart within a month. So
-              we built the store we wished existed: a tight, honest catalog of
-              quality footwear, photographed truthfully, with straightforward
-              pricing and a checkout that works for everyone.
+              ShoeSafari started because we wanted better — better shoes, and
+              a better way to pay for them. We were tired of slow settlements,
+              hidden fees, and payment systems that hadn't evolved in decades.
+            </p>
+            <p>
+              So we built a store that proves there's a better way: quality
+              footwear you can trust, with Stellar-powered checkout that settles
+              in seconds and costs a fraction of a cent. This is what modern
+              e-commerce should look like.
             </p>
           </div>
+        </div>
+        <div className="w-full md:w-1/2 flex justify-center">
+          <Image
+            src="https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&q=80"
+            alt="A pair from the ShoeSafari catalog"
+            width={440}
+            height={360}
+            className="rounded-xl shadow-sm object-cover"
+          />
         </div>
       </div>
     </section>

@@ -20,13 +20,13 @@ export default function Newsletter() {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center bg-white py-10 px-4 sm:px-0">
-      <h2 className="font-extrabold text-4xl sm:text-6xl mb-6 text-center">
-        Join the ShoeSafari List
+    <div className="flex flex-col justify-center items-center bg-white py-16 px-4 sm:px-0">
+      <h2 className="font-bold text-3xl sm:text-4xl mb-3 text-center text-gray-900">
+        Stay in the Loop
       </h2>
-      <p className="text-lg sm:text-xl text-gray-600 mb-6 text-center">
-        New drops, restocks and Stellar payment updates — straight to your
-        inbox.
+      <p className="text-lg sm:text-xl text-gray-600 mb-8 text-center max-w-xl">
+        New shoe drops, Stellar integration updates, and insights on crypto
+        commerce — straight to your inbox. No spam, unsubscribe anytime.
       </p>
       <form
         className="w-full max-w-md"

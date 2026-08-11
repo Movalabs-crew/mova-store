@@ -1,34 +1,61 @@
-import Image from "next/image";
-import shoeImage3 from "/public/images/shoe3.png";
+import { FaCheckCircle, FaTag, FaUndoAlt, FaCreditCard } from "react-icons/fa";
 
-const Catalogue = () => {
+const features = [
+  {
+    icon: FaCheckCircle,
+    title: "Hand-picked quality",
+    text: "Every style is chosen from vetted makers and photographed exactly as it looks, so what you see is what lands at your door.",
+  },
+  {
+    icon: FaTag,
+    title: "Honest pricing",
+    text: "No phantom markdowns, no surprise fees. The price you see is the price you pay — always.",
+  },
+  {
+    icon: FaUndoAlt,
+    title: "Blockchain transparency",
+    text: "Every Stellar payment is recorded on-chain. You can verify your transaction on the public ledger anytime.",
+  },
+  {
+    icon: FaCreditCard,
+    title: "Pay your way",
+    text: "Cards or USDC on Stellar — your choice. Crypto payments settle instantly with near-zero fees, no middlemen.",
+  },
+];
+
+const Catalogue2 = () => {
   return (
-    <section className="px-4 md:px-10 bg-red-700 py-12 gap-10">
-      <div className="flex flex-wrap justify-center md:justify-between items-center sm:mx-[100px] mx-none">
-        <div className="w-full md:w-1/2 text-center md:text-left text-white">
-          <div className="flex  flex-col justify-center md:justify-start">
-            <h2 className="text-2xl my-2">From Street to Boardroom</h2>
-            <p>
-              Whatever the day throws at you, we have a pair for it. Lightweight
-              sneakers for commutes and weekends, weather-ready boots for the
-              rainy season, and sharp formal styles for the office. Every
-              category ships with a detailed size guide and real, unedited
-              photos, so your next pair fits the first time.
-            </p>
-          </div>
+    <section className="bg-white py-16 px-4 md:px-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-2">
+            Why ShoeSafari
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            Great shoes, next-gen payments
+          </h2>
         </div>
-        <div className="w-full md:w-1/2 flex justify-center md:justify-end mb-8 md:mb-0 md:pr-8 pt-10 sm:pt-0">
-          <Image
-            src={shoeImage3}
-            alt="Footwear for every occasion at ShoeSafari"
-            width={400}
-            height={350}
-            className="rounded-lg"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature) => (
+            <div
+              key={feature.title}
+              className="rounded-xl border border-gray-100 bg-gray-50 p-6 hover:shadow-md transition-shadow"
+            >
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-700 text-white mb-4">
+                <feature.icon size={22} />
+              </span>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {feature.text}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 };
 
-export default Catalogue;
+export default Catalogue2;

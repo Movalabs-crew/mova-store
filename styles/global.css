@@ -2,15 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+
 html, body {
   height: 100%;
 }
+
+/* =============================================================================
+   Accessibility
+   ============================================================================= */
+
+/* Screen reader only - visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Remove sr-only when focused (for skip links) */
+.sr-only.focus\:not-sr-only:focus,
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Focus styles for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  button,
+  a {
+    border: 2px solid currentColor;
+  }
+}
+
+/* =============================================================================
+   Custom Components
+   ============================================================================= */
+
 .custom-image {
   background-image: url('/images/ShoesafariLandingimage.png');
 }
+
 .loader {
-  border: 4px solid #e5e7eb; /* Tailwind's gray-200 */
-  border-top: 4px solid #c53030; /* Custom red color matching your theme */
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #c53030;
   border-radius: 50%;
   width: 3rem;
   height: 3rem;
@@ -21,6 +92,42 @@ html, body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* =============================================================================
+   Form Accessibility
+   ============================================================================= */
+
+/* Error state for form fields */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+/* Required field indicator */
+label[data-required="true"]::after {
+  content: " *";
+  color: #dc2626;
+}
+
+/* =============================================================================
+   Interactive Element States
+   ============================================================================= */
+
+/* Disabled state */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading state */
+[aria-busy="true"] {
+  cursor: wait;
 }
 
 

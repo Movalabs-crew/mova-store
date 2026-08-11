@@ -5,8 +5,12 @@ import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { ref, getDownloadURL } from "firebase/storage";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
+import AdminGuard from "../../components/AdminGuard";
+import Link from "next/link";
+import { SiStellar } from "react-icons/si";
+import { MdInventory } from "react-icons/md";
 
-const ProductsAdmin = () => {
+const ProductsAdminContent = () => {
   const [products, setProducts] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState(null);
 
@@ -55,7 +59,25 @@ const ProductsAdmin = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 mt-10">
+    <div className="container mx-auto px-4 py-8">
+      {/* Admin Navigation */}
+      <div className="flex justify-center gap-4 mb-8">
+        <Link
+          href="/admin"
+          className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors"
+        >
+          <MdInventory className="text-xl" />
+          Products
+        </Link>
+        <Link
+          href="/admin/orders"
+          className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors"
+        >
+          <SiStellar className="text-xl" />
+          Stellar Orders
+        </Link>
+      </div>
+
       <h1 className="text-4xl font-extrabold mb-8 text-center text-red-600">
         Products Admin
       </h1>
@@ -113,6 +135,15 @@ const ProductsAdmin = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Wrap the admin content with AdminGuard for authentication/authorization
+const ProductsAdmin = () => {
+  return (
+    <AdminGuard>
+      <ProductsAdminContent />
+    </AdminGuard>
   );
 };
 

@@ -4,10 +4,12 @@
 
 **An open-source retail storefront built on the Stellar network**
 
+[![CI](https://github.com/yourusername/shoesafari/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/shoesafari/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-%237b2ff7?logo=stellar)](https://developers.stellar.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Security](https://img.shields.io/badge/Security-Policy-blue.svg)](SECURITY.md)
 
 </div>
 

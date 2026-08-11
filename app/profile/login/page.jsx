@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { login, loginWithGoogle, signup } from "../../../lib/auth";
 import Toast from "../../../components/Toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import img from "../../../public/images/welcomeshoesafari.png"
+
 const AuthPage = () => {
   const [toast, setToast] = useState({ show: false, message: "" });
   const [email, setEmail] = useState("");
@@ -18,12 +19,24 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
-    const showToast = (message) => {
-      setToast({ show: true, message });
-      setTimeout(() => setToast({ show: false, message: "" }), 3000);
-    };
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: "" }), 3000);
+  };
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get redirect URL from query params, default to /shop
+  const getRedirectUrl = () => {
+    const redirect = searchParams.get("redirect");
+    // Only allow internal redirects (starting with /)
+    if (redirect && redirect.startsWith("/")) {
+      return redirect;
+    }
+    return "/shop";
+  };
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoggingIn(true);
@@ -32,7 +45,7 @@ const AuthPage = () => {
       setEmail("");
       setPassword("");
       showToast("Logged in successfully");
-      router.push("/shop");
+      router.push(getRedirectUrl());
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -53,7 +66,7 @@ const AuthPage = () => {
       setPassword("");
       setConfirmPassword("");
       showToast("User created successfully");
-      router.push("/shop");
+      router.push(getRedirectUrl());
     } catch (err) {
       showToast(err.message);
     } finally {
@@ -65,7 +78,7 @@ const AuthPage = () => {
     try {
       await loginWithGoogle();
       showToast("User logged in with Google successfully");
-      router.push("/shop");
+      router.push(getRedirectUrl());
     } catch (err) {
       showToast(err.message);
     }

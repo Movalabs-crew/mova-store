@@ -32,14 +32,15 @@ export default function Hero() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/60" />
         <div className="relative flex flex-col items-center justify-center h-full px-6 text-center">
           <p className="text-sm uppercase tracking-widest text-red-300 mb-4">
-            Curated footwear · Card or crypto checkout
+            Quality footwear · Powered by Stellar payments
           </p>
           <h1 className="text-5xl sm:text-6xl font-extrabold text-white">
             Walk Taller. Pay Smarter.
           </h1>
           <p className="text-lg sm:text-xl text-white mt-6 max-w-2xl">
-            Hand-picked sneakers, boots, heels and everyday staples — with
-            honest pricing and a checkout that takes cards or USDC on Stellar.
+            Hand-picked sneakers, boots, and everyday staples — with a checkout
+            that takes cards or USDC on Stellar. See how crypto payments work
+            in real e-commerce.
           </p>
           <div className="flex gap-6 mt-10">
             <Link
@@ -50,11 +51,10 @@ export default function Hero() {
               Shop Now
             </Link>
             <Link
-              href={user ? "/collections" : "#"}
+              href="#stellar"
               className="border border-white/70 hover:bg-red-600 hover:border-red-600 text-white rounded-md px-6 py-3"
-              onClick={(e) => handleProtectedLinkClick(e, "/collections")}
             >
-              Explore Collections
+              How Stellar Works
             </Link>
           </div>
         </div>

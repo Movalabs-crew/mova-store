@@ -328,7 +328,7 @@ const Checkout = () => {
                 <div className="flex items-center gap-3">
                   <span className="h-px flex-1 bg-gray-300" />
                   <span className="text-xs uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                    <SiStellar size={16} className="text-[#7b2ff7]" />
+                    <SiStellar size={16} className="text-red-600" />
                     or pay with Stellar (USDC)
                   </span>
                   <span className="h-px flex-1 bg-gray-300" />

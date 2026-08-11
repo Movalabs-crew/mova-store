@@ -22,7 +22,7 @@ const steps = [
 
 const Stellar = () => {
   return (
-    <section className="bg-gradient-to-r from-[#3f0f8f] via-[#7b2ff7] to-[#7b2ff7] py-16 px-6">
+    <section id="stellar" className="bg-gradient-to-r from-red-900 via-red-700 to-red-600 py-16 px-6">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10">
         <div className="md:w-1/2 text-center md:text-left">
           <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-1.5 mb-5 text-sm font-medium text-white">
@@ -33,10 +33,10 @@ const Stellar = () => {
             Pay With Stellar
           </h2>
           <p className="text-white/90 text-lg leading-relaxed mb-8">
-            Pay for your order in USDC on the Stellar network — no card, no bank
-            account, no middleman. Your payment goes straight from your Stellar
-            wallet to ours through a Soroban smart contract, and the receipt is
-            recorded on-chain.
+            Pay for your order in USDC on the Stellar network — no card fees,
+            no bank delays, no middleman. This is a live demonstration of how
+            Stellar payments can power any e-commerce store: fast settlement,
+            verifiable receipts, and costs that traditional processors can't match.
           </p>
           <ul className="space-y-4 text-white/90 mb-8 text-left">
             <li className="flex items-start gap-3">
@@ -65,7 +65,7 @@ const Stellar = () => {
           </ul>
           <Link
             href="/shop"
-            className="inline-block bg-white text-[#7b2ff7] font-semibold px-6 py-3 rounded-md hover:bg-white/90"
+            className="inline-block bg-white text-red-700 font-semibold px-6 py-3 rounded-md hover:bg-white/90"
           >
             Shop &amp; Pay with USDC
           </Link>
@@ -78,7 +78,7 @@ const Stellar = () => {
           <ol className="space-y-6">
             {steps.map((step, index) => (
               <li key={index} className="flex gap-4">
-                <span className="h-8 w-8 flex-shrink-0 rounded-full bg-[#7b2ff7] text-white flex items-center justify-center font-semibold">
+                <span className="h-8 w-8 flex-shrink-0 rounded-full bg-red-700 text-white flex items-center justify-center font-semibold">
                   {index + 1}
                 </span>
                 <div>

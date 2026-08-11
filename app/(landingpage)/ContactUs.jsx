@@ -1,6 +1,28 @@
 "use client";
 import { useState, useRef } from "react";
+import { FaGithub, FaTwitter, FaDiscord } from "react-icons/fa";
 import sendMail from "../../lib/sendmail";
+
+const socialLinks = [
+  {
+    name: "GitHub",
+    icon: FaGithub,
+    href: "https://github.com/ShoeSafari-Hub/ShoeSafari",
+    description: "View source code",
+  },
+  {
+    name: "Twitter",
+    icon: FaTwitter,
+    href: "https://twitter.com/shoesafari",
+    description: "Follow for updates",
+  },
+  {
+    name: "Discord",
+    icon: FaDiscord,
+    href: "https://discord.gg/shoesafari",
+    description: "Join the community",
+  },
+];
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -40,16 +62,59 @@ const ContactUs = () => {
   return (
     <div
       id="contact"
-      className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 flex flex-col items-center py-12 px-4"
+      className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 py-16 px-4"
     >
-      <div className="bg-white shadow-lg rounded-lg p-8 max-w-lg w-full">
-        <h2 className="text-3xl font-bold text-center mb-6 text-red-700">
-          Contact Us
-        </h2>
-        <p className="text-lg text-gray-600 mb-8 text-center">
-          Questions about sizing, an order, or the Stellar checkout? Send a note
-          below and we will get back to you quickly.
-        </p>
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            Get in Touch
+          </h2>
+          <p className="text-white/90 max-w-xl mx-auto">
+            Questions, feedback, or want to contribute? Reach out through
+            any channel below.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Social Links */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8">
+            <h3 className="text-xl font-semibold text-white mb-6">
+              Connect with us
+            </h3>
+            <div className="space-y-4">
+              {socialLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 p-4 bg-white/10 rounded-lg hover:bg-white/20 transition-colors group"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-red-600">
+                    <link.icon size={24} />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-white group-hover:underline">
+                      {link.name}
+                    </p>
+                    <p className="text-sm text-white/70">{link.description}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-white/20">
+              <p className="text-white/80 text-sm">
+                ShoeSafari is open source. Contributions welcome!
+              </p>
+            </div>
+          </div>
+
+          {/* Contact Form */}
+          <div className="bg-white shadow-lg rounded-xl p-8">
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Send us a message
+            </h3>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 mb-4">
             <input
@@ -114,6 +179,8 @@ const ContactUs = () => {
             )}
           </button>
         </form>
+          </div>
+        </div>
       </div>
 
       {toast.show && (

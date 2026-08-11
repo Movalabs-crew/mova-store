@@ -146,6 +146,8 @@ cd contracts/checkout && cargo clippy --all-targets -- -D warnings
 
 ## Testing Guidelines
 
+### Smart Contract Tests (Rust)
+
 **The contract must be tested.** The Rust contract ships with a mock-token test
 suite in `contracts/checkout/src/test.rs`. Run it before every PR that touches
 `contracts/`:
@@ -158,17 +160,65 @@ cd contracts/checkout && cargo test
 - When behavior changes, update existing tests — don't delete coverage.
 - Tests run offline against a mock token; no network or funded account needed.
 
-**The frontend must at least build and typecheck.** There is no unit-test runner
-configured for the UI yet — contributions that add one are welcome. Until then:
+### Frontend Tests (TypeScript/JavaScript)
+
+**The frontend uses Vitest** for unit and integration tests. Run tests before every PR:
 
 ```bash
-npx tsc --noEmit   # type safety
-npm run build      # production build must succeed
+# Run all tests once
+npm run test
+
+# Run tests in watch mode during development
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests with interactive UI
+npm run test:ui
 ```
 
-**Manual QA for payment changes.** If your PR touches the Stellar payment flow,
-describe in the PR how you tested it against testnet (Freighter + USDC faucet
-account). Follow the flow in the root [README](README.md#paying-with-usdc-testnet).
+**Test file locations:**
+- Unit tests: `tests/lib/` for library functions
+- Component tests: `tests/components/` for React components
+- Tests should be named `*.test.ts` or `*.test.tsx`
+
+**What to test:**
+- Utility functions (validation, formatting, etc.)
+- Custom hooks
+- Component behavior (user interactions, state changes)
+- Error handling paths
+
+**Example test:**
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { validateEmail } from "../../lib/validation";
+
+describe("validateEmail", () => {
+  it("accepts valid emails", () => {
+    expect(validateEmail("test@example.com").isValid).toBe(true);
+  });
+
+  it("rejects invalid emails", () => {
+    expect(validateEmail("not-an-email").isValid).toBe(false);
+  });
+});
+```
+
+### Type Safety and Build
+
+```bash
+npm run type-check   # TypeScript type checking
+npm run lint         # ESLint checks
+npm run build        # Production build must succeed
+```
+
+### Manual QA for Payment Changes
+
+If your PR touches the Stellar payment flow, describe in the PR how you tested
+it against testnet (Freighter + USDC faucet account). Follow the flow in the
+root [README](README.md#paying-with-usdc-testnet).
 
 ## Commit Message Style
 
@@ -212,10 +262,12 @@ Before opening a PR, verify:
 
 - [ ] Linked to the GitHub issue and GrantFox milestone/bounty id.
 - [ ] Branch name follows the naming convention.
-- [ ] Code formatted (`prettier` / `rustfmt`).
+- [ ] Code formatted (`npm run format` / `cargo fmt`).
 - [ ] Lints pass (`npm run lint`, `cargo clippy -- -D warnings`).
-- [ ] Typecheck + build pass (`npx tsc --noEmit`, `npm run build`).
-- [ ] Contract tests pass (`cargo test`).
+- [ ] Typecheck passes (`npm run type-check`).
+- [ ] Frontend tests pass (`npm run test`).
+- [ ] Contract tests pass (`cd contracts/checkout && cargo test`).
+- [ ] Build succeeds (`npm run build`).
 - [ ] New behavior has tests; existing tests updated where needed.
 - [ ] No secrets, `.env` files, or build artifacts in the diff.
 - [ ] README/docs updated if behavior or config changed.

@@ -1,75 +1,78 @@
 import Image from "next/image";
 
-import shoeImage1 from "/public/images/shoe1.png";
-import shoeImage2 from "/public/images/shoe2.png";
-import shoeImage3 from "/public/images/shoe3.png";
-import shoeImage4 from "/public/images/shoe4.png";
-import shoeImage5 from "/public/images/shoe5.png";
 const categories = [
   {
     id: 1,
     name: "Men Shoes",
     price: 99.99,
-    imageUrl: shoeImage4,
+    imageUrl: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&q=80",
   },
   {
     id: 2,
     name: "Kids Shoes",
     price: 129.99,
-    imageUrl: shoeImage2,
+    imageUrl: "https://images.unsplash.com/photo-1555274175-75f79b09d5b8?w=400&q=80",
   },
   {
     id: 3,
     name: "Casual Sneakers",
     price: 79.99,
-    imageUrl: shoeImage1,
+    imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80",
   },
   {
     id: 4,
     name: "Women Shoes",
     price: 149.99,
-    imageUrl: shoeImage5,
+    imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&q=80",
   },
   {
     id: 5,
     name: "Formal Shoes",
     price: 139.99,
-    imageUrl: shoeImage3,
+    imageUrl: "https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=400&q=80",
   },
 ];
 
 export default function ShopByCategory() {
   return (
-    <div className="p-4 md:p-8 lg:p-12">
-      <h1 className="text-4xl sm:text-6xl font-bold mb-4 text-center">
-        Shop by Category
-      </h1>
-      <p className="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
-        From the school run to the boardroom — find the right pair for every
-        part of your day.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {categories.map((category) => (
-          <div
-            key={category.id}
-            className="bg-white shadow-lg rounded-lg overflow-hidden"
-          >
-            <div className="relative w-full h-48">
-              <Image
-                src={category.imageUrl}
-                alt={category.name}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-t-lg"
-              />
+    <section className="bg-white py-16 px-4 md:px-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-2">
+            Shop by category
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            The right pair for every part of your day
+          </h2>
+          <p className="text-gray-600 mt-4">
+            From the school run to the boardroom — find the style that fits.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {categories.map((category) => (
+            <div
+              key={category.id}
+              className="group bg-gray-50 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="relative w-full aspect-square bg-white flex items-center justify-center p-3">
+                <Image
+                  src={category.imageUrl}
+                  alt={category.name}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 20vw"
+                  className="object-contain group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-4 text-center">
+                <h2 className="font-semibold text-gray-900">
+                  {category.name}
+                </h2>
+                <p className="text-sm text-gray-500">From {`$${category.price}`}</p>
+              </div>
             </div>
-            <div className="p-4">
-              <h2 className="text-xl font-semibold mb-2">{category.name}</h2>
-              <p className="text-gray-700">From {`$${category.price}`}</p>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+target/
+
+# Lock files
+package-lock.json
+yarn.lock
+Cargo.lock
+
+# Generated
+*.wasm
+*.d.ts
+
+# Config
+.env*
+!.env.local.example

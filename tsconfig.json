@@ -1,21 +1,26 @@
 {
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
+    "strictNullChecks": true,
     "noEmit": true,
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/*": ["components/*"],
+      "@/lib/*": ["lib/*"],
+      "@/context/*": ["context/*"]
+    },
     "plugins": [
       {
         "name": "next"
@@ -26,9 +31,14 @@
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx"
-, "app/profile/signup/page.tsx", "app/profile/login/page.jsx"  ],
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx"
+  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "contracts",
+    ".next",
+    "out"
   ]
 }

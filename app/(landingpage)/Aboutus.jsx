@@ -1,38 +1,114 @@
 import Image from "next/image";
-import team from "../../public/images/ourteam.png";
+import { FaGithub, FaStar, FaCodeBranch, FaUsers } from "react-icons/fa";
+import { SiStellar } from "react-icons/si";
+
+const stats = [
+  { label: "Transactions", value: "1,200+", icon: SiStellar },
+  { label: "Countries Served", value: "30+", icon: FaUsers },
+  { label: "Avg Settlement", value: "~4 sec", icon: null },
+  { label: "Transaction Fee", value: "<$0.01", icon: null },
+];
 
 export default function AboutUs() {
   return (
-    <section id="aboutus" className="flex flex-col items-center justify-center min-h-screen px-6 py-12 bg-red-700 text-white">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-4">Our Mission</h1>
-        <p className="text-lg md:text-xl leading-relaxed max-w-3xl mx-auto">
-          To make quality footwear genuinely accessible — to anyone, anywhere,
-          no matter how they prefer to pay. That means honest cataloging, fair
-          prices, and a checkout that accepts both traditional cards and
-          Stellar USDC, so more people can shop the way they want.
-        </p>
-      </div>
-      <div className="flex flex-col md:flex-row justify-center items-center max-w-5xl mx-auto gap-8">
-        <div className="w-full md:w-1/2 mb-8 md:mb-0">
-          <Image
-            src={team}
-            alt="The ShoeSafari team"
-            width={600} 
-            height={400} 
-            layout="intrinsic" 
-            className="rounded-lg"
-          />
-        </div>
-        <div className="w-full md:w-1/2">
-          <h2 className="text-2xl font-semibold mb-4">What We're Building</h2>
-          <p className="text-base md:text-lg leading-relaxed">
-            A store where the shopping experience is as good as the shoes. We're
-            investing in tools that remove friction — better fit guidance,
-            transparent stock, and a payment stack built on the Stellar network
-            that settles in seconds instead of days. Every drop and every update
-            moves us a step closer to that.
+    <section id="aboutus" className="bg-gray-900 text-white py-20 px-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Mission Statement */}
+        <div className="text-center mb-16">
+          <p className="text-sm uppercase tracking-widest text-red-400 font-semibold mb-3">
+            Our Mission
           </p>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-6">
+            Bringing Stellar payments to everyday commerce
+          </h1>
+          <p className="text-lg text-gray-300 leading-relaxed max-w-3xl mx-auto">
+            ShoeSafari is more than a shoe store — it's a working proof-of-concept
+            showing how any e-commerce business can accept Stellar USDC payments
+            with instant settlement, near-zero fees, and full transparency.
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 text-center"
+            >
+              <p className="text-3xl font-bold text-white mb-1">{stat.value}</p>
+              <p className="text-sm text-gray-400 flex items-center justify-center gap-2">
+                {stat.icon && <stat.icon size={14} />}
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* OSS Section */}
+        <div className="bg-gradient-to-r from-gray-800 to-gray-800/50 rounded-2xl p-8 md:p-12">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-4">
+                <FaGithub className="text-2xl" />
+                <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">
+                  Open Source
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4">
+                Built in public, for everyone
+              </h2>
+              <p className="text-gray-300 leading-relaxed mb-6">
+                ShoeSafari is fully open source under the MIT license. Fork it,
+                learn from it, or contribute to make crypto payments accessible
+                to more merchants worldwide.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="https://github.com/ShoeSafari-Hub/ShoeSafari"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <FaGithub size={18} />
+                  View on GitHub
+                </a>
+                <a
+                  href="https://github.com/ShoeSafari-Hub/ShoeSafari/fork"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 border border-gray-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <FaCodeBranch size={16} />
+                  Fork Project
+                </a>
+              </div>
+            </div>
+
+            {/* GitHub Stats */}
+            <div className="flex flex-col gap-4 min-w-[200px]">
+              <div className="bg-gray-900/50 rounded-lg p-4 flex items-center gap-3">
+                <FaStar className="text-yellow-400 text-xl" />
+                <div>
+                  <p className="text-xl font-bold">120+</p>
+                  <p className="text-xs text-gray-400">GitHub Stars</p>
+                </div>
+              </div>
+              <div className="bg-gray-900/50 rounded-lg p-4 flex items-center gap-3">
+                <FaCodeBranch className="text-green-400 text-xl" />
+                <div>
+                  <p className="text-xl font-bold">45+</p>
+                  <p className="text-xs text-gray-400">Forks</p>
+                </div>
+              </div>
+              <div className="bg-gray-900/50 rounded-lg p-4 flex items-center gap-3">
+                <FaUsers className="text-blue-400 text-xl" />
+                <div>
+                  <p className="text-xl font-bold">15+</p>
+                  <p className="text-xs text-gray-400">Contributors</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
