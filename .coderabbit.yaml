@@ -1,0 +1,55 @@
+# CodeRabbit Configuration
+# https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+language: "en"
+
+reviews:
+  # Enable automatic reviews on PRs
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  # Review profile - assertive provides more detailed feedback
+  profile: "assertive"
+
+  # Request changes when issues are found
+  request_changes_workflow: true
+
+  # High-level summary in PR comments
+  high_level_summary: true
+
+  # Add poem to reviews (fun touch)
+  poem: false
+
+  # Review scope
+  path_filters:
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/.next/**"
+    - "!**/node_modules/**"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
+
+  # Areas to focus on
+  path_instructions:
+    - path: "**/*.ts"
+      instructions: "Review for TypeScript best practices, type safety, and potential runtime errors."
+    - path: "**/*.tsx"
+      instructions: "Review for React best practices, hooks usage, and component structure."
+    - path: "**/*.jsx"
+      instructions: "Review for React best practices and suggest TypeScript migration where beneficial."
+    - path: "lib/stellar/**"
+      instructions: "Pay special attention to Stellar/Soroban integration, transaction handling, and security."
+    - path: "components/**"
+      instructions: "Review for accessibility (a11y), reusability, and consistent styling."
+    - path: "app/admin/**"
+      instructions: "Ensure proper authentication checks and authorization guards."
+
+chat:
+  # Enable chat in PR comments
+  auto_reply: true
+
+# Early access features
+early_access: true
