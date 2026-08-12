@@ -31,6 +31,8 @@ yarn-error.log*
 
 # Miscellaneous
 *.log
-*.lock
+yarn.lock
+pnpm-lock.yaml
 target/
 tsconfig.tsbuildinfo
+contracts/checkout/test_snapshots/

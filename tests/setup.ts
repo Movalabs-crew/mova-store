@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
+import React from "react";
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
@@ -19,19 +20,22 @@ vi.mock("next/navigation", () => ({
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
-  default: ({ src, alt, ...props }: { src: string; alt: string }) => {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} {...props} />;
-  },
+  default: ({
+    src,
+    alt,
+    ...props
+  }: {
+    src: string;
+    alt: string;
+    [key: string]: unknown;
+  }) => React.createElement("img", { src, alt, ...props }),
 }));
 
 // Mock window.crypto for tests
 Object.defineProperty(globalThis, "crypto", {
   value: {
     subtle: {
-      digest: async (algorithm: string, data: ArrayBuffer) => {
-        // Simple mock hash for testing
-        const encoder = new TextEncoder();
+      digest: async (_algorithm: string, data: ArrayBuffer) => {
         const text = new TextDecoder().decode(data);
         const hash = new Uint8Array(32);
         for (let i = 0; i < text.length && i < 32; i++) {
@@ -51,5 +55,10 @@ Object.defineProperty(globalThis, "crypto", {
 
 // Mock environment variables
 vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
-vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CTEST00000000000000000000000000000000000000000000000000");
+vi.stubEnv(
+  "NEXT_PUBLIC_CHECKOUT_CONTRACT_ID",
+  "CTEST00000000000000000000000000000000000000000000000000"
+);
 vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "admin@test.com,admin2@test.com");
+vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://dummy.supabase.co");
+vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "dummy_anon_key");

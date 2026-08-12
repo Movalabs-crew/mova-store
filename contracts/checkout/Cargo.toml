@@ -16,4 +16,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
+soroban-sdk = "27.0.5"
+
+[dev-dependencies]
 soroban-sdk = { version = "27.0.5", features = ["testutils"] }
