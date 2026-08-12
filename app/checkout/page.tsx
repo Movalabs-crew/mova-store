@@ -46,7 +46,7 @@ const Checkout = () => {
     subject: "YOUR ORDER CONFIRMATION",
   });
 
-  const showToast = (message) => {
+  const showToast = (message: string) => {
     setToast({ show: true, message });
     setTimeout(() => setToast({ show: false, message: "" }), 5000);
   };
@@ -55,7 +55,7 @@ const Checkout = () => {
     `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
   );
 
-  const handleStellarSuccess = (result) => {
+  const handleStellarSuccess = (result: { amountUsd: number | string }) => {
     showToast(
       `USDC payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
     );
@@ -63,16 +63,16 @@ const Checkout = () => {
     localStorage.clear();
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleOtpChange = (e) => {
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEnteredOtp(e.target.value);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
@@ -94,7 +94,7 @@ const Checkout = () => {
     }
   };
 
-  const handleEmailConfirmationSubmit = (e) => {
+  const handleEmailConfirmationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsOtpSending(true);
     if (parseInt(enteredOtp) === otp) {

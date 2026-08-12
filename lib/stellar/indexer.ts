@@ -204,7 +204,7 @@ export class PaymentEventIndexer {
 
     const data = raw.value;
     if (data.switch() === xdr.ScValType.scvMap()) {
-      for (const entry of data.map()) {
+      for (const entry of data.map() ?? []) {
         const key =
           entry.key().switch() === xdr.ScValType.scvSymbol()
             ? entry.key().sym().toString()
@@ -212,7 +212,7 @@ export class PaymentEventIndexer {
         fields[key] = scValToString(entry.val());
       }
     } else if (data.switch() === xdr.ScValType.scvVec()) {
-      fields.value = data.vec().map(scValToString).join(",");
+      fields.value = (data.vec() ?? []).map(scValToString).join(",");
     } else {
       fields.value = scValToString(data);
     }

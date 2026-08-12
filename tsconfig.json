@@ -39,6 +39,8 @@
     "node_modules",
     "contracts",
     ".next",
-    "out"
+    "out",
+    "tests",
+    "vitest.config.ts"
   ]
 }

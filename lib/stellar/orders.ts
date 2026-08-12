@@ -12,6 +12,7 @@ import {
   rpc,
   xdr,
   Keypair,
+  StrKey,
 } from "@stellar/stellar-sdk";
 
 import {
@@ -23,7 +24,7 @@ import {
   FEE_BUFFER_STROOPS,
   tokenForContract,
 } from "./config";
-import { connectFreighter, signTransaction } from "./freighter";
+import { connectWallet, signWithFreighter } from "./freighter";
 import { hashOrderId, bytesToHex } from "./scval";
 
 // ---------------------------------------------------------------------------
@@ -60,7 +61,7 @@ export interface OrderActionResult {
 function decodeStatus(statusVal: xdr.ScVal): OrderStatus {
   if (statusVal.switch() === xdr.ScValType.scvVec()) {
     const vec = statusVal.vec();
-    if (vec.length > 0) {
+    if (vec && vec.length > 0) {
       const first = vec[0];
       if (first.switch() === xdr.ScValType.scvSymbol()) {
         const sym = first.sym().toString();
@@ -131,13 +132,14 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
     // Parse the Option<Order> - it's a vec with the order struct inside
     if (retval.switch() === xdr.ScValType.scvVec()) {
       const vec = retval.vec();
-      if (vec.length === 0) return null;
+      if (!vec || vec.length === 0) return null;
 
       // The order is the first (and only) element
       const orderVal = vec[0];
       if (orderVal.switch() !== xdr.ScValType.scvMap()) return null;
 
       const orderMap = orderVal.map();
+      if (!orderMap) return null;
       const order: Partial<OrderDetails> = {
         orderId,
         orderIdHash,
@@ -153,7 +155,9 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
         switch (key) {
           case "buyer":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.buyer = val.address().accountId().publicKey();
+              order.buyer = StrKey.encodeEd25519PublicKey(
+                val.address().accountId().ed25519()
+              );
             }
             break;
           case "amount":
@@ -166,7 +170,9 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
             break;
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.token = val.address().contractId().toString("hex");
+              order.token = StrKey.encodeContract(
+                Buffer.from(val.address().contractId() as unknown as Uint8Array)
+              );
             }
             break;
           case "timestamp":
@@ -209,7 +215,7 @@ export async function dispatchOrder(
   orderId: string
 ): Promise<OrderActionResult> {
   try {
-    const { publicKey } = await connectFreighter();
+    const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
@@ -251,7 +257,7 @@ export async function dispatchOrder(
     const preparedTx = rpc.assembleTransaction(tx, simResult).build();
 
     // Sign with Freighter
-    const signedXdr = await signTransaction(preparedTx.toXDR());
+    const signedXdr = await signWithFreighter(preparedTx.toXDR(), publicKey);
     const signedTx = TransactionBuilder.fromXDR(
       signedXdr,
       NETWORK_PASSPHRASE
@@ -290,7 +296,7 @@ export async function dispatchOrder(
  */
 export async function refundOrder(orderId: string): Promise<OrderActionResult> {
   try {
-    const { publicKey } = await connectFreighter();
+    const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
@@ -330,7 +336,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
 
     // Prepare and sign
     const preparedTx = rpc.assembleTransaction(tx, simResult).build();
-    const signedXdr = await signTransaction(preparedTx.toXDR());
+    const signedXdr = await signWithFreighter(preparedTx.toXDR(), publicKey);
     const signedTx = TransactionBuilder.fromXDR(
       signedXdr,
       NETWORK_PASSPHRASE

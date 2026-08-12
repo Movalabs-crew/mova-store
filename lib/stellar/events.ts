@@ -109,7 +109,7 @@ export function decodePaymentEvent(
     // data = Map { "amount": i128 }
     if (data.switch() === xdr.ScValType.scvMap()) {
       const entries = data.map();
-      for (const entry of entries) {
+      for (const entry of entries ?? []) {
         if (entry.key().switch() === xdr.ScValType.scvSymbol()) {
           const key = entry.key().sym().toString();
           if (key === "amount") {
