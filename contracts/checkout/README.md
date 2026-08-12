@@ -1,4 +1,4 @@
-# ShoeSafari Checkout (Soroban)
+# Mova Store Checkout (Soroban)
 
 A [Stellar Soroban](https://stellar.org/developers) smart contract that runs an
 **on-chain order registry with escrow**. Buyers pay with any whitelisted
@@ -80,7 +80,7 @@ Requires Rust with the `wasm32v1-none` target and the
 ```bash
 rustup target add wasm32v1-none
 cargo build --target wasm32v1-none --release
-ls target/wasm32v1-none/release/shoesafari_checkout.wasm
+ls target/wasm32v1-none/release/movastore_checkout.wasm
 ```
 
 ## Test
@@ -101,10 +101,10 @@ stellar keys generate alice --network testnet --fund
 
 # 2. Deploy the contract
 stellar contract deploy \
-  --wasm target/wasm32v1-none/release/shoesafari_checkout.wasm \
+  --wasm target/wasm32v1-none/release/movastore_checkout.wasm \
   --source-account alice \
   --network testnet \
-  --alias shoesafari_checkout
+  --alias movastore_checkout
 
 # 3. Initialize with the merchant wallet
 stellar contract invoke \

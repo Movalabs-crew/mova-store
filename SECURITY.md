@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-We take security seriously at ShoeSafari. If you discover a security vulnerability, please report it responsibly.
+We take security seriously at Mova Store. If you discover a security vulnerability, please report it responsibly.
 
 ### How to Report
 
@@ -40,10 +40,10 @@ cp .env.local.example .env.local
 | Data Type | Storage | Notes |
 |-----------|---------|-------|
 | API Keys | Environment variables | Never hardcode |
-| Firebase Config | Environment variables | Client-side safe but keep secure |
+| Supabase Config | Environment variables | Client-side anon key is safe; never commit service role key |
 | EmailJS Credentials | Environment variables | Required for email functionality |
 | Stellar Contract IDs | Environment variables | Public but environment-specific |
-| User Passwords | Firebase Auth | Handled by Firebase, never stored locally |
+| User Passwords | Supabase Auth | Handled by Supabase, never stored locally |
 | Payment Data | On-chain (Stellar) | Non-custodial, no card data stored |
 
 ### Smart Contract Security
@@ -66,7 +66,7 @@ The Soroban escrow contract follows security best practices:
 
 ### Authentication
 
-- Firebase Authentication handles user sessions
+- Supabase Authentication handles user sessions
 - Admin access is controlled via email whitelist (`NEXT_PUBLIC_ADMIN_EMAILS`)
 - No passwords are stored in the application
 
@@ -105,27 +105,15 @@ The card payment form fields are UI-only placeholders. In production:
 - Never handle raw card data on your servers
 - Use tokenization for card storage
 
-### Firebase Security Rules
+### Supabase Row Level Security
 
-Ensure your Firestore security rules restrict:
+Apply `supabase/schema.sql` so that:
 
-- Read/write access based on authentication
-- Admin operations to authorized users only
-- Data validation at the database level
+- Anyone can read products
+- Only authenticated users can write products / upload images
+- Tighten policies further for production (admin-only writes)
 
-Example rules:
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /ShoeSafariProducts/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null &&
-        request.auth.token.email in ['admin@example.com'];
-    }
-  }
-}
-```
+Never expose the Supabase **service role** key in the browser.
 
 ## Stellar/Soroban Security
 

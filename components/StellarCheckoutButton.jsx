@@ -71,7 +71,7 @@ const StellarCheckoutButton = ({ amountUsd, orderId, onSuccess, disabled = false
         onClick={handlePay}
         disabled={disabled || busy || Boolean(result)}
         className={`w-full flex flex-col items-center justify-center gap-1 py-3 rounded transition-colors disabled:opacity-60 ${
-          result ? "bg-green-600 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+          result ? "bg-green-600 text-white" : "bg-purple-600 hover:bg-purple-700 text-white"
         }`}
       >
         {busy ? (

@@ -2,7 +2,7 @@
  * Accessibility Utilities
  *
  * Helper functions and constants for improving accessibility
- * throughout the ShoeSafari application.
+ * throughout the Mova Store application.
  */
 
 // =============================================================================

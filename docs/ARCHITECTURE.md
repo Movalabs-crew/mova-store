@@ -1,6 +1,6 @@
-# ShoeSafari × Stellar: Architecture & Deep Integration
+# Mova Store × Stellar: Architecture & Deep Integration
 
-ShoeSafari is designed as an **open-source reference implementation** for
+Mova Store is designed as an **open-source reference implementation** for
 accepting Stellar payments: a production-grade storefront where every payment
 is a first-class on-chain event, not a payment-processor redirect.
 
@@ -51,7 +51,7 @@ Two systems cooperate:
    unsigned transactions, simulates them, asks Freighter to sign, and monitors
    the chain for events.
 
-Because the storefront holds no custody, ShoeSafari is a genuinely
+Because the storefront holds no custody, Mova Store is a genuinely
 non-custodial checkout: funds move directly `buyer → contract → merchant`
 (or `buyer → contract → buyer` on refund).
 

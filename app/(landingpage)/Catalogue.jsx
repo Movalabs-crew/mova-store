@@ -11,20 +11,20 @@ const products = [
 
 const Catalogue = () => {
   return (
-    <section className="bg-[#fafafa] py-16 px-4 md:px-10">
+    <section className="bg-mova-surface/60 py-16 px-4 md:px-10">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-10">
           <div>
-            <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-2">
+            <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-2">
               Featured styles
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">
               Picked for your rotation
             </h2>
           </div>
           <Link
             href="/shop"
-            className="mt-4 sm:mt-0 text-red-700 font-semibold hover:text-red-600 inline-flex items-center gap-1"
+            className="mt-4 sm:mt-0 text-purple-700 font-semibold hover:text-purple-600 inline-flex items-center gap-1"
           >
             View all shoes <span aria-hidden>→</span>
           </Link>
@@ -38,7 +38,7 @@ const Catalogue = () => {
             >
               <div className="relative aspect-square bg-gray-50 flex items-center justify-center p-3">
                 {p.tag && (
-                  <span className="absolute top-3 left-3 bg-red-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                  <span className="absolute top-3 left-3 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                     {p.tag}
                   </span>
                 )}

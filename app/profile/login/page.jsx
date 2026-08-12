@@ -7,7 +7,7 @@ import Toast from "../../../components/Toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
-import img from "../../../public/images/welcomeshoesafari.png"
+import img from "../../../public/images/welcome-mova.png"
 
 const AuthPage = () => {
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -100,9 +100,14 @@ const AuthPage = () => {
         </div>
         <div className="w-full md:w-1/2 text-center md:text-left">
           <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md mx-auto md:mx-0">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">
-              {isLoginMode ? "Login" : "Create Account"}
+            <h2 className="font-display text-3xl font-bold mb-2 text-mova-ink">
+              {isLoginMode ? "Welcome to Mova" : "Join Mova Store"}
             </h2>
+            <p className="mb-6 text-sm text-purple-700/80">
+              {isLoginMode
+                ? "Sign in to shop curated footwear"
+                : "Create an account to start shopping"}
+            </p>
             <form
               onSubmit={isLoginMode ? handleLogin : handleSignup}
               className="space-y-6"
@@ -119,7 +124,7 @@ const AuthPage = () => {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Enter your email"
                   aria-label="Email"
                   required
@@ -137,7 +142,7 @@ const AuthPage = () => {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Enter your password"
                   required
                 />
@@ -166,7 +171,7 @@ const AuthPage = () => {
                     id="confirmPassword"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                     placeholder="Confirm your password"
                     required
                   />
@@ -186,7 +191,7 @@ const AuthPage = () => {
               <div>
                 <button
                   type="submit"
-                  className="w-full bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center justify-center"
+                  className="w-full bg-purple-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 flex items-center justify-center"
                   disabled={isLoggingIn || isSigningUp}
                 >
                   {isLoggingIn || isSigningUp ? (
@@ -206,7 +211,7 @@ const AuthPage = () => {
             <div className="flex justify-center items-center">
               <button
                 onClick={handleGoogleLogin}
-                className="w-full flex items-center bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700 focus:outline-none "
+                className="w-full flex items-center bg-purple-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-purple-700 focus:outline-none "
               >
                 <FcGoogle size={28} />
                 <span className="flex-grow text-center">
@@ -221,7 +226,7 @@ const AuthPage = () => {
                   <br />
                   <button
                     onClick={() => setIsLoginMode(false)}
-                    className="font-serif hover:text-red-700 hover:underline focus:outline-none"
+                    className="font-serif hover:text-purple-700 hover:underline focus:outline-none"
                   >
                     Create an account
                   </button>
@@ -232,7 +237,7 @@ const AuthPage = () => {
                   <br />
                   <button
                     onClick={() => setIsLoginMode(true)}
-                    className="font-serif hover:text-red-700 hover:underline ring-0 focus:outline-none"
+                    className="font-serif hover:text-purple-700 hover:underline ring-0 focus:outline-none"
                   >
                     Login to your account
                   </button>

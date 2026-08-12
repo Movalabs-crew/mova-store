@@ -27,7 +27,7 @@ const Toast = ({ message, show, onClose , time=3000}) => {
       }`}
     >
       {message}
-      <button onClick={onClose} className="ml-4 text-red-500">
+      <button onClick={onClose} className="ml-4 text-purple-500">
         ✕
       </button>
     </div>

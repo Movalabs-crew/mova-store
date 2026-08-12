@@ -28,10 +28,10 @@ const Catalogue2 = () => {
     <section className="bg-white py-16 px-4 md:px-10">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-2">
-            Why ShoeSafari
+          <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-2">
+            Why Mova
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">
             Great shoes, next-gen payments
           </h2>
         </div>
@@ -41,7 +41,7 @@ const Catalogue2 = () => {
               key={feature.title}
               className="rounded-xl border border-gray-100 bg-gray-50 p-6 hover:shadow-md transition-shadow"
             >
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-700 text-white mb-4">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-700 text-white mb-4">
                 <feature.icon size={22} />
               </span>
               <h3 className="font-semibold text-gray-900 mb-2">

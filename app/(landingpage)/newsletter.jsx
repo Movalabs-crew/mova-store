@@ -33,7 +33,7 @@ export default function Newsletter() {
         onSubmit={handleSubmit}
         noValidate={true}
       >
-        <div className="flex items-center border-b border-red-700 py-2">
+        <div className="flex items-center border-b border-purple-700 py-2">
           <input
             type="email"
             name="email"
@@ -47,7 +47,7 @@ export default function Newsletter() {
           />
           <button
             type="submit"
-            className="flex-shrink-0 bg-red-700 hover:bg-red-600 border-red-700 hover:border-red-600 text-sm border-4 text-white py-1 px-2"
+            className="flex-shrink-0 bg-purple-700 hover:bg-purple-600 border-purple-700 hover:border-purple-600 text-sm border-4 text-white py-1 px-2"
           >
             Subscribe
           </button>

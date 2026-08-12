@@ -45,11 +45,8 @@ jobs:
           # Minimal env vars for build
           NEXT_PUBLIC_STELLAR_NETWORK: testnet
           NEXT_PUBLIC_CHECKOUT_CONTRACT_ID: CDUMMY0000000000000000000000000000000000000000000000000
-          NEXT_PUBLIC_FIREBASE_API_KEY: dummy
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: dummy.firebaseapp.com
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: dummy
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: dummy.appspot.com
-          NEXT_PUBLIC_FIREBASE_APP_ID: 1:000000000000:web:0000000000000000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_anon_key
           NEXT_PUBLIC_EMAILJS_SERVICE_ID: service_dummy
           NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: template_dummy
           NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: dummy_key

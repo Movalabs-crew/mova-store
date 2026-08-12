@@ -11,18 +11,19 @@ const stats = [
 
 export default function AboutUs() {
   return (
-    <section id="aboutus" className="bg-gray-900 text-white py-20 px-6">
-      <div className="max-w-6xl mx-auto">
+    <section id="aboutus" className="relative overflow-hidden bg-mova-ink text-white py-20 px-6">
+      <div className="pointer-events-none absolute inset-0 bg-mova-mesh opacity-30" aria-hidden />
+      <div className="relative max-w-6xl mx-auto">
         {/* Mission Statement */}
         <div className="text-center mb-16">
-          <p className="text-sm uppercase tracking-widest text-red-400 font-semibold mb-3">
+          <p className="text-sm uppercase tracking-widest text-mova-soft font-semibold mb-3">
             Our Mission
           </p>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-6">
+          <h1 className="font-display text-3xl sm:text-4xl font-bold mb-6">
             Bringing Stellar payments to everyday commerce
           </h1>
-          <p className="text-lg text-gray-300 leading-relaxed max-w-3xl mx-auto">
-            ShoeSafari is more than a shoe store — it's a working proof-of-concept
+          <p className="text-lg text-purple-100/70 leading-relaxed max-w-3xl mx-auto">
+            Mova Store is more than a shoe store — it's a working proof-of-concept
             showing how any e-commerce business can accept Stellar USDC payments
             with instant settlement, near-zero fees, and full transparency.
           </p>
@@ -58,13 +59,13 @@ export default function AboutUs() {
                 Built in public, for everyone
               </h2>
               <p className="text-gray-300 leading-relaxed mb-6">
-                ShoeSafari is fully open source under the MIT license. Fork it,
+                Mova Store is fully open source under the MIT license. Fork it,
                 learn from it, or contribute to make crypto payments accessible
                 to more merchants worldwide.
               </p>
               <div className="flex flex-wrap gap-3">
                 <a
-                  href="https://github.com/ShoeSafari-Hub/ShoeSafari"
+                  href="https://github.com/Movalabs-crew/mova-store"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -73,7 +74,7 @@ export default function AboutUs() {
                   View on GitHub
                 </a>
                 <a
-                  href="https://github.com/ShoeSafari-Hub/ShoeSafari/fork"
+                  href="https://github.com/Movalabs-crew/mova-store/fork"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 border border-gray-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-700 transition-colors"

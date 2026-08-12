@@ -10,13 +10,13 @@ const images = [
 
 const Slider = () => {
   return (
-    <section className="py-14 overflow-hidden bg-[#fafafa]">
+    <section className="py-14 overflow-hidden bg-mova-surface/60">
       <div className="flex gap-6 overflow-x-auto px-6 md:px-10 pb-2">
         {[...images, ...images].map((src, index) => (
           <Image
             key={index}
             src={src}
-            alt="ShoeSafari footwear"
+            alt="Mova Store footwear"
             width={240}
             height={240}
             className="flex-shrink-0 w-36 h-36 md:w-44 md:h-44 object-cover rounded-xl shadow-sm"

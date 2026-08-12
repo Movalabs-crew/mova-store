@@ -1,8 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db, storage } from "../../lib/firebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  getProductById,
+  updateProduct,
+  uploadProductImage,
+} from "../../lib/products";
 
 const EditProductForm = ({ productId, onProductUpdated }) => {
   const [productName, setProductName] = useState("");
@@ -17,14 +19,11 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const docRef = doc(db, "ShoeSafariProducts", productId);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const productData = docSnap.data();
-          setProductName(productData.name);
-          setProductPrice(productData.price);
-          setExistingImageUrl(productData.img);
+        const product = await getProductById(productId);
+        if (product) {
+          setProductName(product.name);
+          setProductPrice(product.price);
+          setExistingImageUrl(product.img);
         } else {
           setErrorMessage("Product not found");
         }
@@ -48,13 +47,10 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
       let imageUrl = existingImageUrl;
 
       if (productImage) {
-        const imageRef = ref(storage, `products/${productImage.name}`);
-        const snapshot = await uploadBytes(imageRef, productImage);
-        imageUrl = await getDownloadURL(snapshot.ref);
+        imageUrl = await uploadProductImage(productImage);
       }
 
-      const docRef = doc(db, "ShoeSafariProducts", productId);
-      await updateDoc(docRef, {
+      await updateProduct(productId, {
         name: productName,
         price: parseFloat(productPrice),
         img: imageUrl,
@@ -70,8 +66,8 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-lg border border-red-500">
-      <h1 className="text-3xl font-bold mb-6 text-center text-red-500">
+    <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-lg border border-purple-500">
+      <h1 className="text-3xl font-bold mb-6 text-center text-purple-500">
         Edit Product
       </h1>
       <form onSubmit={handleSubmit}>
@@ -81,7 +77,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </div>
         )}
         {errorMessage && (
-          <div className="mb-4 p-4 text-white bg-red-500 rounded-md">
+          <div className="mb-4 p-4 text-white bg-purple-500 rounded-md">
             {errorMessage}
           </div>
         )}
@@ -91,7 +87,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </label>
           <input
             type="text"
-            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
             required
@@ -103,7 +99,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </label>
           <input
             type="number"
-            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productPrice}
             onChange={(e) => setProductPrice(e.target.value)}
             required
@@ -115,7 +111,8 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </label>
           <input
             type="file"
-            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            accept="image/*"
+            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             onChange={(e) => setProductImage(e.target.files[0])}
           />
           {existingImageUrl && (
@@ -128,7 +125,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
         </div>
         <button
           type="submit"
-          className={`w-full py-3 mt-4 text-white font-bold bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+          className={`w-full py-3 mt-4 text-white font-bold bg-purple-500 rounded-md hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
             loading && "opacity-50 cursor-not-allowed"
           }`}
           disabled={loading}

@@ -6,7 +6,7 @@ const steps = [
     icon: FaWallet,
     step: "01",
     title: "Connect Your Wallet",
-    description: "Install Freighter browser extension and connect to ShoeSafari. No account creation needed — your wallet is your identity.",
+    description: "Install Freighter browser extension and connect to Mova Store. No account creation needed — your wallet is your identity.",
   },
   {
     icon: FaShoppingCart,
@@ -33,7 +33,7 @@ export default function HowItWorks() {
     <section className="bg-white py-20 px-4 md:px-10">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-14">
-          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-3">
+          <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-3">
             Getting started
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -53,9 +53,9 @@ export default function HowItWorks() {
                 <div className="hidden lg:block absolute top-8 left-[60%] w-full h-0.5 bg-gray-200" />
               )}
 
-              <div className="relative bg-gray-50 rounded-xl p-6 border border-gray-100 hover:border-red-200 hover:shadow-md transition-all">
+              <div className="relative bg-gray-50 rounded-xl p-6 border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all">
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-white">
                     <step.icon size={24} />
                   </span>
                   <span className="text-4xl font-bold text-gray-200">
@@ -81,7 +81,7 @@ export default function HowItWorks() {
             href="https://www.freighter.app/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
           >
             Get Freighter Wallet
             <span aria-hidden>→</span>

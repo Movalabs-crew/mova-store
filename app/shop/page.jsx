@@ -7,8 +7,7 @@ import { FaShoppingCart } from "react-icons/fa";
 import Cart from "../../components/Cart";
 import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
-import { storage } from "../../lib/firebaseConfig";
-import { ref, listAll, getDownloadURL } from "firebase/storage";
+import { listProducts } from "../../lib/products";
 
 export default function Products() {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
@@ -22,19 +21,8 @@ export default function Products() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const productsRef = ref(storage, "/"); // Fetch from the root directory
-        const productList = await listAll(productsRef);
-        const productPromises = productList.items.map(async (itemRef) => {
-          const url = await getDownloadURL(itemRef);
-          return {
-            id: itemRef.name,
-            img: url,
-            name: itemRef.name.split(".")[0], // Assuming the name is the file name without extension
-            price: Math.floor(Math.random() * 100) + 1, // Random price for demo purposes
-          };
-        });
-        const productsArray = await Promise.all(productPromises);
-        setProducts(productsArray);
+        const data = await listProducts();
+        setProducts(data);
       } catch (err) {
         setError(err.message);
       }
@@ -66,8 +54,8 @@ export default function Products() {
       <div className="w-full max-w-screen-xl mx-auto py-8">
         <Cart itemCount={itemCount} onClick={openModal} />
         <section className="h-[70vh] overflow-auto">
-          <span className="text-4xl sm:text-6xl py-4 flex justify-center items-center font-extrabold">
-            Welcome to Our Store!
+          <span className="font-display text-4xl sm:text-6xl py-4 flex justify-center items-center font-extrabold text-mova-ink">
+            Welcome to Mova Store
           </span>
 
           {error && <p className="text-red-500 text-center">{error}</p>}
@@ -87,7 +75,7 @@ export default function Products() {
                   <h2 className="text-lg">${prod.price}</h2>
                 </Link>
                 <button
-                  className="border-red-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-red-600"
+                  className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
                   onClick={() => {
                     addToCart(prod);
                     showToast("Item added to cart");
@@ -129,7 +117,7 @@ export default function Products() {
                 <span className="ml-4">{item.name}</span>
                 <span className="ml-4">${item.price}</span>
                 <button
-                  className="ml-4 bg-red-500 text-white px-2 py-1 rounded"
+                  className="ml-4 bg-purple-500 text-white px-2 py-1 rounded"
                   onClick={() => removeFromCart(item)}
                 >
                   Remove
@@ -150,7 +138,7 @@ export default function Products() {
           {cartItems.length > 0 && (
             <button
               onClick={handleCheckout}
-              className="bg-red-500 text-white px-4 py-1 rounded mt-4"
+              className="bg-purple-500 text-white px-4 py-1 rounded mt-4"
             >
               {isCheckingOut ? "CheckingOut..." : "CheckOut"}
             </button>

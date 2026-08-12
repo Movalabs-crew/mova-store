@@ -1,9 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import { db, storage } from "../../lib/firebaseConfig";
-import { collection, addDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Toast from "../../components/Toast";
+import { createProduct, uploadProductImage } from "../../lib/products";
 
 const AddProductForm = ({ onProductAdded }) => {
   const [productName, setProductName] = useState("");
@@ -22,23 +20,17 @@ const AddProductForm = ({ onProductAdded }) => {
     setLoading(true);
 
     try {
-      // Ensure a file is selected
       if (!productImage) {
         showToast("Please select an image file");
         setLoading(false);
         return;
       }
 
-      // Upload the image to Firebase Storage
-      const imageRef = ref(storage, `products/${productImage.name}`);
-      const snapshot = await uploadBytes(imageRef, productImage);
-      const imageUrl = await getDownloadURL(snapshot.ref);
-
-      // Add product details to Firestore
-      await addDoc(collection(db, "ShoeSafariProducts"), {
+      const imageUrl = await uploadProductImage(productImage);
+      await createProduct({
         name: productName,
         price: parseFloat(productPrice),
-        img: imageUrl, // Save image URL to Firestore
+        img: imageUrl,
       });
 
       showToast("Product added successfully!");
@@ -54,8 +46,8 @@ const AddProductForm = ({ onProductAdded }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-lg border border-red-500">
-      <h1 className="text-3xl font-bold mb-6 text-center text-red-500">
+    <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-lg border border-purple-500">
+      <h1 className="text-3xl font-bold mb-6 text-center text-purple-500">
         Add New Product
       </h1>
       <form onSubmit={handleSubmit}>
@@ -65,7 +57,7 @@ const AddProductForm = ({ onProductAdded }) => {
           </label>
           <input
             type="text"
-            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
             required
@@ -77,7 +69,7 @@ const AddProductForm = ({ onProductAdded }) => {
           </label>
           <input
             type="number"
-            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productPrice}
             onChange={(e) => setProductPrice(e.target.value)}
             required
@@ -89,14 +81,15 @@ const AddProductForm = ({ onProductAdded }) => {
           </label>
           <input
             type="file"
-            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            accept="image/*"
+            className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             onChange={(e) => setProductImage(e.target.files[0])}
             required
           />
         </div>
         <button
           type="submit"
-          className={`w-full py-3 mt-4 text-white font-bold bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+          className={`w-full py-3 mt-4 text-white font-bold bg-purple-500 rounded-md hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
             loading && "opacity-50 cursor-not-allowed"
           }`}
           disabled={loading}

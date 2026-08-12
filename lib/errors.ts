@@ -2,7 +2,7 @@
  * Error Handling Utilities
  *
  * Provides user-friendly error messages and error classification
- * for the ShoeSafari application.
+ * for the Mova Store application.
  */
 
 // =============================================================================
@@ -181,11 +181,11 @@ const STELLAR_ERRORS: Record<string, AppError> = {
 };
 
 // =============================================================================
-// Firebase Error Messages
+// Auth Error Messages (Supabase)
 // =============================================================================
 
-const FIREBASE_ERRORS: Record<string, AppError> = {
-  "auth/email-already-in-use": {
+const AUTH_ERRORS: Record<string, AppError> = {
+  "User already registered": {
     code: "AUTH_EMAIL_EXISTS",
     message: "Email already in use",
     userMessage: "This email is already registered. Try logging in instead.",
@@ -193,47 +193,32 @@ const FIREBASE_ERRORS: Record<string, AppError> = {
     recoverable: true,
     action: "Login",
   },
-  "auth/invalid-email": {
-    code: "AUTH_INVALID_EMAIL",
-    message: "Invalid email",
-    userMessage: "Please enter a valid email address.",
+  "Invalid login credentials": {
+    code: "AUTH_INVALID_CREDENTIALS",
+    message: "Invalid credentials",
+    userMessage: "Incorrect email or password. Please try again.",
     severity: "error",
     recoverable: true,
   },
-  "auth/weak-password": {
+  "Email not confirmed": {
+    code: "AUTH_EMAIL_NOT_CONFIRMED",
+    message: "Email not confirmed",
+    userMessage: "Please confirm your email before signing in.",
+    severity: "warning",
+    recoverable: true,
+  },
+  "Password should be at least 6 characters": {
     code: "AUTH_WEAK_PASSWORD",
     message: "Weak password",
     userMessage: "Please choose a stronger password (at least 6 characters).",
     severity: "warning",
     recoverable: true,
   },
-  "auth/user-not-found": {
-    code: "AUTH_USER_NOT_FOUND",
-    message: "User not found",
-    userMessage: "No account found with this email. Would you like to create one?",
-    severity: "warning",
-    recoverable: true,
-    action: "Sign up",
-  },
-  "auth/wrong-password": {
-    code: "AUTH_WRONG_PASSWORD",
-    message: "Wrong password",
-    userMessage: "Incorrect password. Please try again.",
+  "Unable to validate email address: invalid format": {
+    code: "AUTH_INVALID_EMAIL",
+    message: "Invalid email",
+    userMessage: "Please enter a valid email address.",
     severity: "error",
-    recoverable: true,
-  },
-  "auth/too-many-requests": {
-    code: "AUTH_TOO_MANY_REQUESTS",
-    message: "Too many attempts",
-    userMessage: "Too many failed attempts. Please wait a moment before trying again.",
-    severity: "warning",
-    recoverable: true,
-  },
-  "auth/popup-closed-by-user": {
-    code: "AUTH_POPUP_CLOSED",
-    message: "Popup closed",
-    userMessage: "Sign-in was cancelled. Click the button to try again.",
-    severity: "info",
     recoverable: true,
   },
 };
@@ -310,10 +295,10 @@ export function parseError(error: unknown): AppError {
 
   // Handle Error objects
   if (error instanceof Error) {
-    // Check for Firebase errors
-    const firebaseCode = (error as { code?: string }).code;
-    if (firebaseCode && FIREBASE_ERRORS[firebaseCode]) {
-      return FIREBASE_ERRORS[firebaseCode];
+    // Check for auth errors
+    const authCode = (error as { code?: string }).code;
+    if (authCode && AUTH_ERRORS[authCode]) {
+      return AUTH_ERRORS[authCode];
     }
 
     return parseErrorMessage(error.message);
@@ -360,9 +345,9 @@ function parseErrorMessage(message: string): AppError {
     return STELLAR_ERRORS.WalletNotInstalled;
   }
 
-  // Check Firebase errors
-  for (const appError of Object.values(FIREBASE_ERRORS)) {
-    if (lowerMessage.includes(appError.code.toLowerCase())) {
+  // Check auth errors by message
+  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
+    if (lowerMessage.includes(key.toLowerCase()) || lowerMessage.includes(appError.code.toLowerCase())) {
       return appError;
     }
   }

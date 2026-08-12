@@ -33,8 +33,8 @@ export default function SkipLink({
         sr-only focus:not-sr-only
         focus:fixed focus:top-4 focus:left-4 focus:z-[100]
         focus:px-4 focus:py-2 focus:rounded-lg
-        focus:bg-red-600 focus:text-white focus:font-medium
-        focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2
+        focus:bg-purple-600 focus:text-white focus:font-medium
+        focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
         transition-transform
       "
     >
@@ -63,8 +63,8 @@ export function SkipLinks({
               className="
                 sr-only focus:not-sr-only
                 focus:block focus:px-4 focus:py-2 focus:rounded-lg
-                focus:bg-red-600 focus:text-white focus:font-medium
-                focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2
+                focus:bg-purple-600 focus:text-white focus:font-medium
+                focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
               "
             >
               {link.label}

@@ -1,10 +1,10 @@
 <div align="center">
 
-# ShoeSafari — Stellar Storefront Reference Architecture
+# Mova Store — Stellar Storefront Reference Architecture
 
 **An open-source retail storefront built on the Stellar network**
 
-[![CI](https://github.com/ShoeSafari-Hub/ShoeSafari/actions/workflows/ci.yml/badge.svg)](https://github.com/ShoeSafari-Hub/ShoeSafari/actions/workflows/ci.yml)
+[![CI](https://github.com/Movalabs-crew/mova-store/actions/workflows/ci.yml/badge.svg)](https://github.com/Movalabs-crew/mova-store/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![Stellar](https://img.shields.io/badge/Stellar-Soroban-%237b2ff7?logo=stellar)](https://developers.stellar.org)
@@ -13,7 +13,7 @@
 
 </div>
 
-ShoeSafari is a **reference-architecture e-commerce storefront** that shows how a
+Mova Store is a **reference-architecture e-commerce storefront** that shows how a
 production-style online store can accept **Stellar (Soroban) payments** — USDC
 or native XLM paid directly from a customer's Freighter wallet into a **Rust
 smart contract** that escrows the funds until the order ships.
@@ -172,7 +172,7 @@ display receipts and finish orders.
 A clean split between **frontend**, **contracts**, and **config**:
 
 ```
-shoesafari/
+mova-store/
 ├── app/                            # Frontend — Next.js App Router
 │   ├── (landingpage)/              #   landing sections (Hero, Stellar, AboutUs…)
 │   ├── checkout/page.tsx           #   checkout with the Stellar/USDC stage
@@ -217,7 +217,7 @@ shoesafari/
 
 | Layer       | Technology                                             |
 | ----------- | ------------------------------------------------------ |
-| Frontend    | Next.js 14 (App Router), React, Tailwind CSS, Firebase |
+| Frontend    | Next.js 14 (App Router), React, Tailwind CSS, Supabase |
 | Payments    | `@stellar/stellar-sdk` 16, `@stellar/freighter-api` 6  |
 | Smart chain | Rust, Soroban SDK 27, Stellar CLI                      |
 | Currency    | USDC + native XLM via the Stellar Asset Contract (7 decimals) |
@@ -249,8 +249,8 @@ stellar --version   # latest
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/ShoeSafari-Hub/ShoeSafari.git
-cd ShoeSafari
+git clone https://github.com/Movalabs-crew/mova-store.git
+cd mova-store
 ```
 
 ### 2. Install dependencies
@@ -268,7 +268,7 @@ cp .env.local.example .env.local
 ```
 
 A minimal Stellar-only configuration (the rest of the app runs with the existing
-Firebase/Mongo values you already use):
+A minimal Stellar-only configuration (fill Supabase values for auth/catalog):
 
 ```bash
 # --- Stellar / Soroban payments ---
@@ -318,7 +318,7 @@ stellar contract build
 
 `stellar contract build` compiles with Cargo and **optimizes the wasm by
 default**. The artifact is written to
-`contracts/checkout/target/wasm32v1-none/release/shoesafari_checkout.wasm`.
+`contracts/checkout/target/wasm32v1-none/release/movastore_checkout.wasm`.
 
 Alternatively, the manual Cargo route (optimize with a newer CLI's
 `stellar contract build --optimize`, or the legacy
@@ -359,7 +359,7 @@ stellar keys generate alice --network testnet --fund
 
 ```bash
 stellar contract deploy \
-  --wasm contracts/checkout/target/wasm32v1-none/release/shoesafari_checkout.wasm \
+  --wasm contracts/checkout/target/wasm32v1-none/release/movastore_checkout.wasm \
   --source-account alice \
   --network testnet
 ```
@@ -470,8 +470,9 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 | `NEXT_PUBLIC_USDC_CONTRACT_ID`        | no       | USDC token contract (testnet default)     |
 | `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`| no       | Native XLM SAC (verified testnet default) |
 | `PUBLIC_MERCHANT_ADDRESS`             | no       | Display-only merchant wallet (on-chain value is authoritative) |
-| `NEXT_PUBLIC_FIREBASE_*`              | yes      | Firebase config (existing storefront)     |
-| `MONGO_DB_URI`                        | yes      | Mongo URI (existing storefront)           |
+| `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Supabase project URL                      |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | yes      | Supabase anon/public key                  |
+| `NEXT_PUBLIC_ADMIN_EMAILS`            | no       | Comma-separated admin emails              |
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
 

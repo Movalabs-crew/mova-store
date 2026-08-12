@@ -1,5 +1,5 @@
 [package]
-name = "shoesafari-checkout"
+name = "movastore-checkout"
 version = "0.1.0"
 edition = "2021"
 publish = false

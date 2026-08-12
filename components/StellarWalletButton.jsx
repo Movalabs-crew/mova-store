@@ -62,7 +62,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
           type="button"
           onClick={handleConnect}
           disabled={loading}
-          className="w-full flex justify-center items-center gap-2 border-2 border-red-600 text-red-600 bg-white py-2 rounded hover:bg-red-50 transition-colors disabled:opacity-60"
+          className="w-full flex justify-center items-center gap-2 border-2 border-purple-600 text-purple-600 bg-white py-2 rounded hover:bg-purple-50 transition-colors disabled:opacity-60"
         >
           {loading ? (
             <span className="animate-pulse">Connecting…</span>
@@ -86,13 +86,13 @@ const StellarWalletButton = ({ onConnect = null }) => {
           <button
             type="button"
             onClick={handleDisconnect}
-            className="text-xs text-gray-500 hover:text-red-600 transition-colors"
+            className="text-xs text-gray-500 hover:text-purple-600 transition-colors"
           >
             Disconnect
           </button>
         </div>
       )}
-      {error && <span className="text-xs text-red-600 text-center">{error}</span>}
+      {error && <span className="text-xs text-purple-600 text-center">{error}</span>}
     </div>
   );
 };

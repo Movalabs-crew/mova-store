@@ -79,7 +79,7 @@ const Checkout = () => {
       await sendMail({
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
-        message: `You are about to checkout your cart on ShoeSafari. Your OTP is: ${otp}`,
+        message: `You are about to checkout your cart on Mova Store. Your OTP is: ${otp}`,
         recipientEmail: formData.email,
         subject: formData.subject,
       });
@@ -133,39 +133,39 @@ const Checkout = () => {
     <>
       <div className="flex justify-center items-center space-x-2 my-4 sm:mx-0 mx-4 mt-16">
         <span
-          className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-red-700 rounded-full ${
-            stage >= 1 ? "bg-red-700 text-white" : "bg-white"
+          className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-purple-700 rounded-full ${
+            stage >= 1 ? "bg-purple-700 text-white" : "bg-white"
           }`}
         >
           1
         </span>
         <span
           className={`w-20 h-1 sm:w-96 ${
-            stage >= 2 ? "bg-red-700" : "bg-gray-200"
+            stage >= 2 ? "bg-purple-700" : "bg-gray-200"
           }`}
         ></span>
         <span
-          className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-red-700 rounded-full ${
-            stage >= 2 ? "bg-red-700 text-white" : "bg-white"
+          className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-purple-700 rounded-full ${
+            stage >= 2 ? "bg-purple-700 text-white" : "bg-white"
           }`}
         >
           2
         </span>
         <span
           className={`w-20 h-1 sm:w-96 ${
-            stage >= 3 ? "bg-red-700" : "bg-gray-200"
+            stage >= 3 ? "bg-purple-700" : "bg-gray-200"
           }`}
         ></span>
         <span
-          className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-red-700 rounded-full ${
-            stage >= 3 ? "bg-red-700 text-white" : "bg-white"
+          className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-purple-700 rounded-full ${
+            stage >= 3 ? "bg-purple-700 text-white" : "bg-white"
           }`}
         >
           3
         </span>
       </div>
 
-      <div className="container mx-auto px-4 py-4 my-10 w-full bg-red-400 rounded-md border-2 border-red-700">
+      <div className="container mx-auto px-4 py-4 my-10 w-full bg-purple-400 rounded-md border-2 border-purple-700">
         <div className="flex flex-wrap -mx-4">
           <div className="w-full md:w-1/2 px-4 mb-4 md:mb-0 p-4 rounded-md grid grid-cols-3 justify-center items-center">
             <FaCcVisa size={70} />
@@ -310,7 +310,7 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full flex justify-center items-center bg-red-500 text-white py-2 rounded hover:bg-red-700 transition-colors"
+                  className="w-full flex justify-center items-center bg-purple-500 text-white py-2 rounded hover:bg-purple-700 transition-colors"
                 >
                   {isSubmitting ? (
                     <>
@@ -328,7 +328,7 @@ const Checkout = () => {
                 <div className="flex items-center gap-3">
                   <span className="h-px flex-1 bg-gray-300" />
                   <span className="text-xs uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                    <SiStellar size={16} className="text-red-600" />
+                    <SiStellar size={16} className="text-purple-600" />
                     or pay with Stellar (USDC)
                   </span>
                   <span className="h-px flex-1 bg-gray-300" />
@@ -371,7 +371,7 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-red-500 text-white flex justify-center items-center py-2 rounded hover:bg-red-700 transition-colors"
+                  className="w-full bg-purple-500 text-white flex justify-center items-center py-2 rounded hover:bg-purple-700 transition-colors"
                 >
                   {isOtpSending ? (
                     <>
@@ -403,7 +403,7 @@ const Checkout = () => {
                 </span>
                 <Link
                   href="/shop"
-                  className="text-center mt-8 py-2 bg-red-700 hover:bg-red-500 rounded-md px-2"
+                  className="text-center mt-8 py-2 bg-purple-700 hover:bg-purple-500 rounded-md px-2"
                 >
                   Back to Shop
                 </Link>

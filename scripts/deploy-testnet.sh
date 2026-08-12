@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deploy the ShoeSafari checkout contract to Stellar testnet and initialize it.
+# Deploy the Mova Store checkout contract to Stellar testnet and initialize it.
 #
 # Requires:
 #   - Rust + wasm32v1-none target  (rustup target add wasm32v1-none)
@@ -25,7 +25,7 @@ MERCHANT="${1:-$(stellar keys address "${SOURCE_ACCOUNT}")}"
 echo "==> Building contract (wasm32v1-none)…"
 (cd "${CONTRACT_DIR}" && cargo build --target wasm32v1-none --release)
 
-WASM="${CONTRACT_DIR}/target/wasm32v1-none/release/shoesafari_checkout.wasm"
+WASM="${CONTRACT_DIR}/target/wasm32v1-none/release/movastore_checkout.wasm"
 if [[ ! -f "${WASM}" ]]; then
   echo "error: ${WASM} not found. Is your toolchain configured for wasm32v1-none?" >&2
   exit 1
@@ -36,7 +36,7 @@ CONTRACT_ID=$(stellar contract deploy \
   --wasm "${WASM}" \
   --source-account "${SOURCE_ACCOUNT}" \
   --network "${NETWORK}" \
-  --alias shoesafari_checkout)
+  --alias movastore_checkout)
 echo "    contract id: ${CONTRACT_ID}"
 
 echo "==> Initializing with merchant ${MERCHANT}…"

@@ -25,14 +25,9 @@ export interface EmailJSConfig {
   defaultRecipientEmail?: string;
 }
 
-export interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId?: string;
-  appId: string;
-  measurementId?: string;
+export interface SupabaseConfig {
+  url: string;
+  anonKey: string;
 }
 
 export interface AdminConfig {
@@ -42,7 +37,7 @@ export interface AdminConfig {
 export interface EnvConfig {
   stellar: StellarConfig;
   emailjs: EmailJSConfig;
-  firebase: FirebaseConfig;
+  supabase: SupabaseConfig;
   admin: AdminConfig;
 }
 
@@ -168,35 +163,22 @@ export function loadEmailJSConfig(
 }
 
 /**
- * Loads and validates Firebase configuration.
+ * Loads and validates Supabase configuration.
  */
-export function loadFirebaseConfig(
+export function loadSupabaseConfig(
   errors: ValidationError[] = []
-): FirebaseConfig {
+): SupabaseConfig {
   return {
-    apiKey: requireEnv(
-      "NEXT_PUBLIC_FIREBASE_API_KEY",
+    url: requireEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
       errors,
-      "Firebase authentication"
+      "Supabase"
     ),
-    authDomain: requireEnv(
-      "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    anonKey: requireEnv(
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       errors,
-      "Firebase authentication"
+      "Supabase"
     ),
-    projectId: requireEnv(
-      "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-      errors,
-      "Firebase database"
-    ),
-    storageBucket: requireEnv(
-      "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-      errors,
-      "Firebase storage"
-    ),
-    messagingSenderId: getEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
-    appId: requireEnv("NEXT_PUBLIC_FIREBASE_APP_ID", errors, "Firebase app"),
-    measurementId: getEnv("NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID"),
   };
 }
 
@@ -226,7 +208,7 @@ export function validateEnv(): EnvConfig {
 
   const stellar = loadStellarConfig(errors);
   const emailjs = loadEmailJSConfig(errors);
-  const firebase = loadFirebaseConfig(errors);
+  const supabase = loadSupabaseConfig(errors);
   const admin = loadAdminConfig();
 
   if (errors.length > 0) {
@@ -237,7 +219,7 @@ export function validateEnv(): EnvConfig {
     );
   }
 
-  return { stellar, emailjs, firebase, admin };
+  return { stellar, emailjs, supabase, admin };
 }
 
 /**

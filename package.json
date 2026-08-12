@@ -1,12 +1,12 @@
 {
-  "name": "shoesafari",
+  "name": "mova-store",
   "version": "1.0.0",
-  "description": "E-commerce platform with Stellar blockchain payments - showcasing crypto integration in web commerce",
+  "description": "Mova Store — e-commerce with Stellar blockchain payments",
   "private": false,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ShoeSafari-Hub/ShoeSafari.git"
+    "url": "https://github.com/Movalabs-crew/mova-store.git"
   },
   "keywords": [
     "ecommerce",
@@ -31,17 +31,15 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "deploy:testnet": "./scripts/deploy-testnet.sh",
-    "prepare": "echo 'ShoeSafari ready!'"
+    "prepare": "echo 'Mova Store ready!'"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^16.2.0",
+    "@supabase/supabase-js": "^2.112.3",
     "@vercel/og": "^0.6.2",
-    "firebase": "^10.12.4",
     "fs": "^0.0.1-security",
-    "mongodb": "^6.8.0",
-    "mongoose": "^8.5.1",
     "next": "14.2.5",
     "next-auth": "^4.24.7",
     "nextjs-toploader": "^1.6.12",

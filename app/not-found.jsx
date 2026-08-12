@@ -7,7 +7,7 @@ const Custom404 = () => {
       <div className="flex flex-col items-center">
         <Link
           href="/"
-          className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition mt-80"
+          className="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition mt-80"
         >
           Go to Homepage
         </Link>

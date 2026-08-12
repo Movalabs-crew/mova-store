@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for ShoeSafari development and production.
+Common issues and solutions for Mova Store development and production.
 
 ## Table of Contents
 
@@ -47,15 +47,16 @@ Common issues and solutions for ShoeSafari development and production.
 3. Verify variable names start with `NEXT_PUBLIC_` for client-side access
 4. Check for typos in variable names
 
-### Firebase connection errors
+### Supabase connection errors
 
-**Symptoms:** "Firebase: Error" messages in console
+**Symptoms:** Auth failures, empty shop, or "Invalid API key" in console
 
 **Solutions:**
-1. Verify Firebase config in `.env.local`
-2. Check Firebase project exists and is active
-3. Ensure Firestore rules allow read/write
-4. Check Firebase API key restrictions
+1. Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
+2. Confirm the Supabase project is active
+3. Run `supabase/schema.sql` in the SQL editor
+4. Enable Email and/or Google providers under Authentication → Providers
+5. Add `http://localhost:3000/**` to Auth → URL Configuration → Redirect URLs
 
 ---
 
@@ -172,10 +173,10 @@ Common issues and solutions for ShoeSafari development and production.
 **Symptoms:** Admin panel shows loading or empty
 
 **Solutions:**
-1. Check Firestore rules allow read access
-2. Verify `ShoeSafariProducts` collection exists
-3. Check browser console for Firebase errors
-4. Ensure Firebase Storage has images
+1. Check RLS policies allow read access on `products`
+2. Verify the `products` table exists (run `supabase/schema.sql`)
+3. Check browser console for Supabase errors
+4. Ensure the `products` storage bucket is public
 
 ### Can't dispatch/refund orders
 
@@ -267,10 +268,10 @@ Common issues and solutions for ShoeSafari development and production.
 **Symptoms:** Product images 404 or broken
 
 **Solutions:**
-1. Check Firebase Storage CORS settings
-2. Verify storage bucket name in env vars
-3. Ensure images are uploaded to correct paths
-4. Check Firebase Storage security rules
+1. Check Supabase Storage public bucket settings for `products`
+2. Verify `NEXT_PUBLIC_SUPABASE_URL` matches your project
+3. Confirm image URLs use `/storage/v1/object/public/products/...`
+4. Check storage RLS policies for the `products` bucket
 
 ---
 
@@ -278,7 +279,7 @@ Common issues and solutions for ShoeSafari development and production.
 
 If you can't resolve an issue:
 
-1. **Search existing issues:** [GitHub Issues](https://github.com/yourusername/shoesafari/issues)
+1. **Search existing issues:** [GitHub Issues](https://github.com/yourusername/mova-store/issues)
 2. **Check Stellar docs:** [developers.stellar.org](https://developers.stellar.org)
 3. **Ask in Discord:** [Stellar Discord](https://discord.gg/stellar)
 4. **Open a new issue** with:
@@ -295,7 +296,7 @@ Enable verbose logging:
 
 ```javascript
 // In browser console
-localStorage.setItem('debug', 'shoesafari:*');
+localStorage.setItem('debug', 'mova-store:*');
 ```
 
 Check Stellar transaction details:

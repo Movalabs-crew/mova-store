@@ -32,8 +32,8 @@ const faqs = [
     answer: "Stellar transaction fees are typically 0.00001 XLM (a tiny fraction of a cent). Compare that to 2-3% credit card fees. You keep more of your money.",
   },
   {
-    question: "Is ShoeSafari open source?",
-    answer: "Yes! ShoeSafari is fully open source. Developers can fork our code to add Stellar payments to their own stores. Check out our GitHub repository to see how it's built.",
+    question: "Is Mova Store open source?",
+    answer: "Yes! Mova Store is fully open source. Developers can fork our code to add Stellar payments to their own stores. Check out our GitHub repository to see how it's built.",
   },
 ];
 
@@ -48,7 +48,7 @@ export default function FAQ() {
     <section className="bg-white py-20 px-4 md:px-10">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-14">
-          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-3">
+          <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-3">
             FAQ
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -98,7 +98,7 @@ export default function FAQ() {
           </p>
           <a
             href="#contact"
-            className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-semibold"
+            className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold"
           >
             Contact our team
             <span aria-hidden>→</span>

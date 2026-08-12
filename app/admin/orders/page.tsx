@@ -45,8 +45,8 @@ const StatusBadge = ({ status }: { status: OrderStatus }) => {
       icon: <MdLocalShipping className="mr-1" />,
     },
     Refunded: {
-      bg: "bg-red-100",
-      text: "text-red-800",
+      bg: "bg-purple-100",
+      text: "text-purple-800",
       icon: <MdCancel className="mr-1" />,
     },
     Unknown: {
@@ -153,7 +153,7 @@ const OrderRow = ({
             <button
               onClick={() => onRefund(order.orderId)}
               disabled={isProcessing}
-              className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
             >
               {isProcessing ? (
                 <AiOutlineLoading3Quarters className="animate-spin" />
@@ -335,19 +335,19 @@ const OrdersManagementContent = () => {
 
       {/* Network Info */}
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
-        <SiStellar className="text-red-600 text-xl" />
+        <SiStellar className="text-purple-600 text-xl" />
         <div>
-          <span className="font-medium text-red-800">
+          <span className="font-medium text-purple-800">
             Stellar {NETWORK.toUpperCase()}
           </span>
-          <span className="text-red-600 ml-2 text-sm">
+          <span className="text-purple-600 ml-2 text-sm">
             Contract: {truncateAddress(CHECKOUT_CONTRACT_ID)}
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-2 text-sm text-red-600">
+        <div className="ml-auto flex items-center gap-2 text-sm text-purple-600">
           <span
             className={`w-2 h-2 rounded-full ${
-              indexerStatus.running ? "bg-green-500" : "bg-red-500"
+              indexerStatus.running ? "bg-green-500" : "bg-purple-500"
             }`}
           />
           {indexerStatus.eventsSeen} events indexed
@@ -396,10 +396,10 @@ const OrdersManagementContent = () => {
           </div>
         </div>
         <div className="bg-red-50 rounded-lg shadow p-4">
-          <div className="text-red-600 text-sm flex items-center gap-1">
+          <div className="text-purple-600 text-sm flex items-center gap-1">
             <MdCancel /> Refunded
           </div>
-          <div className="text-2xl font-bold text-red-800">
+          <div className="text-2xl font-bold text-purple-800">
             {stats.refunded}
           </div>
         </div>
@@ -493,7 +493,7 @@ const OrdersManagementContent = () => {
             </span>
           </li>
           <li className="flex items-start gap-2">
-            <MdCancel className="text-red-500 mt-0.5" />
+            <MdCancel className="text-purple-500 mt-0.5" />
             <span>
               <strong>Refund:</strong> Return the escrowed funds to the
               customer's wallet (e.g., if item is out of stock)

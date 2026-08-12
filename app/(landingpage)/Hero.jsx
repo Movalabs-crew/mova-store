@@ -28,23 +28,24 @@ export default function Hero() {
 
   return (
     <>
-      <section className="bg-custom-image bg-cover bg-center h-screen relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/60" />
-        <div className="relative flex flex-col items-center justify-center h-full px-6 text-center">
-          <p className="text-sm uppercase tracking-widest text-red-300 mb-4">
-            Quality footwear · Powered by Stellar payments
+      <section className="relative h-screen overflow-hidden bg-mova-hero bg-cover bg-center">
+        <div className="absolute inset-0 bg-mova-mesh mova-drift opacity-70" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-b from-mova-deep/80 via-mova-violet/45 to-mova-ink/75" />
+
+        <div className="relative flex h-full flex-col items-center justify-center px-6 text-center">
+          <p className="mova-fade-up font-display text-5xl font-extrabold tracking-tight text-white sm:text-7xl md:text-8xl">
+            Mova Store
           </p>
-          <h1 className="text-5xl sm:text-6xl font-extrabold text-white">
-            Walk Taller. Pay Smarter.
+          <h1 className="mova-fade-up-delay mt-5 max-w-2xl font-display text-2xl font-semibold text-mova-soft sm:text-3xl">
+            Move in style. Pay on Stellar.
           </h1>
-          <p className="text-lg sm:text-xl text-white mt-6 max-w-2xl">
-            Hand-picked sneakers, boots, and everyday staples — with a checkout
-            that takes cards or USDC on Stellar. See how crypto payments work
-            in real e-commerce.
+          <p className="mova-fade-up-delay-2 mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+            Curated footwear with a checkout that takes cards or USDC — escrowed
+            on-chain until your order ships.
           </p>
-          <div className="flex gap-6 mt-10">
+          <div className="mova-fade-up-delay-2 mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
-              className="bg-red-700 hover:bg-red-600 text-white rounded-md px-6 py-3"
+              className="rounded-md bg-purple-600 px-7 py-3 font-semibold text-white shadow-mova transition hover:bg-purple-500"
               href={user ? "/shop" : "#"}
               onClick={(e) => handleProtectedLinkClick(e, "/shop")}
             >
@@ -52,9 +53,9 @@ export default function Hero() {
             </Link>
             <Link
               href="#stellar"
-              className="border border-white/70 hover:bg-red-600 hover:border-red-600 text-white rounded-md px-6 py-3"
+              className="rounded-md border border-white/60 px-7 py-3 font-semibold text-white transition hover:border-purple-300 hover:bg-purple-600/40"
             >
-              How Stellar Works
+              Pay with Stellar
             </Link>
           </div>
         </div>

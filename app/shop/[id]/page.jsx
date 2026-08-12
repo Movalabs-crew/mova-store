@@ -6,8 +6,7 @@ import { useCart } from "../../../context/CartContext";
 import Modal from "../../../components/Modal";
 import Toast from "../../../components/Toast";
 import Cart from "../../../components/Cart";
-import { db } from "../../../lib/firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
+import { getProductById } from "../../../lib/products";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const ProductPage = ({ params }) => {
@@ -23,11 +22,9 @@ const ProductPage = ({ params }) => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const docRef = doc(db, "ShoeSafariProducts", id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setProduct({ id: docSnap.id, ...docSnap.data() });
+        const data = await getProductById(id);
+        if (data) {
+          setProduct(data);
         } else {
           setError("Product not found");
         }
@@ -67,7 +64,7 @@ const ProductPage = ({ params }) => {
         {loading && <LoadingSpinner />}
         {error && (
           <div className="flex flex-col items-center justify-center my-32">
-            <h1 className="text-2xl font-bold text-red-700">Error: {error}</h1>
+            <h1 className="text-2xl font-bold text-purple-700">Error: {error}</h1>
           </div>
         )}
         {!loading && !error && product && (
@@ -82,7 +79,7 @@ const ProductPage = ({ params }) => {
             <div className="flex space-x-4 items-center my-4">
               <h2 className="text-4xl">${product.price}</h2>
               <button
-                className="flex border border-red-800 rounded-md px-4 py-2 justify-between items-center hover:bg-red-700"
+                className="flex border border-purple-800 rounded-md px-4 py-2 justify-between items-center hover:bg-purple-700"
                 onClick={() => {
                   addToCart(product);
                   showToast("Item added to cart");
@@ -123,7 +120,7 @@ const ProductPage = ({ params }) => {
                 <span className="ml-4">{item.name}</span>
                 <span className="ml-4">${item.price}</span>
                 <button
-                  className="ml-4 bg-red-500 text-white px-2 py-1 rounded"
+                  className="ml-4 bg-purple-500 text-white px-2 py-1 rounded"
                   onClick={() => removeFromCart(item)}
                 >
                   Remove
@@ -144,7 +141,7 @@ const ProductPage = ({ params }) => {
           {cartItems.length > 0 && (
             <button
               onClick={handleCheckout}
-              className="bg-red-500 text-white px-4 py-1 rounded mt-4"
+              className="bg-purple-500 text-white px-4 py-1 rounded mt-4"
             >
               Checkout
             </button>

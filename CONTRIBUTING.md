@@ -1,6 +1,6 @@
-# Contributing to ShoeSafari
+# Contributing to Mova Store
 
-First off — thank you for considering a contribution. ShoeSafari is an
+First off — thank you for considering a contribution. Mova Store is an
 open-source, reference-architecture storefront on the Stellar network, and the
 project lives or dies by community contributions like yours.
 

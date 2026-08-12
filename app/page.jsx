@@ -22,7 +22,7 @@ export default function FirstPage() {
       <Carousel />
       <Catalogue />
 
-      {/* Why ShoeSafari */}
+      {/* Why Mova Store */}
       <Catalogue2 />
 
       {/* Stellar Payment Section */}

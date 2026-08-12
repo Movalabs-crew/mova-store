@@ -38,10 +38,10 @@ export default function ShopByCategory() {
     <section className="bg-white py-16 px-4 md:px-10">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-2">
+          <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-2">
             Shop by category
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">
             The right pair for every part of your day
           </h2>
           <p className="text-gray-600 mt-4">

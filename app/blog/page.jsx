@@ -52,9 +52,9 @@ const posts = [
 export default function Blog() {
   return (
     <div className="bg-gray-100 ">
-      <header className="bg-red-700 text-white py-6 px-4 text-center mt-16">
-        <h1 className="text-3xl font-bold">ShoeSafari Blog</h1>
-        <p className="mt-2 text-lg">Insights and Tips for Shoe Enthusiasts</p>
+      <header className="bg-gradient-to-r from-mova-deep via-purple-700 to-purple-600 text-white py-10 px-4 text-center mt-16">
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Mova Store Blog</h1>
+        <p className="mt-2 text-lg text-purple-100">Insights and tips for shoe enthusiasts</p>
       </header>
 
       <main className="py-12 px-4">
@@ -76,7 +76,7 @@ export default function Blog() {
                   <h2 className="text-2xl font-semibold mb-2">{post.title}</h2>
                   <p className="text-gray-600 mb-4">{post.excerpt}</p>
                   <Link href={`/blog/${post.id}`}
-                className="text-red-700 hover:text-red-500 font-semibold">
+                className="text-purple-700 hover:text-purple-500 font-semibold">
                       Read More
              
                   </Link>

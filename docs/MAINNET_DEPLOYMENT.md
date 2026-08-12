@@ -1,6 +1,6 @@
 # Mainnet Deployment Guide
 
-This guide walks you through deploying ShoeSafari to the Stellar mainnet for production use.
+This guide walks you through deploying Mova Store to the Stellar mainnet for production use.
 
 > **Warning:** Mainnet transactions use real funds. Triple-check all addresses and amounts before submitting transactions.
 
@@ -50,7 +50,7 @@ cd contracts/checkout
 stellar contract build
 
 # The optimized wasm is at:
-# target/wasm32-unknown-unknown/release/shoesafari_checkout.wasm
+# target/wasm32-unknown-unknown/release/movastore_checkout.wasm
 ```
 
 ### Verify the Build
@@ -60,14 +60,14 @@ stellar contract build
 cargo test
 
 # Check the wasm size (should be under 64KB)
-ls -la target/wasm32-unknown-unknown/release/shoesafari_checkout.wasm
+ls -la target/wasm32-unknown-unknown/release/movastore_checkout.wasm
 ```
 
 ## Step 3: Deploy to Mainnet
 
 ```bash
 stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/shoesafari_checkout.wasm \
+  --wasm target/wasm32-unknown-unknown/release/movastore_checkout.wasm \
   --source-account merchant-mainnet \
   --network mainnet
 ```
@@ -258,7 +258,7 @@ stellar contract invoke \
 ## Support
 
 For issues specific to:
-- **ShoeSafari:** Open a GitHub issue
+- **Mova Store:** Open a GitHub issue
 - **Stellar/Soroban:** [Stellar Discord](https://discord.gg/stellar)
 - **Freighter:** [Freighter Support](https://freighter.app)
 

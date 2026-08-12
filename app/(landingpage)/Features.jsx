@@ -35,16 +35,17 @@ const features = [
 
 export default function Features() {
   return (
-    <section className="bg-gray-900 py-20 px-4 md:px-10">
-      <div className="max-w-6xl mx-auto">
+    <section className="relative overflow-hidden bg-mova-ink py-20 px-4 md:px-10">
+      <div className="pointer-events-none absolute inset-0 bg-mova-mesh opacity-40" aria-hidden />
+      <div className="relative max-w-6xl mx-auto">
         <div className="text-center mb-14">
-          <p className="text-sm uppercase tracking-widest text-red-400 font-semibold mb-3">
+          <p className="text-sm uppercase tracking-widest text-mova-soft font-semibold mb-3">
             Why pay with Stellar
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4">
             The future of e-commerce payments
           </h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
+          <p className="text-purple-100/70 max-w-2xl mx-auto">
             Traditional payment rails are slow and expensive. Stellar makes commerce
             faster, cheaper, and more accessible for everyone.
           </p>
@@ -54,15 +55,15 @@ export default function Features() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 hover:border-red-500/50 transition-colors"
+              className="bg-white/5 border border-purple-400/20 rounded-xl p-6 hover:border-purple-400/50 hover:bg-purple-500/10 transition-colors"
             >
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-red-600/20 text-red-400 mb-4">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600/30 text-mova-soft mb-4">
                 <feature.icon size={24} />
               </span>
               <h3 className="font-semibold text-white text-lg mb-2">
                 {feature.title}
               </h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <p className="text-purple-100/60 text-sm leading-relaxed">
                 {feature.description}
               </p>
             </div>

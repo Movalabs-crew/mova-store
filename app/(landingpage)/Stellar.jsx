@@ -4,7 +4,7 @@ import Link from "next/link";
 const steps = [
   {
     title: "Connect your Stellar wallet",
-    text: "Grant ShoeSafari read access via Freighter in one click — no sign-up, no KYC.",
+    text: "Grant Mova Store read access via Freighter in one click — no sign-up, no KYC.",
   },
   {
     title: "Choose USDC at checkout",
@@ -22,14 +22,14 @@ const steps = [
 
 const Stellar = () => {
   return (
-    <section id="stellar" className="bg-gradient-to-r from-red-900 via-red-700 to-red-600 py-16 px-6">
+    <section id="stellar" className="bg-gradient-to-r from-purple-900 via-purple-700 to-purple-600 py-16 px-6">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10">
         <div className="md:w-1/2 text-center md:text-left">
           <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-1.5 mb-5 text-sm font-medium text-white">
             <SiStellar size={16} />
             Crypto checkout, built in
           </div>
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">
+          <h2 className="font-display text-4xl sm:text-5xl font-extrabold text-white mb-4">
             Pay With Stellar
           </h2>
           <p className="text-white/90 text-lg leading-relaxed mb-8">
@@ -65,7 +65,7 @@ const Stellar = () => {
           </ul>
           <Link
             href="/shop"
-            className="inline-block bg-white text-red-700 font-semibold px-6 py-3 rounded-md hover:bg-white/90"
+            className="inline-block bg-white text-purple-700 font-semibold px-6 py-3 rounded-md hover:bg-white/90"
           >
             Shop &amp; Pay with USDC
           </Link>
@@ -78,7 +78,7 @@ const Stellar = () => {
           <ol className="space-y-6">
             {steps.map((step, index) => (
               <li key={index} className="flex gap-4">
-                <span className="h-8 w-8 flex-shrink-0 rounded-full bg-red-700 text-white flex items-center justify-center font-semibold">
+                <span className="h-8 w-8 flex-shrink-0 rounded-full bg-purple-700 text-white flex items-center justify-center font-semibold">
                   {index + 1}
                 </span>
                 <div>

@@ -42,7 +42,7 @@ const AdminGuard = ({ children, redirectTo = "/profile/login" }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-        <AiOutlineLoading3Quarters className="animate-spin text-red-600 text-4xl mb-4" />
+        <AiOutlineLoading3Quarters className="animate-spin text-purple-600 text-4xl mb-4" />
         <p className="text-gray-600">Checking access...</p>
       </div>
     );
@@ -57,7 +57,7 @@ const AdminGuard = ({ children, redirectTo = "/profile/login" }) => {
         <p className="text-gray-600 mb-6">Please log in to access the admin panel.</p>
         <Link
           href={`${redirectTo}?redirect=/admin`}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
         >
           Go to Login
         </Link>
@@ -86,7 +86,7 @@ const AdminGuard = ({ children, redirectTo = "/profile/login" }) => {
           </Link>
           <Link
             href="/shop"
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
           >
             Browse Shop
           </Link>
@@ -103,12 +103,12 @@ const AdminGuard = ({ children, redirectTo = "/profile/login" }) => {
   return (
     <div>
       {/* Admin header bar */}
-      <div className="bg-red-700 text-white px-4 py-2 text-sm flex items-center justify-between">
+      <div className="bg-purple-700 text-white px-4 py-2 text-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MdLock className="text-lg" />
           <span>Admin Panel</span>
         </div>
-        <span className="text-red-200">{user?.email}</span>
+        <span className="text-purple-200">{user?.email}</span>
       </div>
       {children}
     </div>

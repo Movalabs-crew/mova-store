@@ -1,4 +1,5 @@
 import "../styles/global.css";
+import { Syne, Manrope } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import Navbar from "../components/Navbar";
 import ScrollToTop from "../components/ScrollToTop";
@@ -6,22 +7,36 @@ import Whatsapp from "../components/Whatsapp";
 import Footer from "../components/Footer";
 import { AuthProvider } from "../lib/AuthContext";
 import Head from "next/head";
-import logo from "../public/images/favicon.ico"
+import logo from "../public/images/favicon.ico";
+
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-mova-display",
+  display: "swap",
+  weight: ["600", "700", "800"],
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-mova-body",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata = {
-  title: "SHOESAFARI",
-  description: "YOUR OUTFIT & FOOTWEARS",
+  title: "Mova Store",
+  description: "Curated footwear with Stellar crypto checkout",
   openGraph: {
     type: "website",
-    url: "https://shoesafari.vercel.app/",
-    title: "SHOESAFARI",
-    description: "YOUR OUTFIT",
+    url: "https://mova-store.vercel.app/",
+    title: "Mova Store",
+    description: "Curated footwear with Stellar crypto checkout",
     images: [
       {
-        url: "https://shoesafari.vercel.app/images/og-image.png",
+        url: "https://mova-store.vercel.app/images/og-image.png",
         width: 1200,
         height: 630,
-        alt: "SHOESAFARI",
+        alt: "Mova Store",
       },
     ],
   },
@@ -29,7 +44,7 @@ export const metadata = {
 
 const RootLayout = ({ children }) => {
   return (
-    <html lang="en">
+    <html lang="en" className={`${syne.variable} ${manrope.variable}`}>
       <Head>
         <link rel="icon" href={logo} width="300px" type="image/x-icon" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -45,10 +60,9 @@ const RootLayout = ({ children }) => {
           type="image/<generated>"
           sizes="<generated>"
         />
-     
       </Head>
-      <body className="h-full">
-        <NextTopLoader color="#ff0000" showSpinner={false} />
+      <body className="h-full font-body antialiased">
+        <NextTopLoader color="#7c3aed" showSpinner={false} />
 
         <AuthProvider>
           <div className="flex flex-col min-h-screen">

@@ -3,18 +3,53 @@
 @tailwind utilities;
 
 /* =============================================================================
+   Mova Store — Design Tokens
+   ============================================================================= */
+
+:root {
+  --mova-violet: #6d28d9;
+  --mova-violet-deep: #4c1d95;
+  --mova-violet-bright: #8b5cf6;
+  --mova-violet-soft: #c4b5fd;
+  --mova-violet-mist: #ede9fe;
+  --mova-ink: #1e1033;
+  --mova-surface: #f7f4ff;
+  --mova-focus: #7c3aed;
+}
+
+/* =============================================================================
    Base Styles
    ============================================================================= */
 
-html, body {
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
   height: 100%;
+}
+
+body {
+  color: var(--mova-ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(139, 92, 246, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(109, 40, 217, 0.12), transparent 50%),
+    linear-gradient(180deg, #faf8ff 0%, #f3efff 40%, #faf8ff 100%);
+  font-family: var(--font-mova-body), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-mova-display), Georgia, serif;
 }
 
 /* =============================================================================
    Accessibility
    ============================================================================= */
 
-/* Screen reader only - visually hidden but accessible */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -27,7 +62,6 @@ html, body {
   border-width: 0;
 }
 
-/* Remove sr-only when focused (for skip links) */
 .sr-only.focus\:not-sr-only:focus,
 .focus\:not-sr-only:focus {
   position: fixed;
@@ -40,18 +74,15 @@ html, body {
   white-space: normal;
 }
 
-/* Focus styles for keyboard navigation */
 :focus-visible {
-  outline: 2px solid #dc2626;
+  outline: 2px solid var(--mova-focus);
   outline-offset: 2px;
 }
 
-/* Remove focus outline for mouse users */
 :focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -63,7 +94,6 @@ html, body {
   }
 }
 
-/* High contrast mode support */
 @media (prefers-contrast: high) {
   button,
   a {
@@ -72,20 +102,28 @@ html, body {
 }
 
 /* =============================================================================
-   Custom Components
+   Motion
    ============================================================================= */
 
-.custom-image {
-  background-image: url('/images/ShoesafariLandingimage.png');
+@keyframes mova-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.loader {
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #c53030;
-  border-radius: 50%;
-  width: 3rem;
-  height: 3rem;
-  animation: spin 1s linear infinite;
+@keyframes mova-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0) scale(1.03);
+  }
 }
 
 @keyframes spin {
@@ -94,11 +132,43 @@ html, body {
   }
 }
 
+.mova-fade-up {
+  animation: mova-fade-up 0.8s ease-out both;
+}
+
+.mova-fade-up-delay {
+  animation: mova-fade-up 0.9s ease-out 0.15s both;
+}
+
+.mova-fade-up-delay-2 {
+  animation: mova-fade-up 0.9s ease-out 0.3s both;
+}
+
+.mova-drift {
+  animation: mova-drift 18s ease-in-out infinite;
+}
+
+/* =============================================================================
+   Custom Components
+   ============================================================================= */
+
+.custom-image {
+  background-image: url("/images/mova-landing.png");
+}
+
+.loader {
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid var(--mova-violet);
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  animation: spin 1s linear infinite;
+}
+
 /* =============================================================================
    Form Accessibility
    ============================================================================= */
 
-/* Error state for form fields */
 input[aria-invalid="true"],
 textarea[aria-invalid="true"],
 select[aria-invalid="true"] {
@@ -106,7 +176,6 @@ select[aria-invalid="true"] {
   background-color: #fef2f2;
 }
 
-/* Required field indicator */
 label[data-required="true"]::after {
   content: " *";
   color: #dc2626;
@@ -116,7 +185,6 @@ label[data-required="true"]::after {
    Interactive Element States
    ============================================================================= */
 
-/* Disabled state */
 button:disabled,
 input:disabled,
 select:disabled,
@@ -125,9 +193,6 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-/* Loading state */
 [aria-busy="true"] {
   cursor: wait;
 }
-
-

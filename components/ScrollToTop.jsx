@@ -29,7 +29,7 @@ const ScrollToTop = () => {
       {isVisible && (
         <button
           onClick={scrollToTop}
-          className="p-2 rounded-full bg-red-600 text-white shadow-md hover:bg-red-700  transition-all duration-300"
+          className="p-2 rounded-full bg-purple-600 text-white shadow-md hover:bg-purple-700  transition-all duration-300"
         >
           <FaAngleDoubleUp  size={24} className="hover:animate-bounce"/>
         </button>

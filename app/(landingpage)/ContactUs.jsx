@@ -7,19 +7,19 @@ const socialLinks = [
   {
     name: "GitHub",
     icon: FaGithub,
-    href: "https://github.com/ShoeSafari-Hub/ShoeSafari",
+    href: "https://github.com/Movalabs-crew/mova-store",
     description: "View source code",
   },
   {
     name: "Twitter",
     icon: FaTwitter,
-    href: "https://twitter.com/shoesafari",
+    href: "https://twitter.com/movastore",
     description: "Follow for updates",
   },
   {
     name: "Discord",
     icon: FaDiscord,
-    href: "https://discord.gg/shoesafari",
+    href: "https://discord.gg/movastore",
     description: "Join the community",
   },
 ];
@@ -62,7 +62,7 @@ const ContactUs = () => {
   return (
     <div
       id="contact"
-      className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 py-16 px-4"
+      className="bg-gradient-to-r from-mova-deep via-purple-700 to-purple-500 py-16 px-4"
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
@@ -90,7 +90,7 @@ const ContactUs = () => {
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 p-4 bg-white/10 rounded-lg hover:bg-white/20 transition-colors group"
                 >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-red-600">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-purple-600">
                     <link.icon size={24} />
                   </span>
                   <div>
@@ -105,7 +105,7 @@ const ContactUs = () => {
 
             <div className="mt-8 pt-6 border-t border-white/20">
               <p className="text-white/80 text-sm">
-                ShoeSafari is open source. Contributions welcome!
+                Mova Store is open source. Contributions welcome!
               </p>
             </div>
           </div>
@@ -123,7 +123,7 @@ const ContactUs = () => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Your Name"
-              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
             <input
@@ -132,7 +132,7 @@ const ContactUs = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="Your Email"
-              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
             <textarea
@@ -141,13 +141,13 @@ const ContactUs = () => {
               onChange={handleChange}
               placeholder="Your Message"
               rows="4"
-              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
+            className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -188,7 +188,7 @@ const ContactUs = () => {
           {toast.message}
           <button
             onClick={() => setToast({ show: false, message: "" })}
-            className="ml-4 text-red-500"
+            className="ml-4 text-purple-500"
           >
             ✕
           </button>

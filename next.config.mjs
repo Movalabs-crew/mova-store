@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Image optimization
   images: {
     remotePatterns: [
       {
@@ -10,8 +9,8 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "firebasestorage.googleapis.com",
-        pathname: "/**",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
       {
         protocol: "https",
@@ -19,23 +18,15 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
-    // Use modern image formats
     formats: ["image/avif", "image/webp"],
-    // Optimize image sizes
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  // Enable React strict mode for better development experience
   reactStrictMode: true,
-
-  // Compress responses
   compress: true,
-
-  // Power optimization for production
   poweredByHeader: false,
 
-  // Security headers
   async headers() {
     return [
       {
@@ -62,13 +53,11 @@ const nextConfig = {
     ];
   },
 
-  // Experimental features for better performance
   experimental: {
-    // Optimize package imports
     optimizePackageImports: [
       "react-icons",
       "@stellar/stellar-sdk",
-      "firebase",
+      "@supabase/supabase-js",
     ],
   },
 };

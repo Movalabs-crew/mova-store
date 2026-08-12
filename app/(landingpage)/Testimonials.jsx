@@ -34,10 +34,10 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="bg-[#fafafa] py-20 px-4 md:px-10">
+    <section className="bg-mova-surface/60 py-20 px-4 md:px-10">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-14">
-          <p className="text-sm uppercase tracking-widest text-red-700 font-semibold mb-3">
+          <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-3">
             Customer stories
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
@@ -56,7 +56,7 @@ export default function Testimonials() {
               className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start gap-4">
-                <FaQuoteLeft className="text-red-200 text-2xl flex-shrink-0 mt-1" />
+                <FaQuoteLeft className="text-purple-200 text-2xl flex-shrink-0 mt-1" />
                 <div className="flex-1">
                   <p className="text-gray-700 leading-relaxed mb-4">
                     "{testimonial.text}"
