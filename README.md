@@ -476,6 +476,29 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
 
+### Marking admins
+
+Admin rights are enforced in the database, not just in the UI: catalog and
+product-image writes require membership in the `public.admin_emails` table
+(checked by the `public.is_admin()` helper — see `supabase/schema.sql`).
+RLS cannot read env vars, so keep that table in sync with
+`NEXT_PUBLIC_ADMIN_EMAILS` by running this once per admin in the Supabase
+SQL editor:
+
+```sql
+insert into public.admin_emails (email) values ('you@example.com')
+on conflict (email) do nothing;
+
+-- remove an admin just as easily:
+-- delete from public.admin_emails where email = 'you@example.com';
+```
+
+Notes:
+
+- Emails are compared case-insensitively.
+- The signed-in user's email claim must match; make sure email confirmation
+  is enabled in Supabase Auth so the claim belongs to a verified address.
+
 ## Security Notes
 
 - **Merchant authorization is on-chain.** The `initialize` transaction sets the
@@ -493,6 +516,10 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
   `PaymentReceived` event server-side if you operate a fulfillment backend.
 - **Keys never leave the browser.** Freighter holds private keys; the store
   only ever asks for signatures.
+- **Catalog writes are admin-only at the database level.** Product and
+  product-image mutations require the signed-in email to be in
+  `public.admin_emails` (see "Marking admins" above); the anon key stays
+  read-only regardless of what the client UI allows.
 
 ## Contributing
 
