@@ -147,6 +147,15 @@ const ContactUs = () => {
               required
             />
           </div>
+          {error && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"
+            >
+              {error}
+            </div>
+          )}
           <button
             type="submit"
             className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
