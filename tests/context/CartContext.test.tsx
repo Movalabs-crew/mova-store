@@ -8,9 +8,8 @@ describe("CartContext removeFromCart", () => {
     localStorage.clear();
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    React.createElement(CartProvider, null, children)
-  );
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(CartProvider, null, children);
 
   it("adds and removes items correctly", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
@@ -80,5 +79,41 @@ describe("CartContext removeFromCart", () => {
     expect(result.current.itemCount).toBe(0);
     expect(result.current.totalPrice).toBe(0);
     expect(result.current.cartItems).toEqual([]);
+  });
+});
+
+describe("CartContext hydration race handling (#71)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(CartProvider, null, children);
+
+  it("merges item added before/during hydration with existing localStorage items", () => {
+    // Setup existing stored cart
+    const existing = [{ id: "p-stored", name: "Stored Shoe", price: 80 }];
+    localStorage.setItem("cartItems", JSON.stringify(existing));
+    localStorage.setItem("itemCount", "1");
+    localStorage.setItem("totalPrice", "80");
+
+    const { result } = renderHook(() => useCart(), { wrapper });
+
+    const newItem = { id: "p-new", name: "New Shoe", price: 40 };
+
+    act(() => {
+      result.current.addToCart(newItem);
+    });
+
+    expect(result.current.itemCount).toBe(2);
+    expect(result.current.totalPrice).toBe(120);
+    expect(result.current.cartItems).toHaveLength(2);
+    expect(result.current.cartItems.map((i: any) => i.id)).toEqual(["p-stored", "p-new"]);
+
+    expect(localStorage.getItem("itemCount")).toBe("2");
+    expect(localStorage.getItem("totalPrice")).toBe("120");
+    const stored = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    expect(stored).toHaveLength(2);
+    expect(stored.map((i: any) => i.id)).toEqual(["p-stored", "p-new"]);
   });
 });

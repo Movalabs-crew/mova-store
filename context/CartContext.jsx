@@ -1,5 +1,5 @@
-"use client"
-import { createContext, useContext, useEffect, useState } from "react";
+"use client";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const CartContext = createContext();
 
@@ -9,8 +9,9 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [itemCount, setItemCount] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const isHydratedRef = useRef(false);
 
-  useEffect(() => {
+  const getStoredCartState = () => {
     let storedCartItems = [];
     let storedItemCount = 0;
     let storedTotalPrice = 0;
@@ -51,25 +52,86 @@ export const CartProvider = ({ children }) => {
       storedTotalPrice = 0;
     }
 
-    setCartItems(storedCartItems);
-    setItemCount(storedItemCount);
-    setTotalPrice(storedTotalPrice);
+    return { storedCartItems, storedItemCount, storedTotalPrice };
+  };
+
+  useEffect(() => {
+    const { storedCartItems, storedItemCount, storedTotalPrice } = getStoredCartState();
+
+    setCartItems((currentItems) => {
+      // If items were added before hydration effect ran, merge with stored items
+      if (currentItems.length > 0) {
+        const mergedItems = [...storedCartItems, ...currentItems];
+        try {
+          localStorage.setItem("cartItems", JSON.stringify(mergedItems));
+        } catch {}
+        return mergedItems;
+      }
+      return storedCartItems;
+    });
+
+    setItemCount((currentCount) => {
+      if (currentCount > 0) {
+        const mergedCount = storedItemCount + currentCount;
+        try {
+          localStorage.setItem("itemCount", mergedCount.toString());
+        } catch {}
+        return mergedCount;
+      }
+      return storedItemCount;
+    });
+
+    setTotalPrice((currentPrice) => {
+      if (currentPrice > 0) {
+        const mergedPrice = storedTotalPrice + currentPrice;
+        try {
+          localStorage.setItem("totalPrice", mergedPrice.toString());
+        } catch {}
+        return mergedPrice;
+      }
+      return storedTotalPrice;
+    });
+
+    isHydratedRef.current = true;
   }, []);
 
   const addToCart = (product) => {
     setCartItems((prevCartItems) => {
-      const updatedCartItems = [...prevCartItems, product];
-      localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      let baseItems = prevCartItems;
+      if (!isHydratedRef.current && prevCartItems.length === 0) {
+        const { storedCartItems } = getStoredCartState();
+        baseItems = storedCartItems;
+      }
+      const updatedCartItems = [...baseItems, product];
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      } catch {}
       return updatedCartItems;
     });
+
     setItemCount((prevItemCount) => {
-      const newItemCount = prevItemCount + 1;
-      localStorage.setItem("itemCount", newItemCount.toString());
+      let baseCount = prevItemCount;
+      if (!isHydratedRef.current && prevItemCount === 0) {
+        const { storedItemCount } = getStoredCartState();
+        baseCount = storedItemCount;
+      }
+      const newItemCount = baseCount + 1;
+      try {
+        localStorage.setItem("itemCount", newItemCount.toString());
+      } catch {}
       return newItemCount;
     });
+
     setTotalPrice((prevTotalPrice) => {
-      const newTotalPrice = prevTotalPrice + product.price;
-      localStorage.setItem("totalPrice", newTotalPrice.toString());
+      let basePrice = prevTotalPrice;
+      if (!isHydratedRef.current && prevTotalPrice === 0) {
+        const { storedTotalPrice } = getStoredCartState();
+        basePrice = storedTotalPrice;
+      }
+      const newTotalPrice = basePrice + (product.price || 0);
+      try {
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+      } catch {}
       return newTotalPrice;
     });
   };
@@ -82,17 +144,23 @@ export const CartProvider = ({ children }) => {
       const removedItem = prevCartItems[index];
       const updatedCartItems = [...prevCartItems];
       updatedCartItems.splice(index, 1);
-      localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      } catch {}
 
       setItemCount((prevItemCount) => {
         const newItemCount = Math.max(0, prevItemCount - 1);
-        localStorage.setItem("itemCount", newItemCount.toString());
+        try {
+          localStorage.setItem("itemCount", newItemCount.toString());
+        } catch {}
         return newItemCount;
       });
 
       setTotalPrice((prevTotalPrice) => {
         const newTotalPrice = Math.max(0, prevTotalPrice - (removedItem.price || 0));
-        localStorage.setItem("totalPrice", newTotalPrice.toString());
+        try {
+          localStorage.setItem("totalPrice", newTotalPrice.toString());
+        } catch {}
         return newTotalPrice;
       });
 
@@ -104,9 +172,11 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
     setItemCount(0);
     setTotalPrice(0);
-    localStorage.removeItem("cartItems");
-    localStorage.removeItem("itemCount");
-    localStorage.removeItem("totalPrice");
+    try {
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
+    } catch {}
   };
 
   return (
