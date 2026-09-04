@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import Sidebar from "../../components/Sidebar";
 
 // Mock AuthContext
@@ -9,10 +9,19 @@ vi.mock("../../lib/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-// Mock Modal component
-vi.mock("../../components/Modal", () => ({
-  default: ({ show, children }: { show: boolean; children: React.ReactNode }) =>
-    show ? <div data-testid="modal">{children}</div> : null,
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => ({
+    get: vi.fn(),
+  }),
+  usePathname: () => "/",
 }));
 
 describe("Sidebar component", () => {
@@ -59,5 +68,39 @@ describe("Sidebar component", () => {
 
     const adminLinks = screen.queryAllByRole("link", { name: /admin/i });
     expect(adminLinks.length).toBe(0);
+  });
+
+  it("handles search input submit and navigates to shop with query parameter", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAdmin: false,
+      loading: false,
+    });
+
+    render(<Sidebar />);
+
+    const searchInput = screen.getByRole("textbox", { name: /search shoes/i });
+    expect(searchInput).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "Air Max" } });
+    fireEvent.submit(searchInput.closest("form")!);
+
+    expect(mockPush).toHaveBeenCalledWith("/shop?search=Air%20Max");
+  });
+
+  it("navigates to /shop when search is submitted empty", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAdmin: false,
+      loading: false,
+    });
+
+    render(<Sidebar />);
+
+    const searchInput = screen.getByRole("textbox", { name: /search shoes/i });
+    fireEvent.change(searchInput, { target: { value: "   " } });
+    fireEvent.submit(searchInput.closest("form")!);
+
+    expect(mockPush).toHaveBeenCalledWith("/shop");
   });
 });

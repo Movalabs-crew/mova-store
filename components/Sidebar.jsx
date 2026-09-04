@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FaHome,
   FaInfoCircle,
@@ -13,24 +14,38 @@ import {
 import { FaShoePrints } from "react-icons/fa6";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
-import Modal from "../components/Modal";
+
 export default function Sidebar() {
   const { user, isAdmin } = useAuth();
-  const [showModal, setShowModal] = useState(false);
-  const openModal = () => setShowModal(true);
-  const closeModal = () => setShowModal(false);
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const query = searchTerm.trim();
+    if (query) {
+      router.push(`/shop?search=${encodeURIComponent(query)}`);
+    } else {
+      router.push("/shop");
+    }
+  };
   
   return (
     <>
       <aside className="w-64 bg-white text-gray-700 flex-shrink-0  hidden sm:block pt-10">
         <nav className="divide-y divide-gray-200">
           <ul className="px-5 py-6 space-y-2">
-            <li onClick={openModal}>
-              <input
-                type="text"
-                className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
-                placeholder="Search Shoes"
-              />
+            <li>
+              <form onSubmit={handleSearchSubmit}>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
+                  placeholder="Search Shoes"
+                  aria-label="Search Shoes"
+                />
+              </form>
             </li>
             <li>
               <Link
@@ -108,8 +123,14 @@ export default function Sidebar() {
       <aside className="flex flex-col justify-center  w-10 bg-purple-600 text-gray-700 flex-shrink-0  sm:hidden  pt-10">
         <nav className="divide-y divide-gray-200">
           <ul className="py-6 space-y-14 px-2">
-            <li className=" hover:text-white transition-colors duration-200">
-              <FaSearch size={20} className="mr-3" />
+            <li>
+              <Link
+                href="/shop"
+                className="hover:text-white transition-colors duration-200"
+                aria-label="Search shop"
+              >
+                <FaSearch size={20} className="mr-3" />
+              </Link>
             </li>
             <li>
               <Link
@@ -159,13 +180,6 @@ export default function Sidebar() {
           </ul>
         </nav>
       </aside>
-      <Modal show={showModal} onClose={closeModal}>
-        <input
-          type="text"
-          className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
-          placeholder="Search Shoes"
-        />
-      </Modal>
     </>
   );
 }
