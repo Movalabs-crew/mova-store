@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { currentAddress, freighterAvailable, WalletError } from "../lib/stellar/freighter";
+import { currentAddress, freighterAvailable, WalletError, connectWallet } from "../lib/stellar/freighter";
 import { shortAddress } from "../lib/stellar/freighter";
 
 /**
