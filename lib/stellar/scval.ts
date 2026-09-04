@@ -106,8 +106,14 @@ export function hexToBytes(hex: string): Uint8Array {
     throw new Error("invalid hex string (odd length)");
   }
   const out = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  for (let i = 0; i < clean.length; i += 2) {
+    const chunk = clean.slice(i, i + 2);
+    const byte = parseInt(chunk, 16);
+    if (Number.isNaN(byte) || !/^[0-9a-fA-F]{2}$/.test(chunk)) {
+      const invalidChar = chunk.match(/[^0-9a-fA-F]/)?.[0] ?? chunk;
+      throw new Error(`invalid hex character: "${invalidChar}"`);
+    }
+    out[i / 2] = byte;
   }
   return out;
 }
