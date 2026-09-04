@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { FaGithub, FaTwitter, FaDiscord } from "react-icons/fa";
 import sendMail from "../../lib/sendmail";
 
@@ -33,21 +33,23 @@ const ContactUs = () => {
   const [toast, setToast] = useState({ show: false, message: "" });
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const form = useRef();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     try {
       await sendMail(formData);
       showToast("Message sent successfully!");
       setFormData({ name: "", email: "", message: "" });
-    } catch (error) {
+      setError(null);
+    } catch (err) {
       setError("Failed to send message.");
       showToast("Unable to send message, please try again later");
     }
@@ -178,6 +180,15 @@ const ContactUs = () => {
               "Send Message"
             )}
           </button>
+          {error && (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="mt-4 text-center text-sm font-medium text-red-600"
+            >
+              {error}
+            </p>
+          )}
         </form>
           </div>
         </div>
