@@ -7,7 +7,7 @@ import Toast from "../../../components/Toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
-import img from "../../../public/images/welcome-mova.png"
+import img from "../../../public/images/welcome-mova.png";
 
 const AuthPage = () => {
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -16,6 +16,7 @@ const AuthPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -75,12 +76,16 @@ const AuthPage = () => {
   };
 
   const handleGoogleLogin = async () => {
+    if (isGoogleLoading) return;
+    setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
       showToast("User logged in with Google successfully");
       router.push(getRedirectUrl());
     } catch (err) {
       showToast(err.message);
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -96,7 +101,7 @@ const AuthPage = () => {
     <section className="px-4 md:px-10 bg-white py-12 flex items-center justify-center min-h-screen">
       <div className="flex flex-wrap justify-center md:justify-between items-center w-full max-w-4xl">
         <div className="w-full md:w-1/2 flex justify-center md:justify-start mb-8 md:mb-0 md:pr-8">
-        <Image src={img} alt="img"/>
+          <Image src={img} alt="img" />
         </div>
         <div className="w-full md:w-1/2 text-center md:text-left">
           <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md mx-auto md:mx-0">
@@ -108,15 +113,9 @@ const AuthPage = () => {
                 ? "Sign in to shop curated footwear"
                 : "Create an account to start shopping"}
             </p>
-            <form
-              onSubmit={isLoginMode ? handleLogin : handleSignup}
-              className="space-y-6"
-            >
+            <form onSubmit={isLoginMode ? handleLogin : handleSignup} className="space-y-6">
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   Email
                 </label>
                 <input
@@ -131,10 +130,7 @@ const AuthPage = () => {
                 />
               </div>
               <div className="relative">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
                 <input
@@ -151,11 +147,7 @@ const AuthPage = () => {
                   onClick={togglePasswordVisibility}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6 text-gray-500"
                 >
-                  {showPassword ? (
-                    <FaRegEye size={20} />
-                  ) : (
-                    <FaRegEyeSlash size={20} />
-                  )}
+                  {showPassword ? <FaRegEye size={20} /> : <FaRegEyeSlash size={20} />}
                 </button>
               </div>
               {!isLoginMode && (
@@ -180,11 +172,7 @@ const AuthPage = () => {
                     onClick={toggleConfirmPasswordVisibility}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6 text-gray-500"
                   >
-                    {showConfirmPassword ? (
-                      <FaRegEye size={20} />
-                    ) : (
-                      <FaRegEyeSlash size={20} />
-                    )}
+                    {showConfirmPassword ? <FaRegEye size={20} /> : <FaRegEyeSlash size={20} />}
                   </button>
                 </div>
               )}
@@ -210,13 +198,22 @@ const AuthPage = () => {
             <span className="flex justify-center items-center py-2">Or</span>
             <div className="flex justify-center items-center">
               <button
+                type="button"
                 onClick={handleGoogleLogin}
-                className="w-full flex items-center bg-purple-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-purple-700 focus:outline-none "
+                disabled={isGoogleLoading || isLoggingIn || isSigningUp}
+                className="w-full flex items-center bg-purple-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-purple-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed justify-center"
               >
-                <FcGoogle size={28} />
-                <span className="flex-grow text-center">
-                  Continue with Google
-                </span>
+                {isGoogleLoading ? (
+                  <>
+                    <AiOutlineLoading3Quarters className="animate-spin mr-2" />
+                    <span>Connecting with Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle size={28} />
+                    <span className="flex-grow text-center">Continue with Google</span>
+                  </>
+                )}
               </button>
             </div>
             <div className="mt-4 text-center text-gray-700">
