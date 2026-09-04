@@ -229,7 +229,11 @@ Install the following before getting started:
 
 | Tool             | Version / Notes                                              | Install                                     |
 | ---------------- | ------------------------------------------------------------ | ------------------------------------------- |
+<<<<<<< HEAD
 | **Node.js**      | 18.18+ (Node 20 recommended, see `.nvmrc`)                 | https://nodejs.org or `nvm use`            |
+=======
+| **Node.js**      | 18.18+ (Node 20 recommended, see `.nvmrc`, bundles `npm`)    | https://nodejs.org                          |
+>>>>>>> fc03e29 (build(node): add .nvmrc and harmonize Node version requirements)
 | **Rust**         | stable, with the `wasm32v1-none` target                      | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
 | **Stellar CLI**  | latest (`stellar --version`)                                 | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
 | **Freighter**    | browser wallet extension (Chrome / Firefox)                  | https://freighter.app                       |
@@ -258,6 +262,7 @@ cd mova-store
 ### 2. Install dependencies
 
 ```bash
+nvm use             # optional: load Node 20 via .nvmrc
 npm install
 ```
 
