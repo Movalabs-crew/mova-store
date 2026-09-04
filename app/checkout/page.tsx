@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useCart } from "../../context/CartContext";
 
 import Toast from "../../components/Toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -21,15 +20,31 @@ import {
 import { BsBank, BsCalendarDate } from "react-icons/bs";
 import { SiKlarna } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
+import { validateOTP } from "../../lib/validation";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
 import { SiStellar } from "react-icons/si";
+import {
+  validateEmail,
+  validateName,
+  validateAddress,
+  validateCardNumber,
+  validateCardExpiry,
+  validateCardCVV,
+} from "../../lib/validation";
 
 const Checkout = () => {
 
-  const [otp, setOtp] = useState(Math.floor(Math.random() * 1000000) + 1);
+  // OTP is stored as a zero-padded 6-digit string so it always matches the format
+  // shown in the email (e.g. "000042") and can be compared with exact string
+  // equality instead of a loose numeric parse.
+  const [otp, setOtp] = useState<string>(() =>
+    String(Math.floor(Math.random() * 1000000)).padStart(6, "0")
+  );
   const [totalPrice, setTotalPrice] = useState(0);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [stage, setStage] = useState(1);
   const [isOtpSending, setIsOtpSending] = useState(false);
@@ -99,7 +114,14 @@ const Checkout = () => {
     e.preventDefault();
     if (isOtpSending) return;
     setIsOtpSending(true);
-    if (parseInt(enteredOtp) === otp) {
+    // Validate the raw trimmed input as a 6-digit code, then compare it against the
+    // zero-padded OTP with exact string equality. We deliberately compare the raw
+    // input rather than validateOTP's sanitized value, because the validator strips
+    // non-digits ("000042abc" -> "000042") and would otherwise let digits-followed-
+    // by-junk through.
+    const entered = enteredOtp.trim();
+    const { isValid } = validateOTP(entered);
+    if (isValid && entered === otp) {
       setStage(3);
       localStorage.clear();
       showToast("OTP confirmed successfully.");
@@ -117,11 +139,23 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    const storedTotalPrice = localStorage.getItem("totalPrice");
-    if (storedTotalPrice) {
-      setTotalPrice(parseFloat(storedTotalPrice));
+    try {
+      const storedItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+      const storedTotalPrice = localStorage.getItem("totalPrice");
+      if (Array.isArray(storedItems)) {
+        setCartItems(storedItems);
+      }
+      if (storedTotalPrice) {
+        setTotalPrice(parseFloat(storedTotalPrice));
+      }
+    } catch {
+      setCartItems([]);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
+
+  const isEmptyCart = isLoaded && (cartItems.length === 0 || totalPrice <= 0);
 
   useEffect(() => {
     if (stage === 3) {
@@ -130,6 +164,23 @@ const Checkout = () => {
       localStorage.removeItem("cartItems");
     }
   }, [stage]);
+
+  if (isEmptyCart) {
+    return (
+      <div className="container mx-auto px-4 py-16 my-10 max-w-lg text-center bg-white rounded-lg shadow-md border-2 border-purple-300">
+        <h2 className="text-2xl font-bold text-gray-800 mb-3">Your cart is empty</h2>
+        <p className="text-gray-600 mb-6">
+          Looks like you have not added any items to your cart yet. Please add items to proceed with checkout.
+        </p>
+        <Link
+          href="/shop"
+          className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-700 hover:bg-purple-800 transition-colors"
+        >
+          <MdArrowBack className="mr-2" /> Back to Shop
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -243,15 +294,17 @@ const Checkout = () => {
                         value={formData.cardNumber}
                         onChange={(e) => {
                           let { value } = e.target;
-                          if (value.length > 16) {
-                            value = value.slice(0, 16);
+                          value = value.replace(/\s+/g, "").replace(/[^0-9]/g, "");
+                          if (value.length > 19) {
+                            value = value.slice(0, 19);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             cardNumber: value,
                           }));
                         }}
-                        maxLength={16}
+                        maxLength={19}
+                        placeholder="16-digit card number"
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
@@ -267,17 +320,20 @@ const Checkout = () => {
                         value={formData.expiryDate}
                         onChange={(e) => {
                           let { value } = e.target;
-                          value = value.replace(/[^0-9]/g, "");
-                          if (value.length > 6) {
-                            value = value.slice(0, 6);
+                          value = value.replace(/[^0-9/]/g, "");
+                          if (value.length === 2 && !value.includes("/") && formData.expiryDate.length === 1) {
+                            value = value + "/";
+                          }
+                          if (value.length > 5) {
+                            value = value.slice(0, 5);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             expiryDate: value,
                           }));
                         }}
-                        placeholder="DD/MM/YY"
-                        maxLength={6}
+                        placeholder="MM/YY"
+                        maxLength={5}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                         required
                       />
@@ -290,19 +346,21 @@ const Checkout = () => {
                     <div className="relative flex justify-center items-center">
                       <input
                         type="text"
-                        name="cardNumber"
+                        name="cvv"
                         value={formData.cvv}
                         onChange={(e) => {
                           let { value } = e.target;
-                          if (value.length > 3) {
-                            value = value.slice(0, 3);
+                          value = value.replace(/[^0-9]/g, "");
+                          if (value.length > 4) {
+                            value = value.slice(0, 4);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             cvv: value,
                           }));
                         }}
-                        maxLength={3}
+                        placeholder="3 or 4 digits"
+                        maxLength={4}
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
@@ -368,6 +426,9 @@ const Checkout = () => {
                     value={enteredOtp}
                     onChange={handleOtpChange}
                     required
+                    maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
                     placeholder="OTP"
                     className="w-64 px-3 py-2 border rounded"
                   />
