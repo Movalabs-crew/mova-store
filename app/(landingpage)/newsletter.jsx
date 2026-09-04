@@ -1,5 +1,6 @@
 import Toast from "../../components/Toast";
 import { useState } from "react";
+import { validateEmail } from "../../lib/validation";
 
 export default function Newsletter() {
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -11,11 +12,19 @@ export default function Newsletter() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email.length !== 0) {
-      showToast("Thank you for subscribing!");
-    } else {
+    if (!email || email.trim().length === 0) {
       showToast("Please enter your email!");
+      return;
     }
+
+    const validation = validateEmail(email);
+    if (!validation.isValid) {
+      showToast(validation.error || "Please enter a valid email address");
+      return;
+    }
+
+    showToast("Thank you for subscribing!");
+    setEmail("");
     e.target.reset();
   };
 
@@ -37,6 +46,7 @@ export default function Newsletter() {
           <input
             type="email"
             name="email"
+            value={email}
             className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
             placeholder="Enter your email"
             aria-label="Email"

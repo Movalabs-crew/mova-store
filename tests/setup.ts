@@ -11,7 +11,6 @@ vi.mock("next/navigation", () => ({
     back: vi.fn(),
     forward: vi.fn(),
     refresh: vi.fn(),
-    prefetch: vi.fn(),
   }),
   useSearchParams: () => ({
     get: vi.fn(),
@@ -21,15 +20,8 @@ vi.mock("next/navigation", () => ({
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
-  default: ({
-    src,
-    alt,
-    ...props
-  }: {
-    src: string;
-    alt: string;
-    [key: string]: unknown;
-  }) => React.createElement("img", { src, alt, ...props }),
+  default: ({ src, alt, ...props }: { src: string; alt: string; [key: string]: unknown }) =>
+    React.createElement("img", { src, alt, ...props }),
 }));
 
 // Provide genuine WebCrypto for tests

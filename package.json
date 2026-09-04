@@ -39,7 +39,6 @@
     "@stellar/stellar-sdk": "^16.2.0",
     "@supabase/supabase-js": "^2.112.3",
     "@vercel/og": "^0.6.2",
-    "fs": "^0.0.1-security",
     "next": "14.2.5",
     "next-auth": "^4.24.7",
     "nextjs-toploader": "^1.6.12",
@@ -52,7 +51,6 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.0",
     "@testing-library/react": "^14.2.0",
-    "@types/next": "^9.0.0",
     "@types/node": "^20.19.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -69,6 +67,6 @@
     "vitest": "^1.2.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.18.0"
   }
 }
