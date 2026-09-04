@@ -76,6 +76,29 @@ describe("ScVal helpers", () => {
       expect(bytesToHex(bytes)).toBe("a1b2c3");
     });
 
+    it("accepts a case-insensitive 0x prefix and an empty string", () => {
+      expect(bytesToHex(hexToBytes("0Xa1B2c3"))).toBe("a1b2c3");
+      expect(hexToBytes("")).toEqual(new Uint8Array());
+    });
+
+    it("rejects non-hex characters and identifies the offending input", () => {
+      expect(() => hexToBytes("gggg")).toThrow(
+        'invalid hex character "g" at index 0'
+      );
+      expect(() => hexToBytes("0xzz")).toThrow(
+        'invalid hex character "z" at index 0'
+      );
+      expect(() => hexToBytes("00x0")).toThrow(
+        'invalid hex character "x" at index 2'
+      );
+    });
+
+    it("prevents invalid 32-byte hex from reaching bytes32ToScVal", () => {
+      expect(() => bytes32ToScVal("g".repeat(64))).toThrow(
+        'invalid hex character "g" at index 0'
+      );
+    });
+
     it("throws on odd-length hex strings", () => {
       expect(() => hexToBytes("123")).toThrow("invalid hex string (odd length)");
     });
