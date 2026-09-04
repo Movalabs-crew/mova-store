@@ -1,8 +1,8 @@
 import { FaWhatsapp } from "react-icons/fa";
 import Link from "next/link";
 const goWhatsapp = () => {
-    alert("You clicked me")
-}
+  alert("You clicked me");
+};
 const Whatsapp = () => {
   return (
     <div className="fixed top-[75vh] right-4">

@@ -80,10 +80,7 @@ export async function fundTestnetAccount(publicKey: string): Promise<void> {
 }
 
 /** Native XLM balance of an account (0 when the account does not exist). */
-export async function getNativeBalance(
-  server: rpc.Server,
-  publicKey: string
-): Promise<bigint> {
+export async function getNativeBalance(server: rpc.Server, publicKey: string): Promise<bigint> {
   try {
     const entry = await server.getAccountEntry(publicKey);
     return BigInt(entry.balance().toString());

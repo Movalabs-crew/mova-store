@@ -34,14 +34,10 @@ export default function Newsletter() {
         Stay in the Loop
       </h2>
       <p className="text-lg sm:text-xl text-gray-600 mb-8 text-center max-w-xl">
-        New shoe drops, Stellar integration updates, and insights on crypto
-        commerce — straight to your inbox. No spam, unsubscribe anytime.
+        New shoe drops, Stellar integration updates, and insights on crypto commerce — straight to
+        your inbox. No spam, unsubscribe anytime.
       </p>
-      <form
-        className="w-full max-w-md"
-        onSubmit={handleSubmit}
-        noValidate={true}
-      >
+      <form className="w-full max-w-md" onSubmit={handleSubmit} noValidate={true}>
         <div className="flex items-center border-b border-purple-700 py-2">
           <input
             type="email"

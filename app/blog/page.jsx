@@ -8,15 +8,13 @@ const posts = [
   {
     id: 1,
     title: "The Art of Choosing the Perfect Pair of Shoes",
-    excerpt:
-      "Learn how to select shoes that combine comfort, style, and durability.",
+    excerpt: "Learn how to select shoes that combine comfort, style, and durability.",
     image: shoe1,
   },
   {
     id: 2,
     title: "Top Shoe Trends for 2024",
-    excerpt:
-      "Discover the top shoe trends that are taking the fashion world by storm this year.",
+    excerpt: "Discover the top shoe trends that are taking the fashion world by storm this year.",
     image: shoe2,
   },
   {
@@ -61,10 +59,7 @@ export default function Blog() {
         <div className="container mx-auto max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {posts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-white rounded-lg shadow-lg overflow-hidden"
-              >
+              <div key={post.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
                 <Image
                   src={post.image}
                   alt={post.title}
@@ -75,10 +70,11 @@ export default function Blog() {
                 <div className="p-6">
                   <h2 className="text-2xl font-semibold mb-2">{post.title}</h2>
                   <p className="text-gray-600 mb-4">{post.excerpt}</p>
-                  <Link href={`/blog/${post.id}`}
-                className="text-purple-700 hover:text-purple-500 font-semibold">
-                      Read More
-             
+                  <Link
+                    href={`/blog/${post.id}`}
+                    className="text-purple-700 hover:text-purple-500 font-semibold"
+                  >
+                    Read More
                   </Link>
                 </div>
               </div>

@@ -47,9 +47,7 @@ function Navbar() {
     links.forEach((link) => link.addEventListener("click", handleLinkClick));
 
     return () => {
-      links.forEach((link) =>
-        link.removeEventListener("click", handleLinkClick)
-      );
+      links.forEach((link) => link.removeEventListener("click", handleLinkClick));
     };
   }, [router]);
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -138,9 +136,7 @@ function Navbar() {
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-mova-mist" />
                   )}
-                  <span className="text-md font-medium text-mova-ink">
-                    {user.displayName}
-                  </span>
+                  <span className="text-md font-medium text-mova-ink">{user.displayName}</span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -222,9 +218,7 @@ function Navbar() {
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-mova-mist" />
                     )}
-                    <span className="text-sm font-medium text-mova-ink">
-                      {user.displayName}
-                    </span>
+                    <span className="text-sm font-medium text-mova-ink">{user.displayName}</span>
                   </div>
                   <button
                     onClick={() => {

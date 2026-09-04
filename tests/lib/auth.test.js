@@ -1,11 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  login,
-  loginWithGoogle,
-  logout,
-  mapAuthUser,
-  signup,
-} from "../../lib/auth";
+import { login, loginWithGoogle, logout, mapAuthUser, signup } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
 
 vi.mock("../../lib/supabase", () => ({
@@ -52,8 +46,7 @@ describe("mapAuthUser", () => {
 
   it("falls back to name, then display_name", () => {
     expect(
-      mapAuthUser({ id: "u2", email: "a@b.c", user_metadata: { name: "Grace" } })
-        .displayName
+      mapAuthUser({ id: "u2", email: "a@b.c", user_metadata: { name: "Grace" } }).displayName
     ).toBe("Grace");
     expect(
       mapAuthUser({
@@ -66,12 +59,9 @@ describe("mapAuthUser", () => {
 
   it("falls back to the email prefix, then the 'User' default", () => {
     expect(
-      mapAuthUser({ id: "u4", email: "grace@example.com", user_metadata: {} })
-        .displayName
+      mapAuthUser({ id: "u4", email: "grace@example.com", user_metadata: {} }).displayName
     ).toBe("grace");
-    expect(mapAuthUser({ id: "u5", user_metadata: {} }).displayName).toBe(
-      "User"
-    );
+    expect(mapAuthUser({ id: "u5", user_metadata: {} }).displayName).toBe("User");
   });
 
   it("prefers avatar_url over picture for the photo", () => {
@@ -168,9 +158,7 @@ describe("loginWithGoogle", () => {
       data: null,
       error: { message: "OAuth rejected" },
     });
-    await expect(loginWithGoogle()).rejects.toThrow(
-      "Error logging in with Google: OAuth rejected"
-    );
+    await expect(loginWithGoogle()).rejects.toThrow("Error logging in with Google: OAuth rejected");
   });
 });
 
@@ -185,8 +173,6 @@ describe("logout", () => {
     auth.signOut.mockResolvedValue({
       error: { message: "Could not sign out" },
     });
-    await expect(logout()).rejects.toThrow(
-      "Error logging out: Could not sign out"
-    );
+    await expect(logout()).rejects.toThrow("Error logging out: Could not sign out");
   });
 });

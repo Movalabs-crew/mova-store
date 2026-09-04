@@ -10,8 +10,7 @@ import { getProductById } from "../../../lib/products";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const ProductPage = ({ params }) => {
-  const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
-    useCart();
+  const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -70,12 +69,7 @@ const ProductPage = ({ params }) => {
         {!loading && !error && product && (
           <>
             <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
-            <Image
-              src={product.img}
-              alt={product.name}
-              width={400}
-              height={400}
-            />
+            <Image src={product.img} alt={product.name} width={400} height={400} />
             <div className="flex space-x-4 items-center my-4">
               <h2 className="text-4xl">${product.price}</h2>
               <button
@@ -104,10 +98,7 @@ const ProductPage = ({ params }) => {
         ) : (
           <div>
             {cartItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between items-center mb-2"
-              >
+              <div key={item.id} className="flex justify-between items-center mb-2">
                 <div className="w-16 h-16 flex-shrink-0">
                   <Image
                     src={item.img}
@@ -132,11 +123,7 @@ const ProductPage = ({ params }) => {
         <div className="flex justify-between items-center mt-4 mx-5 sm:mx-10">
           <div>
             {cartItems.length > 0 && <strong>Total:</strong>}
-            {totalPrice ? (
-              <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span>
-            ) : (
-              ""
-            )}
+            {totalPrice ? <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span> : ""}
           </div>
           {cartItems.length > 0 && (
             <button

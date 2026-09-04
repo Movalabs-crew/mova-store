@@ -8,9 +8,8 @@ describe("CartContext removeFromCart", () => {
     localStorage.clear();
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    React.createElement(CartProvider, null, children)
-  );
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(CartProvider, null, children);
 
   it("adds and removes items correctly", () => {
     const { result } = renderHook(() => useCart(), { wrapper });

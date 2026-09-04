@@ -19,7 +19,7 @@ export default function Sidebar() {
   const [showModal, setShowModal] = useState(false);
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
-  
+
   return (
     <>
       <aside className="w-64 bg-white text-gray-700 flex-shrink-0  hidden sm:block pt-10">
@@ -112,35 +112,23 @@ export default function Sidebar() {
               <FaSearch size={20} className="mr-3" />
             </li>
             <li>
-              <Link
-                href="/categories"
-                className=" hover:text-white transition-colors duration-200"
-              >
+              <Link href="/categories" className=" hover:text-white transition-colors duration-200">
                 <FaList className="mr-3" size={20} />
               </Link>
             </li>
             <li>
-              <Link
-                href="/shop"
-                className="  hover:text-white transition-colors duration-200"
-              >
+              <Link href="/shop" className="  hover:text-white transition-colors duration-200">
                 <FaShoppingCart className="mr-3" size={20} />
               </Link>
             </li>
             <li>
-              <Link
-                href="/"
-                className=" hover:text-white transition-colors duration-200"
-              >
+              <Link href="/" className=" hover:text-white transition-colors duration-200">
                 <FaHome className="mr-3" size={20} />
               </Link>
             </li>
             <li>
               {isAdmin ? (
-                <Link
-                  href="/admin"
-                  className=" hover:text-white transition-colors duration-200"
-                >
+                <Link href="/admin" className=" hover:text-white transition-colors duration-200">
                   <FaInfoCircle className="mr-3" size={20} />
                   Admin
                 </Link>

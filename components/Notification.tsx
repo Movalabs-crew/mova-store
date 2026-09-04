@@ -79,8 +79,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   );
 
   const success = useCallback(
-    (message: string, title?: string) =>
-      addNotification({ type: "success", message, title }),
+    (message: string, title?: string) => addNotification({ type: "success", message, title }),
     [addNotification]
   );
 
@@ -97,8 +96,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   );
 
   const info = useCallback(
-    (message: string, title?: string) =>
-      addNotification({ type: "info", message, title }),
+    (message: string, title?: string) => addNotification({ type: "info", message, title }),
     [addNotification]
   );
 
@@ -115,10 +113,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }}
     >
       {children}
-      <NotificationContainer
-        notifications={notifications}
-        onClose={removeNotification}
-      />
+      <NotificationContainer notifications={notifications} onClose={removeNotification} />
     </NotificationContext.Provider>
   );
 }
@@ -303,11 +298,7 @@ export function Toast({ message, show, onClose, type = "info", time = 3000 }: To
     >
       <Icon className={`w-5 h-5 ${config.iconColor}`} />
       <span className="text-gray-800">{message}</span>
-      <button
-        onClick={onClose}
-        className="ml-2 p-1 rounded hover:bg-black/5"
-        aria-label="Close"
-      >
+      <button onClick={onClose} className="ml-2 p-1 rounded hover:bg-black/5" aria-label="Close">
         <MdClose className="w-4 h-4 text-gray-500" />
       </button>
     </div>
