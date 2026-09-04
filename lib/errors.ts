@@ -27,6 +27,100 @@ export interface AppError {
 // =============================================================================
 
 export const STELLAR_ERRORS: Record<string, AppError> = {
+  WalletNotConnected: {
+    code: "WALLET_NOT_CONNECTED",
+    message: "Wallet not connected",
+    userMessage: "Please connect your Freighter wallet to continue.",
+    severity: "warning",
+    recoverable: true,
+    action: "Connect wallet",
+  },
+  WalletNotInstalled: {
+    code: "WALLET_NOT_INSTALLED",
+    message: "Wallet not installed",
+    userMessage: "Freighter wallet extension is required. Please install it to continue.",
+    severity: "error",
+    recoverable: true,
+    action: "Install Freighter",
+  },
+  WrongNetwork: {
+    code: "WALLET_WRONG_NETWORK",
+    message: "Wrong network",
+    userMessage: "Please switch your wallet to the Stellar Testnet network.",
+    severity: "warning",
+    recoverable: true,
+    action: "Switch network",
+  },
+  NetworkError: {
+    code: "NETWORK_ERROR",
+    message: "Network error",
+    userMessage:
+      "We're having trouble connecting to the Stellar network. Please check your internet connection.",
+    severity: "error",
+    recoverable: true,
+    action: "Retry",
+  },
+  RpcError: {
+    code: "RPC_ERROR",
+    message: "RPC server error",
+    userMessage: "The payment server is temporarily unavailable. Please try again in a moment.",
+    severity: "error",
+    recoverable: true,
+    action: "Retry",
+  },
+  // Contract errors
+  NotInitialized: {
+    code: "STELLAR_NOT_INITIALIZED",
+    message: "Contract not initialized",
+    userMessage: "The payment system is not configured. Please contact support.",
+    severity: "error",
+    recoverable: false,
+  },
+  AlreadyInitialized: {
+    code: "STELLAR_ALREADY_INITIALIZED",
+    message: "Contract already initialized",
+    userMessage: "The payment system is already set up.",
+    severity: "warning",
+    recoverable: false,
+  },
+  InvalidAmount: {
+    code: "STELLAR_INVALID_AMOUNT",
+    message: "Invalid payment amount",
+    userMessage: "The payment amount is invalid. Please check your cart and try again.",
+    severity: "error",
+    recoverable: true,
+    action: "Check cart total",
+  },
+  OrderAlreadyPaid: {
+    code: "STELLAR_ORDER_ALREADY_PAID",
+    message: "Order already paid",
+    userMessage:
+      "This order has already been paid. If you believe this is an error, please contact support.",
+    severity: "warning",
+    recoverable: false,
+  },
+  OrderNotFound: {
+    code: "STELLAR_ORDER_NOT_FOUND",
+    message: "Order not found",
+    userMessage: "We couldn't find this order. It may have expired or been processed.",
+    severity: "error",
+    recoverable: false,
+  },
+  TokenNotAllowed: {
+    code: "STELLAR_TOKEN_NOT_ALLOWED",
+    message: "Token not allowed",
+    userMessage: "This payment token is not accepted. Please try a different payment method.",
+    severity: "error",
+    recoverable: true,
+    action: "Try different token",
+  },
+  InvalidOrderStatus: {
+    code: "STELLAR_INVALID_ORDER_STATUS",
+    message: "Invalid order status",
+    userMessage: "This order cannot be processed in its current state.",
+    severity: "error",
+    recoverable: false,
+  },
   // Wallet & Freighter errors
   FREIGHTER_NOT_FOUND: {
     code: "WALLET_NOT_INSTALLED",
@@ -329,21 +423,25 @@ function parseErrorMessage(message: string): AppError {
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
     if (
       lowerMessage.includes(key.toLowerCase()) ||
-      lowerMessage.includes(appError.code.toLowerCase())
+      lowerMessage.includes(appError.code.toLowerCase()) ||
+      lowerMessage.includes(appError.message.toLowerCase())
     ) {
       return appError;
     }
   }
 
   // Check for common error patterns
+  if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
+    return STELLAR_ERRORS.TX_TIMEOUT;
+  }
   if (lowerMessage.includes("insufficient") || lowerMessage.includes("balance")) {
     return STELLAR_ERRORS.INSUFFICIENT_BALANCE;
   }
   if (lowerMessage.includes("rejected") || lowerMessage.includes("cancelled")) {
     return STELLAR_ERRORS.USER_REJECTED;
   }
-  if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
-    return STELLAR_ERRORS.TX_TIMEOUT;
+  if (lowerMessage.includes("network") || lowerMessage.includes("connection")) {
+    return STELLAR_ERRORS.NetworkError || STELLAR_ERRORS.FREIGHTER_NETWORK_ERROR;
   }
   if (lowerMessage.includes("freighter") && (lowerMessage.includes("install") || lowerMessage.includes("not installed"))) {
     return STELLAR_ERRORS.FREIGHTER_NOT_FOUND;
