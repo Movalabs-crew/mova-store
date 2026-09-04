@@ -266,24 +266,68 @@ describe("lib/products data layer", () => {
 
   describe("deleteProduct", () => {
     it("deletes a product by id", async () => {
-      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
-      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockEq1 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
+      const mockDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDeleteEq = vi.fn().mockReturnValue({ eq: mockDelete });
+      mockFrom.mockReturnValueOnce({ select: mockSelect }).mockReturnValueOnce({ delete: mockDeleteEq });
 
       await deleteProduct("p-del");
 
       expect(mockFrom).toHaveBeenCalledWith("products");
       expect(mockDelete).toHaveBeenCalledTimes(1);
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+    });
+
+    it("removes orphaned storage image before deleting the row", async () => {
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: { img: "https://dummy.supabase.co/storage/v1/object/public/products/img-123.png" },
+        error: null,
+      });
+      const mockEq1 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
+      const mockRemove = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDeleteEq = vi.fn().mockReturnValue({ eq: mockDelete });
+      mockFrom.mockReturnValueOnce({ select: mockSelect }).mockReturnValueOnce({ delete: mockDeleteEq });
+      mockStorageFrom.remove.mockImplementation(() => mockRemove);
+
+      await deleteProduct("p-with-img");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["img-123.png"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("proceeds with row deletion when storage remove fails", async () => {
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: { img: "https://dummy.supabase.co/storage/v1/object/public/products/img-456.jpg" },
+        error: null,
+      });
+      const mockEq1 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
+      const mockRemove = vi.fn().mockRejectedValue(new Error("File not found"));
+      const mockDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDeleteEq = vi.fn().mockReturnValue({ eq: mockDelete });
+      mockFrom.mockReturnValueOnce({ select: mockSelect }).mockReturnValueOnce({ delete: mockDeleteEq });
+      mockStorageFrom.remove.mockImplementation(() => mockRemove);
+
+      await deleteProduct("p-missing-img");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["img-456.jpg"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
     });
 
     it("throws error when delete fails", async () => {
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockEq1 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq1 });
       const mockEq = vi.fn().mockResolvedValue({
         data: null,
         error: new Error("Foreign key constraint violation"),
       });
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+      mockFrom.mockReturnValueOnce({ select: mockSelect }).mockReturnValueOnce({ delete: mockDelete });
 
       await expect(deleteProduct("p-del")).rejects.toThrow(
         "Foreign key constraint violation"
