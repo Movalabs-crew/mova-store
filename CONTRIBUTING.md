@@ -72,13 +72,13 @@ git checkout -b docs/stellar-contract-readme # documentation
 
 Branch naming conventions:
 
-| Prefix   | Use for                              | Example                         |
-| -------- | ------------------------------------ | ------------------------------- |
-| `feat/`  | New features                         | `feat/payment-retry`            |
-| `fix/`   | Bug fixes                            | `fix/wrong-total-on-mobile`     |
-| `docs/`  | Documentation only                   | `docs/soroban-deploy-guide`     |
-| `refactor/` | Code changes with no behavior change | `refactor/stellar-lib-modules`  |
-| `test/`  | Adding or updating tests             | `test/pay-dup-order-cases`      |
+| Prefix      | Use for                              | Example                        |
+| ----------- | ------------------------------------ | ------------------------------ |
+| `feat/`     | New features                         | `feat/payment-retry`           |
+| `fix/`      | Bug fixes                            | `fix/wrong-total-on-mobile`    |
+| `docs/`     | Documentation only                   | `docs/soroban-deploy-guide`    |
+| `refactor/` | Code changes with no behavior change | `refactor/stellar-lib-modules` |
+| `test/`     | Adding or updating tests             | `test/pay-dup-order-cases`     |
 
 ### Step 4 — Write clean code with testing
 
@@ -179,12 +179,14 @@ npm run test:ui
 ```
 
 **Test file locations:**
+
 - Unit tests: `tests/lib/` for library functions (for example `tests/lib/env.test.ts` and `tests/lib/validation.test.ts`)
 - Shared Vitest setup: `tests/setup.ts`
 - Tests should be named `*.test.ts` or `*.test.tsx`
 - Put new component tests under `tests/` only when you add them; do not assume a `tests/components/` directory exists yet
 
 **What to test:**
+
 - Utility functions (validation, formatting, etc.)
 - Custom hooks
 - Component behavior (user interactions, state changes)
@@ -219,7 +221,7 @@ npm run build        # Production build must succeed
 
 If your PR touches the Stellar payment flow, describe in the PR how you tested
 it against testnet (Freighter + USDC faucet account). Follow the flow in the
-root [README](README.md#paying-with-usdc-testnet).
+root [README](README.md#paying-with-stellar-testnet).
 
 ## Commit Message Style
 
@@ -230,14 +232,14 @@ tooling detect releases automatically.
 <type>(<optional scope>): <short summary>
 ```
 
-| Type       | Meaning                                  |
-| ---------- | ---------------------------------------- |
-| `feat`     | A new user-facing feature                |
-| `fix`      | A bug fix                                |
-| `docs`     | Documentation only                       |
-| `refactor` | Code change with no behavior change      |
-| `test`     | Adding or updating tests                 |
-| `chore`    | Build tooling, deps, config              |
+| Type       | Meaning                             |
+| ---------- | ----------------------------------- |
+| `feat`     | A new user-facing feature           |
+| `fix`      | A bug fix                           |
+| `docs`     | Documentation only                  |
+| `refactor` | Code change with no behavior change |
+| `test`     | Adding or updating tests            |
+| `chore`    | Build tooling, deps, config         |
 
 Examples:
 
@@ -252,7 +254,7 @@ chore: bump @stellar/stellar-sdk to 16.2.0
 Rules:
 
 - Imperative mood, lowercase after the type, no trailing period.
-- Summary under ~72 characters. Add a body explaining *why* when it's not
+- Summary under ~72 characters. Add a body explaining _why_ when it's not
   obvious.
 - One logical change per commit. Prefer several focused commits over one large
   one.
@@ -281,7 +283,7 @@ everyone — regardless of experience, background, or identity.
 **Our expectations:**
 
 - **Be respectful.** Disagreement on code is normal; keep it about the code.
-- **Be constructive.** In reviews, explain *why*; in replies, be open to
+- **Be constructive.** In reviews, explain _why_; in replies, be open to
   alternatives.
 - **Be patient.** Maintainers and contributors volunteer their time; reviews may
   take a few days.
@@ -297,4 +299,4 @@ reviewed confidentially.
 
 ---
 
-*Happy building — and see you on GrantFox.*
+_Happy building — and see you on GrantFox._
