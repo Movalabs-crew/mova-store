@@ -15,7 +15,7 @@ import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
 import Modal from "../components/Modal";
 export default function Sidebar() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
@@ -78,7 +78,7 @@ export default function Sidebar() {
               </Link>
             </li>
             <li>
-              {user?.uid === "SvGyqjTVt4XgGLsGSzC0amUzC0M2" ? (
+              {isAdmin ? (
                 <Link
                   href="/admin"
                   className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
@@ -136,7 +136,7 @@ export default function Sidebar() {
               </Link>
             </li>
             <li>
-              {user?.uid === "SvGyqjTVt4XgGLsGSzC0amUzC0M2" ? (
+              {isAdmin ? (
                 <Link
                   href="/admin"
                   className=" hover:text-white transition-colors duration-200"
