@@ -1,7 +1,7 @@
 import { rpc, StrKey, xdr } from "@stellar/stellar-sdk";
 
 import { RPC_URL, TX_TIMEOUT_SECONDS, TX_POLL_INTERVAL_MS } from "./config";
-import { bytesToHex, scValToString } from "./scval";
+import { scValToString } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Payment event decoding.
@@ -128,5 +128,3 @@ export function decodePaymentEvent(
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-export { bytesToHex };
