@@ -1,7 +1,12 @@
 import { rpc, StrKey, xdr } from "@stellar/stellar-sdk";
 
-import { RPC_URL, TX_TIMEOUT_SECONDS, TX_POLL_INTERVAL_MS } from "./config";
-import { bytesToHex, scValToString } from "./scval";
+import {
+  CHECKOUT_CONTRACT_ID,
+  RPC_URL,
+  TX_TIMEOUT_SECONDS,
+  TX_POLL_INTERVAL_MS,
+} from "./config";
+import { scValToString } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Payment event decoding.
@@ -60,7 +65,8 @@ export async function waitForTransaction(
 export function decodePaymentEvent(
   tx: rpc.Api.GetSuccessfulTransactionResponse
 ): PaymentReceipt | null {
-  const contractEvents: xdr.ContractEvent[] = tx.events?.contractEventsXdr?.flat() ?? [];
+  const contractEvents: xdr.ContractEvent[] =
+    tx.events?.contractEventsXdr?.flat() ?? [];
   for (const event of contractEvents) {
     let v0: xdr.ContractEventV0;
     try {
@@ -74,20 +80,29 @@ export function decodePaymentEvent(
     if (first.switch() !== xdr.ScValType.scvSymbol()) continue;
     if (first.sym().toString() !== "pay") continue;
 
-    const data = v0.data();
-    const receipt: PaymentReceipt = {
-      txHash: tx.txHash,
-      ledger: tx.ledger,
-    };
+    let eventContractId: string | undefined;
     try {
       if (event.contractId()) {
-        receipt.contractId = StrKey.encodeContract(
+        eventContractId = StrKey.encodeContract(
           Buffer.from(event.contractId() as unknown as Uint8Array)
         );
       }
     } catch {
       // system events have no contract id
     }
+
+    // When a checkout contract id is configured, only accept events emitted by it
+    if (CHECKOUT_CONTRACT_ID && eventContractId && eventContractId !== CHECKOUT_CONTRACT_ID) {
+      continue;
+    }
+
+    const data = v0.data();
+    const receipt: PaymentReceipt = {
+      txHash: tx.txHash,
+      ledger: tx.ledger,
+      contractId: eventContractId,
+    };
+
     // topics[1..] = [token, buyer, merchant, order_id]
     for (let i = 1; i < topics.length; i++) {
       const str = scValToString(topics[i]);
@@ -128,5 +143,3 @@ export function decodePaymentEvent(
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-export { bytesToHex };
