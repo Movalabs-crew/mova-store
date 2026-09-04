@@ -33,6 +33,7 @@ import {
   validateCardExpiry,
   validateCardCVV,
 } from "../../lib/validation";
+import { useToast } from "@/hooks/useToast";
 
 const Checkout = () => {
 
@@ -45,7 +46,7 @@ const Checkout = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(4000);
   const [stage, setStage] = useState(1);
   const [isOtpSending, setIsOtpSending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,10 +62,6 @@ const Checkout = () => {
     subject: "YOUR ORDER CONFIRMATION",
   });
 
-  const showToast = (message: string) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
 
   const [orderId] = useState(() =>
     `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
@@ -484,7 +481,7 @@ const Checkout = () => {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        onClose={hideToast}
         time={4000}
       />
     </>

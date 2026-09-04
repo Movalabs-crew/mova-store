@@ -8,6 +8,7 @@ import Toast from "../../../components/Toast";
 import Cart from "../../../components/Cart";
 import { getProductById } from "../../../lib/products";
 import LoadingSpinner from "../../../components/LoadingSpinner";
+import { useToast } from "@/hooks/useToast";
 
 const ProductPage = ({ params }) => {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
@@ -16,7 +17,7 @@ const ProductPage = ({ params }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(3000);
   const { id } = params;
 
   useEffect(() => {
@@ -40,10 +41,6 @@ const ProductPage = ({ params }) => {
     }
   }, [id]);
 
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
@@ -95,7 +92,7 @@ const ProductPage = ({ params }) => {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        onClose={hideToast}
       />
       <Modal show={showModal} onClose={closeModal}>
         <h2 className="text-2xl mb-4">Cart Items</h2>

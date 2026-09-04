@@ -8,9 +8,10 @@ import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import img from "../../../public/images/welcome-mova.png";
+import { useToast } from "@/hooks/useToast";
 
 const AuthPage = () => {
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(3000);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,10 +22,6 @@ const AuthPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
 
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -247,7 +244,7 @@ const AuthPage = () => {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        onClose={hideToast}
       />
     </section>
   );

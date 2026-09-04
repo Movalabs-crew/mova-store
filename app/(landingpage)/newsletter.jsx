@@ -1,14 +1,11 @@
 import Toast from "../../components/Toast";
 import { useState } from "react";
 import { validateEmail } from "../../lib/validation";
+import { useToast } from "@/hooks/useToast";
 
 export default function Newsletter() {
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(5000);
   const [email, setEmail] = useState("");
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -66,7 +63,8 @@ export default function Newsletter() {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        time={5000}
+        onClose={hideToast}
       />
     </div>
   );

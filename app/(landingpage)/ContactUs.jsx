@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { FaGithub, FaTwitter, FaDiscord } from "react-icons/fa";
 import sendMail from "../../lib/sendmail";
+import { useToast } from "@/hooks/useToast";
 
 const socialLinks = [
   {
@@ -30,7 +31,7 @@ const ContactUs = () => {
     email: "",
     message: "",
   });
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(5000);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,10 +57,6 @@ const ContactUs = () => {
     setIsLoading(false);
   };
 
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
 
   return (
     <div
@@ -207,7 +204,7 @@ const ContactUs = () => {
         <div className="fixed bottom-5 right-5 bg-gray-800 text-white p-3 rounded shadow-lg transition-transform transform translate-y-0 ease-in-out duration-300">
           {toast.message}
           <button
-            onClick={() => setToast({ show: false, message: "" })}
+            onClick={hideToast}
             className="ml-4 text-purple-500"
           >
             ✕

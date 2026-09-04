@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Toast from "../../components/Toast";
 import { createProduct, uploadProductImage } from "../../lib/products";
+import { useToast } from "@/hooks/useToast";
 
 const AddProductForm = ({ onProductAdded }) => {
   const [productName, setProductName] = useState("");
@@ -9,11 +10,7 @@ const AddProductForm = ({ onProductAdded }) => {
   const [productImage, setProductImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const [toast, setToast] = useState({ show: false, message: "" });
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
+  const { toast, showToast, hideToast } = useToast(3000);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -100,7 +97,7 @@ const AddProductForm = ({ onProductAdded }) => {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        onClose={hideToast}
       />
     </div>
   );

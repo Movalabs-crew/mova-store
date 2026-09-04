@@ -8,12 +8,13 @@ import Cart from "../../components/Cart";
 import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
 import { listProducts } from "../../lib/products";
+import { useToast } from "@/hooks/useToast";
 
 export default function Products() {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
     useCart();
   const [showModal, setShowModal] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(3000);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
@@ -31,10 +32,6 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
 
   const handleCheckout = (e) => {
     setIsCheckingOut(true);
@@ -92,7 +89,7 @@ export default function Products() {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        onClose={hideToast}
       />
       <Modal show={showModal} onClose={closeModal}>
         <h2 className="text-2xl mb-4">Cart Items</h2>

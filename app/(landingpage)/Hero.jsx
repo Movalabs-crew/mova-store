@@ -1,19 +1,15 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/AuthContext";
 import Toast from "../../components/Toast";
 import Link from "next/link";
+import { useToast } from "@/hooks/useToast";
 
 export default function Hero() {
   const { user } = useAuth();
   const router = useRouter();
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(5000);
 
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
 
   const handleProtectedLinkClick = (e, path) => {
     if (!user) {
@@ -63,7 +59,8 @@ export default function Hero() {
       <Toast
         message={toast.message}
         show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
+        time={5000}
+        onClose={hideToast}
       />
     </>
   );

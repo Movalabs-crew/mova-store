@@ -8,6 +8,7 @@ import { logout } from "../lib/auth";
 import Toast from "../components/Toast";
 import { useRouter } from "next/navigation";
 import { TfiAngleRight } from "react-icons/tfi";
+import { useToast } from "@/hooks/useToast";
 
 const navLinkClass =
   "text-md font-medium text-mova-ink/80 hover:text-purple-600 transition-colors duration-200";
@@ -52,11 +53,7 @@ function Navbar() {
       );
     };
   }, [router]);
-  const [toast, setToast] = useState({ show: false, message: "" });
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
+  const { toast, showToast, hideToast } = useToast(3000);
 
   const [showNav, setShowNav] = useState(false);
   const { user } = useAuth();
@@ -257,7 +254,7 @@ function Navbar() {
         <Toast
           message={toast.message}
           show={toast.show}
-          onClose={() => setToast({ show: false, message: "" })}
+          onClose={hideToast}
         />
       </nav>
     </>
