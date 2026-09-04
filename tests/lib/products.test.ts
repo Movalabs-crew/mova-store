@@ -26,6 +26,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  getStoragePathFromUrl,
 } from "../../lib/products";
 
 describe("lib/products data layer", () => {
@@ -68,6 +69,24 @@ describe("lib/products data layer", () => {
       };
       const mapped = mapProduct(raw);
       expect(mapped?.price).toBe(25);
+    });
+  });
+
+  describe("getStoragePathFromUrl", () => {
+    it("extracts object path from full Supabase public URL", () => {
+      const url = "https://xyz.supabase.co/storage/v1/object/public/products/12345-shoe.png";
+      expect(getStoragePathFromUrl(url)).toBe("12345-shoe.png");
+    });
+
+    it("extracts nested path correctly", () => {
+      const url = "https://xyz.supabase.co/storage/v1/object/public/products/folder/item.jpg";
+      expect(getStoragePathFromUrl(url)).toBe("folder/item.jpg");
+    });
+
+    it("returns null for non-matching URLs or empty input", () => {
+      expect(getStoragePathFromUrl(null)).toBeNull();
+      expect(getStoragePathFromUrl("")).toBeNull();
+      expect(getStoragePathFromUrl("https://other-domain.com/shoe.png")).toBeNull();
     });
   });
 
@@ -160,7 +179,9 @@ describe("lib/products data layer", () => {
         error: null,
       });
       mockStorageFrom.getPublicUrl.mockReturnValue({
-        data: { publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png" },
+        data: {
+          publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png",
+        },
       });
 
       const url = await uploadProductImage(mockFile);
@@ -265,29 +286,83 @@ describe("lib/products data layer", () => {
   });
 
   describe("deleteProduct", () => {
-    it("deletes a product by id", async () => {
-      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
-      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+    it("deletes product and removes image from storage if present", async () => {
+      const productRow = {
+        id: "p-del",
+        name: "Old Shoe",
+        price: "50",
+        img: "https://xyz.supabase.co/storage/v1/object/public/products/1234-oldshoe.png",
+      };
+
+      // Mock getProductById
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: productRow, error: null });
+      const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+
+      // Mock delete
+      const mockDeleteEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockDeleteEq });
+
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+        delete: mockDelete,
+      });
+
+      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
 
       await deleteProduct("p-del");
 
-      expect(mockFrom).toHaveBeenCalledWith("products");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["1234-oldshoe.png"]);
       expect(mockDelete).toHaveBeenCalledTimes(1);
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
     });
 
-    it("throws error when delete fails", async () => {
-      const mockEq = vi.fn().mockResolvedValue({
+    it("still deletes row if storage remove fails or throws", async () => {
+      const productRow = {
+        id: "p-del2",
+        name: "Old Shoe",
+        price: "50",
+        img: "https://xyz.supabase.co/storage/v1/object/public/products/1234-oldshoe.png",
+      };
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: productRow, error: null });
+      const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+
+      const mockDeleteEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockDeleteEq });
+
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+        delete: mockDelete,
+      });
+
+      mockStorageFrom.remove.mockRejectedValue(new Error("Storage unavailable"));
+
+      await deleteProduct("p-del2");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["1234-oldshoe.png"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del2");
+    });
+
+    it("throws error when db delete fails", async () => {
+      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+
+      const mockDeleteEq = vi.fn().mockResolvedValue({
         data: null,
         error: new Error("Foreign key constraint violation"),
       });
-      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockDeleteEq });
 
-      await expect(deleteProduct("p-del")).rejects.toThrow(
-        "Foreign key constraint violation"
-      );
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+        delete: mockDelete,
+      });
+
+      await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
     });
   });
 });
