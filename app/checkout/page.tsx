@@ -21,6 +21,7 @@ import {
 import { BsBank, BsCalendarDate } from "react-icons/bs";
 import { SiKlarna } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
+import { compareOTP, generateOTP } from "../../lib/validation";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
@@ -28,7 +29,7 @@ import { SiStellar } from "react-icons/si";
 
 const Checkout = () => {
 
-  const [otp, setOtp] = useState(Math.floor(Math.random() * 1000000) + 1);
+  const [otp] = useState(() => generateOTP());
   const [totalPrice, setTotalPrice] = useState(0);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [stage, setStage] = useState(1);
@@ -97,7 +98,7 @@ const Checkout = () => {
   const handleEmailConfirmationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsOtpSending(true);
-    if (parseInt(enteredOtp) === otp) {
+    if (compareOTP(enteredOtp, otp)) {
       setStage(3);
       localStorage.clear();
       showToast("OTP confirmed successfully.");
@@ -366,6 +367,9 @@ const Checkout = () => {
                     onChange={handleOtpChange}
                     required
                     placeholder="OTP"
+                    maxLength={6}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     className="w-64 px-3 py-2 border rounded"
                   />
                 </div>

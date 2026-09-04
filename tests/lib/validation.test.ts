@@ -4,6 +4,8 @@ import {
   validateName,
   validatePhone,
   validateOTP,
+  generateOTP,
+  compareOTP,
   validatePrice,
   validateStellarAddress,
   sanitizeText,
@@ -124,6 +126,41 @@ describe("validateOTP", () => {
     const result = validateOTP("12-34-56");
     expect(result.sanitized).toBe("123456");
     expect(result.isValid).toBe(true);
+  });
+});
+
+describe("generateOTP", () => {
+  it("returns a zero-padded 6-digit string", () => {
+    expect(generateOTP(42)).toBe("000042");
+    expect(generateOTP(0)).toBe("000000");
+    expect(generateOTP(999999)).toBe("999999");
+  });
+
+  it("always produces six digits when called without a value", () => {
+    expect(generateOTP()).toMatch(/^\d{6}$/);
+  });
+});
+
+describe("compareOTP", () => {
+  it("rejects a wrong numeric OTP", () => {
+    expect(compareOTP("000043", "000042")).toBe(false);
+    expect(compareOTP("123456", "000042")).toBe(false);
+  });
+
+  it("rejects digits followed by junk characters", () => {
+    expect(compareOTP("000042x", "000042")).toBe(false);
+    expect(compareOTP("123x", "000123")).toBe(false);
+    expect(compareOTP("123.4", "000123")).toBe(false);
+  });
+
+  it("accepts a correct zero-padded OTP such as 000042", () => {
+    expect(compareOTP("000042", "000042")).toBe(true);
+    expect(compareOTP(" 000042 ", "000042")).toBe(true);
+  });
+
+  it("rejects letters-only input", () => {
+    expect(compareOTP("abcdef", "000042")).toBe(false);
+    expect(compareOTP("OTP", "000042")).toBe(false);
   });
 });
 
