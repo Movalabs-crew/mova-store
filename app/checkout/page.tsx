@@ -310,6 +310,7 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full flex justify-center items-center bg-purple-500 text-white py-2 rounded hover:bg-purple-700 transition-colors"
                 >
                   {isSubmitting ? (
@@ -371,6 +372,7 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
+                  disabled={isOtpSending}
                   className="w-full bg-purple-500 text-white flex justify-center items-center py-2 rounded hover:bg-purple-700 transition-colors"
                 >
                   {isOtpSending ? (
