@@ -83,8 +83,9 @@ export function decodePaymentEvent(
     let eventContractId: string | undefined;
     try {
       if (event.contractId()) {
+        // the XDR layer accepts the raw contract hash bytes at runtime
         eventContractId = StrKey.encodeContract(
-          Buffer.from(event.contractId() as unknown as Uint8Array)
+          event.contractId() as never
         );
       }
     } catch {
