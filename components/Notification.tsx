@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, createContext, useContext } from "react";
+import { useEffect, useState, useCallback, createContext, useContext, useRef } from "react";
 import { MdClose, MdCheckCircle, MdError, MdWarning, MdInfo } from "react-icons/md";
 
 // =============================================================================
@@ -51,8 +51,27 @@ export function useNotification() {
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
+
   const removeNotification = useCallback((id: string) => {
+    // Cancel the pending auto-removal timer so it cannot outlive the
+    // notification (issue #23: same corrected pattern as Toast).
+    const timer = timersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  // Clear any pending auto-removal timers on unmount.
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach((timer) => clearTimeout(timer));
+      timersRef.current.clear();
+    };
   }, []);
 
   const addNotification = useCallback(
@@ -66,11 +85,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       setNotifications((prev) => [...prev, newNotification]);
 
-      // Auto-remove after duration
+      // Auto-remove after duration (tracked so it can be cancelled)
       if (newNotification.duration && newNotification.duration > 0) {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           removeNotification(id);
         }, newNotification.duration);
+        timersRef.current.set(id, timer);
       }
 
       return id;

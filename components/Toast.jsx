@@ -1,24 +1,32 @@
 import { useEffect, useState } from "react";
 
-const Toast = ({ message, show, onClose , time=3000}) => {
+const Toast = ({ message, show, onClose, time = 3000 }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (show) {
-      setVisible(true);
-    
-      const timer = setTimeout(() => {
-        setVisible(false);
-        const exitTimer = setTimeout(() => {
-          onClose();
-        }, 300);
-        return () => clearTimeout(exitTimer);
-      }, time);
-      return () => clearTimeout(timer);
-    } else {
+    if (!show) {
       setVisible(false);
+      return;
     }
-  }, [show, onClose]);
+
+    setVisible(true);
+
+    let exitTimer;
+    const timer = setTimeout(() => {
+      setVisible(false);
+      // Keep the exit timer in effect scope (issue #23): the previous version
+      // scheduled it inside the timeout callback, where its cleanup was never
+      // executed, so a stale onClose could hide a freshly re-shown toast.
+      exitTimer = setTimeout(() => {
+        onClose();
+      }, 300);
+    }, time);
+
+    return () => {
+      clearTimeout(timer);
+      if (exitTimer) clearTimeout(exitTimer);
+    };
+  }, [show, onClose, time]);
 
   return (
     <div
