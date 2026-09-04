@@ -218,7 +218,7 @@ npm run build        # Production build must succeed
 
 If your PR touches the Stellar payment flow, describe in the PR how you tested
 it against testnet (Freighter + USDC faucet account). Follow the flow in the
-root [README](README.md#paying-with-usdc-testnet).
+root [README](README.md#paying-with-stellar-testnet).
 
 ## Commit Message Style
 
