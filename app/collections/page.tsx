@@ -1,9 +1,9 @@
-import Image from 'next/image';
-import shoeImage1 from "/public/images/shoe4.png";
-import shoeImage2 from "/public/images/shoe3.png";
+import Image from "next/image";
+import shoeImage1 from "/public/images/shoe1.png";
+import shoeImage2 from "/public/images/shoe2.png";
 import shoeImage3 from "/public/images/shoe3.png";
 import shoeImage4 from "/public/images/shoe4.png";
-import shoeImage5 from "/public/images/shoe5.png";
+
 const shoes = [
   {
     id: 1,
@@ -15,19 +15,19 @@ const shoes = [
     id: 2,
     name: "Basketball Shoes",
     price: "$129.99",
-    imageUrl: shoeImage1,
+    imageUrl: shoeImage2,
   },
   {
     id: 3,
     name: "Casual Sneakers",
     price: "$79.99",
-    imageUrl: shoeImage1,
+    imageUrl: shoeImage3,
   },
   {
     id: 4,
     name: "Formal Shoes",
     price: "$149.99",
-    imageUrl: shoeImage1,
+    imageUrl: shoeImage4,
   },
 ];
 
@@ -42,8 +42,8 @@ export default function ShoesCollection() {
               <Image
                 src={shoe.imageUrl}
                 alt={shoe.name}
-                layout="fill"
-                objectFit="cover"
+                fill
+                style={{ objectFit: "cover" }}
                 className="rounded-t-lg"
               />
             </div>
