@@ -14,7 +14,7 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
   const v = BigInt(value);
   const mask = BigInt("0xffffffffffffffff");
   const lo = new xdr.Uint64(BigInt.asUintN(64, v & mask));
-  const hi = new xdr.Int64(BigInt.asUintN(64, v >> BigInt(64)));
+  const hi = new xdr.Int64(BigInt.asIntN(64, v >> BigInt(64)));
   return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
 }
 
