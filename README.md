@@ -82,7 +82,7 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
   - [Step 5b — Whitelist the tokens you accept](#step-5b--whitelist-the-tokens-you-accept)
   - [Step 6 — Wire the deployed contract to the storefront](#step-6--wire-the-deployed-contract-to-the-storefront)
   - [Convenience script](#convenience-script)
-- [Paying with USDC (testnet)](#paying-with-usdc-testnet)
+- [Paying with Stellar (testnet)](#paying-with-stellar-testnet)
 - [Environment Variables Reference](#environment-variables-reference)
 - [Security Notes](#security-notes)
 - [Contributing](#contributing)
