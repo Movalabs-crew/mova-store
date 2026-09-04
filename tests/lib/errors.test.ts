@@ -79,3 +79,39 @@ describe("Error Handling & Stellar Error Reconciliation Tests", () => {
     expect(isRecoverable(new WalletError("Wrong net", "WRONG_NETWORK"))).toBe(true);
   });
 });
+
+describe("parseError - auth error precedence (#35)", () => {
+  it("classifies an auth message containing 'cancelled' as the auth error, not UserRejected", () => {
+    const result = parseError(
+      "Email not confirmed: you cancelled the verification request"
+    );
+    expect(result.code).toBe("AUTH_EMAIL_NOT_CONFIRMED");
+    expect(result.userMessage).toBe(
+      "Please confirm your email before signing in."
+    );
+  });
+
+  it("classifies a pure Stellar 'Transaction cancelled by user' as UserRejected", () => {
+    const result = parseError("Transaction cancelled by user");
+    expect(result.code).toBe("WALLET_USER_REJECTED");
+  });
+
+  it("still maps pure Stellar heuristics (balance) correctly", () => {
+    expect(parseError("Insufficient balance").code).toBe(
+      "ACCOUNT_INSUFFICIENT_BALANCE"
+    );
+  });
+
+  it("classifies the other auth phrases", () => {
+    expect(parseError("User already registered").code).toBe("AUTH_EMAIL_EXISTS");
+    expect(parseError("Invalid login credentials").code).toBe(
+      "AUTH_INVALID_CREDENTIALS"
+    );
+  });
+
+  it("falls back to the generic unknown error with the original message", () => {
+    const result = parseError("something completely unexpected");
+    expect(result.code).toBe("UNKNOWN_ERROR");
+    expect(result.message).toBe("something completely unexpected");
+  });
+});
