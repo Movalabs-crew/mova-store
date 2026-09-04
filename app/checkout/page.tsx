@@ -75,7 +75,9 @@ const Checkout = () => {
       `USDC payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
     );
     setStage(3);
-    localStorage.clear();
+    localStorage.removeItem("cartItems");
+    localStorage.removeItem("itemCount");
+    localStorage.removeItem("totalPrice");
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,7 +125,9 @@ const Checkout = () => {
     const { isValid } = validateOTP(entered);
     if (isValid && entered === otp) {
       setStage(3);
-      localStorage.clear();
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
       showToast("OTP confirmed successfully.");
     } else {
       setIsOtpSending(false);
