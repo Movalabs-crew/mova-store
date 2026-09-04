@@ -329,7 +329,8 @@ function parseErrorMessage(message: string): AppError {
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
     if (
       lowerMessage.includes(key.toLowerCase()) ||
-      lowerMessage.includes(appError.code.toLowerCase())
+      lowerMessage.includes(appError.code.toLowerCase()) ||
+      lowerMessage.includes(appError.message.toLowerCase())
     ) {
       return appError;
     }
