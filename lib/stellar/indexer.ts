@@ -64,6 +64,7 @@ export class PaymentEventIndexer {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
   private started = false;
+  private ledgerRetries = 0;
 
   constructor(
     opts: {
@@ -115,14 +116,26 @@ export class PaymentEventIndexer {
         1,
         this.latestLedger - EVENT_START_LEDGER_BACKFILL
       );
+      this.ledgerRetries = 0;
       callbacks.onStatus?.(this.status);
+      this.timer = setInterval(() => void this.poll(callbacks), this.pollMs);
+      void this.poll(callbacks);
     } catch (err) {
+      if (!this.running) return;
+      // Polling cannot begin until a start ledger is known, so retry the
+      // lookup with capped exponential backoff and surface the retrying
+      // state via onStatus instead of hard-failing. A transient startup
+      // RPC outage then recovers without a page reload.
+      this.ledgerRetries += 1;
       this.lastError = String(err instanceof Error ? err.message : err);
-      callbacks.onError?.(new Error(`Could not reach the Stellar RPC: ${this.lastError}`));
+      callbacks.onStatus?.(this.status);
+      const delay =
+        Math.min(this.pollMs, 1000) *
+        2 ** Math.min(this.ledgerRetries - 1, 2);
+      setTimeout(() => {
+        if (this.running) void this.initialize(callbacks);
+      }, delay);
     }
-
-    this.timer = setInterval(() => void this.poll(callbacks), this.pollMs);
-    void this.poll(callbacks);
   }
 
   private async poll(callbacks: IndexerCallbacks): Promise<void> {
