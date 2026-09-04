@@ -74,6 +74,7 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       await sendMail({
@@ -96,6 +97,7 @@ const Checkout = () => {
 
   const handleEmailConfirmationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isOtpSending) return;
     setIsOtpSending(true);
     if (parseInt(enteredOtp) === otp) {
       setStage(3);
@@ -310,7 +312,8 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full flex justify-center items-center bg-purple-500 text-white py-2 rounded hover:bg-purple-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="w-full flex justify-center items-center bg-purple-500 text-white py-2 rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>
@@ -371,7 +374,8 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-purple-500 text-white flex justify-center items-center py-2 rounded hover:bg-purple-700 transition-colors"
+                  disabled={isOtpSending}
+                  className="w-full bg-purple-500 text-white flex justify-center items-center py-2 rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isOtpSending ? (
                     <>
