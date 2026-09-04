@@ -102,7 +102,7 @@ export default function Products() {
           <div>
             {cartItems.map((item) => (
               <div
-                key={item.id}
+                key={item.lineId ?? item.id}
                 className="flex justify-between items-center mb-2"
               >
                 <div className="w-16 h-16 flex-shrink-0">

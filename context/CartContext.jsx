@@ -5,6 +5,23 @@ const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
+// Unique per-cart-line identifier. Adding the same product twice must create
+// two independent rows (each removable on its own, each with a unique React
+// key), so every line item gets a `lineId` that is unique across the cart
+// lifetime and stable across localStorage persistence.
+let lineIdSequence = 0;
+const makeLineId = (productId) => {
+  lineIdSequence += 1;
+  return `${productId}#${lineIdSequence}-${Date.now().toString(36)}`;
+};
+
+// Normalize items restored from localStorage: carts persisted by an older
+// version of this context have no `lineId` yet.
+const ensureLineId = (item) =>
+  item && typeof item === "object" && !item.lineId
+    ? { ...item, lineId: makeLineId(item.id) }
+    : item;
+
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [itemCount, setItemCount] = useState(0);
@@ -51,14 +68,15 @@ export const CartProvider = ({ children }) => {
       storedTotalPrice = 0;
     }
 
-    setCartItems(storedCartItems);
+    setCartItems(storedCartItems.map(ensureLineId));
     setItemCount(storedItemCount);
     setTotalPrice(storedTotalPrice);
   }, []);
 
   const addToCart = (product) => {
     setCartItems((prevCartItems) => {
-      const updatedCartItems = [...prevCartItems, product];
+      const lineItem = ensureLineId(product);
+      const updatedCartItems = [...prevCartItems, lineItem];
       localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
       return updatedCartItems;
     });
@@ -76,7 +94,14 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = (product) => {
     setCartItems((prevCartItems) => {
-      const index = prevCartItems.findIndex((item) => item.id === product.id);
+      // Remove the exact line instance (by lineId) so that, with duplicate
+      // products in the cart, only the row whose Remove button was clicked
+      // disappears. Fall back to product id matching for legacy callers that
+      // pass a bare product object.
+      const index =
+        product?.lineId != null
+          ? prevCartItems.findIndex((item) => item.lineId === product.lineId)
+          : prevCartItems.findIndex((item) => item.id === product?.id);
       if (index === -1) return prevCartItems;
 
       const removedItem = prevCartItems[index];
