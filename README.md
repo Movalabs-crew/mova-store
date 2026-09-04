@@ -267,7 +267,6 @@ Copy the template and fill in your values:
 cp .env.local.example .env.local
 ```
 
-A minimal Stellar-only configuration (the rest of the app runs with the existing
 A minimal Stellar-only configuration (fill Supabase values for auth/catalog):
 
 ```bash
