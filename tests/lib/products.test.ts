@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock supabase before importing lib/products
@@ -289,5 +291,69 @@ describe("lib/products data layer", () => {
         "Foreign key constraint violation"
       );
     });
+  });
+});
+
+describe("Products Mapping & Schema Integrity (Issue #106)", () => {
+  it("returns null when row is null or undefined", () => {
+    expect(mapProduct(null)).toBeNull();
+    expect(mapProduct(undefined as any)).toBeNull();
+  });
+
+  it("maps product row without updated_at correctly", () => {
+    const rawRow = {
+      id: "prod-1",
+      name: "Stellar Horizon Cap",
+      price: "29.99",
+      img: "https://example.com/cap.png",
+      created_at: "2026-09-01T12:00:00Z",
+    };
+
+    const mapped = mapProduct(rawRow);
+    expect(mapped).toEqual({
+      id: "prod-1",
+      name: "Stellar Horizon Cap",
+      price: 29.99,
+      img: "https://example.com/cap.png",
+      created_at: "2026-09-01T12:00:00Z",
+    });
+    expect(mapped?.updated_at).toBeUndefined();
+  });
+
+  it("surfaces updated_at when present on the row", () => {
+    const rawRow = {
+      id: "prod-2",
+      name: "Soroban Smart Contract T-Shirt",
+      price: 34.5,
+      img: "https://example.com/shirt.png",
+      created_at: "2026-09-01T12:00:00Z",
+      updated_at: "2026-09-04T10:00:00Z",
+    };
+
+    const mapped = mapProduct(rawRow);
+    expect(mapped?.updated_at).toBe("2026-09-04T10:00:00Z");
+    expect(mapped).toEqual({
+      id: "prod-2",
+      name: "Soroban Smart Contract T-Shirt",
+      price: 34.5,
+      img: "https://example.com/shirt.png",
+      created_at: "2026-09-01T12:00:00Z",
+      updated_at: "2026-09-04T10:00:00Z",
+    });
+  });
+
+  it("verifies supabase/schema.sql defines updated_at and maintenance trigger idempotently", () => {
+    const schemaPath = path.resolve(__dirname, "../../supabase/schema.sql");
+    expect(fs.existsSync(schemaPath)).toBe(true);
+
+    const sql = fs.readFileSync(schemaPath, "utf-8");
+    expect(sql).toContain("updated_at timestamptz not null default now()");
+    expect(sql).toContain(
+      "alter table public.products add column if not exists updated_at"
+    );
+    expect(sql).toContain("create or replace function public.set_updated_at()");
+    expect(sql).toContain("new.updated_at = now();");
+    expect(sql).toContain("drop trigger if exists set_products_updated_at");
+    expect(sql).toContain("create trigger set_products_updated_at");
   });
 });
