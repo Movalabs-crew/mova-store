@@ -228,7 +228,7 @@ Install the following before getting started:
 
 | Tool             | Version / Notes                                              | Install                                     |
 | ---------------- | ------------------------------------------------------------ | ------------------------------------------- |
-| **Node.js**      | 18.18+ (bundles `npm`)                                       | https://nodejs.org                          |
+| **Node.js**      | 18.18+ (Node 20 recommended, see `.nvmrc`)                 | https://nodejs.org or `nvm use`            |
 | **Rust**         | stable, with the `wasm32v1-none` target                      | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
 | **Stellar CLI**  | latest (`stellar --version`)                                 | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
 | **Freighter**    | browser wallet extension (Chrome / Firefox)                  | https://freighter.app                       |
@@ -239,6 +239,7 @@ Install the following before getting started:
 Verify your setup:
 
 ```bash
+nvm use             # use version from .nvmrc (v20)
 node --version      # v18.18+ or newer
 cargo --version     # 1.7x+
 stellar --version   # latest
