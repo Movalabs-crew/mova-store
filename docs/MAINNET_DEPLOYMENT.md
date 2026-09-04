@@ -50,7 +50,7 @@ cd contracts/checkout
 stellar contract build
 
 # The optimized wasm is at:
-# target/wasm32-unknown-unknown/release/movastore_checkout.wasm
+# target/wasm32v1-none/release/movastore_checkout.wasm
 ```
 
 ### Verify the Build
@@ -60,14 +60,14 @@ stellar contract build
 cargo test
 
 # Check the wasm size (should be under 64KB)
-ls -la target/wasm32-unknown-unknown/release/movastore_checkout.wasm
+ls -la target/wasm32v1-none/release/movastore_checkout.wasm
 ```
 
 ## Step 3: Deploy to Mainnet
 
 ```bash
 stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/movastore_checkout.wasm \
+  --wasm target/wasm32v1-none/release/movastore_checkout.wasm \
   --source-account merchant-mainnet \
   --network mainnet
 ```
