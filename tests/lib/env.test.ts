@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction } from "../../lib/env";
+import { isAdminEmail, isDevelopment, isProduction, loadStellarConfig } from "../../lib/env";
 
 describe("isAdminEmail", () => {
   beforeEach(() => {
@@ -58,5 +58,34 @@ describe("isProduction", () => {
   it("returns false in development", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(isProduction()).toBe(false);
+  });
+});
+
+describe("loadStellarConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("resolves the canonical SDF mainnet RPC endpoint when network is mainnet and RPC is unset", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    const config = loadStellarConfig();
+    expect(config.network).toBe("mainnet");
+    expect(config.rpcUrl).toBe("https://soroban-rpc.stellar.org");
+  });
+
+  it("resolves the canonical SDF testnet RPC endpoint when network is testnet and RPC is unset", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    const config = loadStellarConfig();
+    expect(config.network).toBe("testnet");
+    expect(config.rpcUrl).toBe("https://soroban-testnet.stellar.org");
+  });
+
+  it("uses custom RPC endpoint when NEXT_PUBLIC_STELLAR_RPC_URL is provided", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_RPC_URL", "https://custom-soroban-rpc.example.com");
+    const config = loadStellarConfig();
+    expect(config.rpcUrl).toBe("https://custom-soroban-rpc.example.com");
   });
 });
