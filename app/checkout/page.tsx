@@ -89,10 +89,7 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isEmptyCart) {
-      showToast("Your cart is empty. Please add items before checking out.");
-      return;
-    }
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       await sendMail({
@@ -115,6 +112,7 @@ const Checkout = () => {
 
   const handleEmailConfirmationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isOtpSending) return;
     setIsOtpSending(true);
     // Validate the raw trimmed input as a 6-digit code, then compare it against the
     // zero-padded OTP with exact string equality. We deliberately compare the raw
@@ -372,7 +370,7 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  disabled={isSubmitting || isEmptyCart}
+                  disabled={isSubmitting}
                   className="w-full flex justify-center items-center bg-purple-500 text-white py-2 rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
