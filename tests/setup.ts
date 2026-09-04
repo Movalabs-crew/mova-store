@@ -1,14 +1,7 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 import React from "react";
-const nodeCrypto = require("crypto");
-
-// Ensure test environment for React/Testing Library
-// @ts-ignore
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-if (typeof process !== "undefined" && process.env) {
-  process.env.NODE_ENV = "test";
-}
+import { webcrypto } from "node:crypto";
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
@@ -31,18 +24,10 @@ vi.mock("next/image", () => ({
     React.createElement("img", { src, alt, ...props }),
 }));
 
-// Replace fake crypto mock with REAL SHA-256 via Node webcrypto
-const realWebCrypto = (nodeCrypto as any).webcrypto || nodeCrypto;
-Object.defineProperty(globalThis, "crypto", {
-  value: realWebCrypto,
-  writable: true,
-  configurable: true,
-});
-if (typeof window !== "undefined") {
-  Object.defineProperty(window, "crypto", {
-    value: realWebCrypto,
-    writable: true,
-    configurable: true,
+// Provide genuine WebCrypto for tests
+if (!globalThis.crypto || !globalThis.crypto.subtle) {
+  Object.defineProperty(globalThis, "crypto", {
+    value: webcrypto,
   });
 }
 
