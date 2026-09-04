@@ -7,6 +7,7 @@ import { FaShoppingCart } from "react-icons/fa";
 import Cart from "../../components/Cart";
 import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
+import { ProductGridSkeleton } from "../../components/Skeleton";
 import { listProducts } from "../../lib/products";
 
 export default function Products() {
@@ -17,14 +18,18 @@ export default function Products() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setLoading(true);
         const data = await listProducts();
         setProducts(data);
       } catch (err) {
         setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -58,34 +63,44 @@ export default function Products() {
             Welcome to Mova Store
           </span>
 
-          {error && <p className="text-red-500 text-center">{error}</p>}
+          {loading && <ProductGridSkeleton count={8} />}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {products.map((prod) => (
-              <div key={prod.id} className="p-4 border rounded-lg shadow">
-                <Link href={`/shop/${prod.id}`}>
-                  <Image
-                    src={prod.img} // Ensure this URL is correct
-                    alt={prod.name}
-                    width={200}
-                    height={200}
-                    className="mb-2"
-                  />
-                  <h1 className="text-xl font-bold">{prod.name}</h1>
-                  <h2 className="text-lg">${prod.price}</h2>
-                </Link>
-                <button
-                  className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
-                  onClick={() => {
-                    addToCart(prod);
-                    showToast("Item added to cart");
-                  }}
-                >
-                  <FaShoppingCart />
-                </button>
-              </div>
-            ))}
-          </div>
+          {!loading && error && (
+            <p className="text-red-500 text-center">{error}</p>
+          )}
+
+          {!loading && !error && products.length === 0 && (
+            <p className="text-center text-gray-500 py-8">No products yet.</p>
+          )}
+
+          {!loading && !error && products.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {products.map((prod) => (
+                <div key={prod.id} className="p-4 border rounded-lg shadow">
+                  <Link href={`/shop/${prod.id}`}>
+                    <Image
+                      src={prod.img}
+                      alt={prod.name}
+                      width={200}
+                      height={200}
+                      className="mb-2"
+                    />
+                    <h1 className="text-xl font-bold">{prod.name}</h1>
+                    <h2 className="text-lg">${prod.price}</h2>
+                  </Link>
+                  <button
+                    className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
+                    onClick={() => {
+                      addToCart(prod);
+                      showToast("Item added to cart");
+                    }}
+                  >
+                    <FaShoppingCart />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
@@ -107,7 +122,7 @@ export default function Products() {
               >
                 <div className="w-16 h-16 flex-shrink-0">
                   <Image
-                    src={item.img} // Ensure this URL is correct
+                    src={item.img}
                     width={64}
                     height={64}
                     alt={`${item.name} image`}
@@ -139,6 +154,7 @@ export default function Products() {
             <button
               onClick={handleCheckout}
               className="bg-purple-500 text-white px-4 py-1 rounded mt-4"
+              disabled={isCheckingOut}
             >
               {isCheckingOut ? "CheckingOut..." : "CheckOut"}
             </button>
