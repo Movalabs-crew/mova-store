@@ -191,7 +191,14 @@ export class PaymentEventIndexer {
     }
   }
 
-  private decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
+  /**
+   * Decode an RPC event response into an IndexedEvent, or return null if
+   * the event has a non-symbol first topic, an unwatched symbol, or invalid shape.
+   *
+   * @param raw Raw RPC event response from Stellar RPC
+   * @returns IndexedEvent with parsed topic fields and data values, or null if filtered
+   */
+  decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
     const first = raw.topic[0];
     if (!first || first.switch() !== xdr.ScValType.scvSymbol()) return null;
     const symbol = first.sym().toString();
