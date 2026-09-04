@@ -67,6 +67,14 @@ describe("ScVal helpers", () => {
       );
       expect(() => bytes32ToScVal("aabbcc")).toThrow("order_id must be exactly 32 bytes");
     });
+
+    it("produces byte-identical XDR for hex string and Uint8Array inputs", () => {
+      const hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+      const u8 = hexToBytes(hex);
+      const scValFromHex = bytes32ToScVal(hex);
+      const scValFromBytes = bytes32ToScVal(u8);
+      expect(scValFromHex.toXDR("base64")).toBe(scValFromBytes.toXDR("base64"));
+    });
   });
 
   describe("hexToBytes and bytesToHex", () => {
