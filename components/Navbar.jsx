@@ -63,7 +63,9 @@ function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
-      localStorage.clear();
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
       router.push("/");
       showToast("Logged out successfully");
     } catch (error) {
