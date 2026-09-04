@@ -1,102 +1,178 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction, validateEnv } from "../../lib/env";
+import {
+  loadEmailJSConfig,
+  loadSupabaseConfig,
+  loadAdminConfig,
+  validateEnv,
+} from "../../lib/env";
 
-describe("isAdminEmail", () => {
-  beforeEach(() => {
-    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "admin@test.com,admin2@test.com");
-  });
-
+describe("loadEmailJSConfig", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("returns true for admin emails", () => {
-    expect(isAdminEmail("admin@test.com")).toBe(true);
-    expect(isAdminEmail("admin2@test.com")).toBe(true);
-  });
-
-  it("is case insensitive", () => {
-    expect(isAdminEmail("ADMIN@TEST.COM")).toBe(true);
-    expect(isAdminEmail("Admin@Test.Com")).toBe(true);
-  });
-
-  it("returns false for non-admin emails", () => {
-    expect(isAdminEmail("user@test.com")).toBe(false);
-    expect(isAdminEmail("notadmin@test.com")).toBe(false);
-  });
-
-  it("returns false for null/undefined", () => {
-    expect(isAdminEmail(null)).toBe(false);
-    expect(isAdminEmail(undefined)).toBe(false);
-    expect(isAdminEmail("")).toBe(false);
-  });
-
-  it("handles empty admin list", () => {
-    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "");
-    expect(isAdminEmail("admin@test.com")).toBe(false);
-  });
-});
-
-describe("isDevelopment", () => {
-  it("returns true in development", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    expect(isDevelopment()).toBe(true);
-  });
-
-  it("returns false in production", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    expect(isDevelopment()).toBe(false);
-  });
-});
-
-describe("isProduction", () => {
-  it("returns true in production", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    expect(isProduction()).toBe(true);
-  });
-
-  it("returns false in development", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    expect(isProduction()).toBe(false);
-  });
-});
-
-describe("validateEnv", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("throws an error naming missing fields when required variables are unset", () => {
-    // Ensure required env vars are empty/unset
-    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+  it("throws errors for each missing required field", () => {
+    const errors: { field: string; message: string }[] = [];
     vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "");
     vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "");
     vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "");
 
-    expect(() => validateEnv()).toThrowError(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
-    expect(() => validateEnv()).toThrowError(/NEXT_PUBLIC_SUPABASE_URL/);
-    expect(() => validateEnv()).toThrowError(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+    loadEmailJSConfig(errors);
+    expect(errors).toHaveLength(3);
+    expect(errors.some((e) => e.field === "NEXT_PUBLIC_EMAILJS_SERVICE_ID")).toBe(true);
+    expect(errors.some((e) => e.field === "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID")).toBe(true);
+    expect(errors.some((e) => e.field === "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY")).toBe(true);
   });
 
-  it("returns populated configuration when all required environment variables are set", () => {
-    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CA1234567890TESTCONTRACTID");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key-123");
-    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "service_abc");
-    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "template_xyz");
-    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pubkey_789");
-    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "admin@store.org");
+  it("loads successfully when all required fields are set", () => {
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "svc_123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_456");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_789");
 
-    const config = validateEnv();
+    const errors: { field: string; message: string }[] = [];
+    const config = loadEmailJSConfig(errors);
 
-    expect(config.stellar.checkoutContractId).toBe("CA1234567890TESTCONTRACTID");
-    expect(config.supabase.url).toBe("https://project.supabase.co");
-    expect(config.supabase.anonKey).toBe("test-anon-key-123");
-    expect(config.emailjs.serviceId).toBe("service_abc");
-    expect(config.emailjs.templateId).toBe("template_xyz");
-    expect(config.emailjs.publicKey).toBe("pubkey_789");
-    expect(config.admin.adminEmails).toContain("admin@store.org");
+    expect(errors).toHaveLength(0);
+    expect(config.serviceId).toBe("svc_123");
+    expect(config.templateId).toBe("tmpl_456");
+    expect(config.publicKey).toBe("pub_789");
+  });
+
+  it("leaves defaultRecipientEmail undefined when not set", () => {
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "svc_123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_456");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_789");
+
+    const config = loadEmailJSConfig([]);
+    expect(config.defaultRecipientEmail).toBeUndefined();
+  });
+
+  it("allows optional defaultRecipientEmail when set", () => {
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "svc_123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_456");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_789");
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL", "help@store.org");
+
+    const config = loadEmailJSConfig([]);
+    expect(config.defaultRecipientEmail).toBe("help@store.org");
+  });
+
+  it("treats whitespace-only required values as missing", () => {
+    const errors: { field: string; message: string }[] = [];
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "   ");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_456");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_789");
+
+    loadEmailJSConfig(errors);
+    expect(errors.some((e) => e.field === "NEXT_PUBLIC_EMAILJS_SERVICE_ID")).toBe(true);
+  });
+});
+
+describe("loadSupabaseConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("throws errors for each missing required field", () => {
+    const errors: { field: string; message: string }[] = [];
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+
+    loadSupabaseConfig(errors);
+    expect(errors).toHaveLength(2);
+    expect(errors.some((e) => e.field === "NEXT_PUBLIC_SUPABASE_URL")).toBe(true);
+    expect(errors.some((e) => e.field === "NEXT_PUBLIC_SUPABASE_ANON_KEY")).toBe(true);
+  });
+
+  it("loads successfully when all required fields are set", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://myproject.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
+
+    const errors: { field: string; message: string }[] = [];
+    const config = loadSupabaseConfig(errors);
+
+    expect(errors).toHaveLength(0);
+    expect(config.url).toBe("https://myproject.supabase.co");
+    expect(config.anonKey).toBe("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
+  });
+
+  it("trims whitespace from values", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "  https://myproject.supabase.co  ");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "  key123  ");
+
+    const config = loadSupabaseConfig([]);
+    expect(config.url).toBe("https://myproject.supabase.co");
+    expect(config.anonKey).toBe("key123");
+  });
+});
+
+describe("loadAdminConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("trims and lowercases admin emails", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "  Admin@Test.Com  ,  MOD@TEST.COM  ");
+
+    const config = loadAdminConfig();
+    expect(config.adminEmails).toEqual(["admin@test.com", "mod@test.com"]);
+  });
+
+  it("drops empty entries", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "a@b.com,,  ,c@d.com");
+
+    const config = loadAdminConfig();
+    expect(config.adminEmails).toEqual(["a@b.com", "c@d.com"]);
+  });
+
+  it("returns empty array for blank string", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "");
+
+    const config = loadAdminConfig();
+    expect(config.adminEmails).toEqual([]);
+  });
+
+  it("returns empty array for comma-only string", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", ",,,");
+
+    const config = loadAdminConfig();
+    expect(config.adminEmails).toEqual([]);
+  });
+
+  it("returns empty array for whitespace-only string", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "   ");
+
+    const config = loadAdminConfig();
+    expect(config.adminEmails).toEqual([]);
+  });
+});
+
+describe("validateEnv — error accumulation", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("collects errors from multiple missing loaders", () => {
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "svc_ok");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_ok");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_ok");
+
+    expect(() => validateEnv()).toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+    expect(() => validateEnv()).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
+    expect(() => validateEnv()).toThrow(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  });
+
+  it("whitespace-only values are treated as missing in validateEnv", () => {
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CA123");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "  ");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "key123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "svc_123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_456");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_789");
+
+    expect(() => validateEnv()).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
   });
 });
