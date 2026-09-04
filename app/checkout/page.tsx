@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useCart } from "../../context/CartContext";
 
 import Toast from "../../components/Toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
