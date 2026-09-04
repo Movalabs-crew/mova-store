@@ -11,10 +11,45 @@ export const CartProvider = ({ children }) => {
   const [totalPrice, setTotalPrice] = useState(0);
 
   useEffect(() => {
-    const storedCartItems = JSON.parse(localStorage.getItem("cartItems")) || [];
-    const storedItemCount = parseInt(localStorage.getItem("itemCount")) || 0;
-    const storedTotalPrice =
-      parseFloat(localStorage.getItem("totalPrice")) || 0;
+    let storedCartItems = [];
+    let storedItemCount = 0;
+    let storedTotalPrice = 0;
+
+    try {
+      const rawItems = localStorage.getItem("cartItems");
+      if (rawItems) {
+        const parsed = JSON.parse(rawItems);
+        if (Array.isArray(parsed)) {
+          storedCartItems = parsed;
+        }
+      }
+    } catch {
+      storedCartItems = [];
+    }
+
+    try {
+      const rawCount = localStorage.getItem("itemCount");
+      if (rawCount) {
+        const parsedCount = parseInt(rawCount, 10);
+        if (Number.isFinite(parsedCount) && parsedCount >= 0) {
+          storedItemCount = parsedCount;
+        }
+      }
+    } catch {
+      storedItemCount = 0;
+    }
+
+    try {
+      const rawPrice = localStorage.getItem("totalPrice");
+      if (rawPrice) {
+        const parsedPrice = parseFloat(rawPrice);
+        if (Number.isFinite(parsedPrice) && parsedPrice >= 0) {
+          storedTotalPrice = parsedPrice;
+        }
+      }
+    } catch {
+      storedTotalPrice = 0;
+    }
 
     setCartItems(storedCartItems);
     setItemCount(storedItemCount);
