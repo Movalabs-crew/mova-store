@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 import React from "react";
-import { webcrypto } from "node:crypto";
+import crypto from "node:crypto";
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
@@ -33,14 +33,19 @@ vi.mock("next/image", () => ({
 }));
 
 // Replace fake crypto mock with REAL SHA-256 via Node webcrypto
-Object.defineProperty(globalThis, "crypto", {
-  value: {
-    subtle: webcrypto.subtle,
-    getRandomValues: (arr: Uint8Array) => webcrypto.getRandomValues(arr),
-  },
-  writable: false,
-  configurable: true,
-});
+const subtle = crypto.webcrypto?.subtle ?? (globalThis.crypto && globalThis.crypto.subtle);
+const getRandomValues = (arr: Uint8Array) => (crypto.webcrypto ? crypto.webcrypto.getRandomValues(arr) : (globalThis.crypto ? globalThis.crypto.getRandomValues(arr) : arr));
+
+if (!globalThis.crypto || !globalThis.crypto.subtle) {
+  Object.defineProperty(globalThis, "crypto", {
+    value: {
+      subtle,
+      getRandomValues,
+    },
+    writable: true,
+    configurable: true,
+  });
+}
 
 // Mock environment variables
 vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
