@@ -79,3 +79,37 @@ describe("Error Handling & Stellar Error Reconciliation Tests", () => {
     expect(isRecoverable(new WalletError("Wrong net", "WRONG_NETWORK"))).toBe(true);
   });
 });
+
+describe("parseErrorMessage precedence: exact AUTH_ERRORS before broad heuristics", () => {
+  it("classifies an auth message containing 'cancelled' as the auth error, not USER_REJECTED", () => {
+    const parsed = parseError(
+      "Email not confirmed: you cancelled the verification request"
+    );
+    expect(parsed.code).toBe("AUTH_EMAIL_NOT_CONFIRMED");
+    expect(parsed.userMessage).toBe("Please confirm your email before signing in.");
+  });
+
+  it("still maps a pure Stellar cancellation message to USER_REJECTED", () => {
+    const parsed = parseError("Transaction cancelled by user");
+    expect(parsed.code).toBe("WALLET_USER_REJECTED");
+  });
+
+  it("classifies an auth message containing 'timeout' as the auth error, not TX_TIMEOUT", () => {
+    const parsed = parseError(
+      "Invalid login credentials: the request timed out before the server responded"
+    );
+    expect(parsed.code).toBe("AUTH_INVALID_CREDENTIALS");
+  });
+
+  it("still maps a pure Stellar timeout message to TX_TIMEOUT", () => {
+    const parsed = parseError("Transaction submission timed out");
+    expect(parsed.code).toBe("TX_TIMEOUT");
+  });
+
+  it("classifies an auth weak-password message containing 'balance'-like words correctly", () => {
+    const parsed = parseError(
+      "Password should be at least 6 characters: insufficient strength"
+    );
+    expect(parsed.code).toBe("AUTH_WEAK_PASSWORD");
+  });
+});
