@@ -292,13 +292,6 @@ If you can't resolve an issue:
 
 ## Debug Mode
 
-Enable verbose logging:
-
-```javascript
-// In browser console
-localStorage.setItem('debug', 'mova-store:*');
-```
-
 Check Stellar transaction details:
 
 ```bash
