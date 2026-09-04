@@ -180,7 +180,6 @@ npm run test:ui
 
 **Test file locations:**
 - Unit tests: `tests/lib/` for library functions
-- Component tests: `tests/components/` for React components
 - Tests should be named `*.test.ts` or `*.test.tsx`
 
 **What to test:**
