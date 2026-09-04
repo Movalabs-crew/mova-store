@@ -6,6 +6,9 @@ import {
   validateOTP,
   validatePrice,
   validateStellarAddress,
+  validateCardNumber,
+  validateCardExpiry,
+  validateCardCVV,
   sanitizeText,
   escapeHtml,
   validateForm,
@@ -157,6 +160,49 @@ describe("validateStellarAddress", () => {
     expect(validateStellarAddress("not-an-address").isValid).toBe(false);
     expect(validateStellarAddress("GABC").isValid).toBe(false); // too short
     expect(validateStellarAddress("CABC...").isValid).toBe(false); // wrong prefix
+  });
+});
+
+describe("validateCardNumber", () => {
+  it("accepts valid credit card numbers (Luhn check)", () => {
+    expect(validateCardNumber("49927398716", false).isValid).toBe(true);
+    expect(validateCardNumber("4111 1111 1111 1111").isValid).toBe(true);
+  });
+
+  it("rejects invalid card numbers", () => {
+    expect(validateCardNumber("").isValid).toBe(false);
+    expect(validateCardNumber("4111111111111112").isValid).toBe(false); // bad luhn
+    expect(validateCardNumber("123").isValid).toBe(false); // too short
+    expect(validateCardNumber("abcdefghijklmnop").isValid).toBe(false);
+  });
+});
+
+describe("validateCardExpiry", () => {
+  it("accepts valid future expiry dates", () => {
+    expect(validateCardExpiry("12/30").isValid).toBe(true);
+    expect(validateCardExpiry("01/2035").isValid).toBe(true);
+  });
+
+  it("rejects expired dates and invalid formats", () => {
+    expect(validateCardExpiry("").isValid).toBe(false);
+    expect(validateCardExpiry("13/30").isValid).toBe(false); // invalid month
+    expect(validateCardExpiry("00/30").isValid).toBe(false); // invalid month
+    expect(validateCardExpiry("01/20").isValid).toBe(false); // expired
+    expect(validateCardExpiry("invalid").isValid).toBe(false);
+  });
+});
+
+describe("validateCardCVV", () => {
+  it("accepts valid CVV codes", () => {
+    expect(validateCardCVV("123").isValid).toBe(true);
+    expect(validateCardCVV("1234").isValid).toBe(true);
+  });
+
+  it("rejects invalid CVV codes", () => {
+    expect(validateCardCVV("").isValid).toBe(false);
+    expect(validateCardCVV("12").isValid).toBe(false);
+    expect(validateCardCVV("12345").isValid).toBe(false);
+    expect(validateCardCVV("abc").isValid).toBe(false);
   });
 });
 

@@ -24,6 +24,14 @@ import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
 import { SiStellar } from "react-icons/si";
+import {
+  validateEmail,
+  validateName,
+  validateAddress,
+  validateCardNumber,
+  validateCardExpiry,
+  validateCardCVV,
+} from "../../lib/validation";
 
 const Checkout = () => {
 
@@ -73,6 +81,31 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const emailCheck = validateEmail(formData.email);
+    if (!emailCheck.isValid) {
+      showToast(emailCheck.error || "Please enter a valid email address");
+      return;
+    }
+
+    const cardCheck = validateCardNumber(formData.cardNumber);
+    if (!cardCheck.isValid) {
+      showToast(cardCheck.error || "Please enter a valid card number");
+      return;
+    }
+
+    const expiryCheck = validateCardExpiry(formData.expiryDate);
+    if (!expiryCheck.isValid) {
+      showToast(expiryCheck.error || "Please enter a valid expiry date");
+      return;
+    }
+
+    const cvvCheck = validateCardCVV(formData.cvv);
+    if (!cvvCheck.isValid) {
+      showToast(cvvCheck.error || "Please enter a valid CVV");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await sendMail({
@@ -240,15 +273,17 @@ const Checkout = () => {
                         value={formData.cardNumber}
                         onChange={(e) => {
                           let { value } = e.target;
-                          if (value.length > 16) {
-                            value = value.slice(0, 16);
+                          value = value.replace(/\s+/g, "").replace(/[^0-9]/g, "");
+                          if (value.length > 19) {
+                            value = value.slice(0, 19);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             cardNumber: value,
                           }));
                         }}
-                        maxLength={16}
+                        maxLength={19}
+                        placeholder="16-digit card number"
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
@@ -264,17 +299,20 @@ const Checkout = () => {
                         value={formData.expiryDate}
                         onChange={(e) => {
                           let { value } = e.target;
-                          value = value.replace(/[^0-9]/g, "");
-                          if (value.length > 6) {
-                            value = value.slice(0, 6);
+                          value = value.replace(/[^0-9/]/g, "");
+                          if (value.length === 2 && !value.includes("/") && formData.expiryDate.length === 1) {
+                            value = value + "/";
+                          }
+                          if (value.length > 5) {
+                            value = value.slice(0, 5);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             expiryDate: value,
                           }));
                         }}
-                        placeholder="DD/MM/YY"
-                        maxLength={6}
+                        placeholder="MM/YY"
+                        maxLength={5}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                         required
                       />
@@ -287,19 +325,21 @@ const Checkout = () => {
                     <div className="relative flex justify-center items-center">
                       <input
                         type="text"
-                        name="cardNumber"
+                        name="cvv"
                         value={formData.cvv}
                         onChange={(e) => {
                           let { value } = e.target;
-                          if (value.length > 3) {
-                            value = value.slice(0, 3);
+                          value = value.replace(/[^0-9]/g, "");
+                          if (value.length > 4) {
+                            value = value.slice(0, 4);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             cvv: value,
                           }));
                         }}
-                        maxLength={3}
+                        placeholder="3 or 4 digits"
+                        maxLength={4}
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
