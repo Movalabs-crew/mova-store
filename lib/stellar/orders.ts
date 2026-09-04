@@ -25,7 +25,24 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex } from "./scval";
+import { hashOrderId, hexToBytes, bytesToHex } from "./scval";
+
+const HASHED_ORDER_ID_RE = /^[0-9a-fA-F]{64}$/;
+
+/**
+ * Resolves an order ID into a 32-byte hash (Uint8Array).
+ * If the input is already a 64-character hex string (e.g. from an indexer event),
+ * it converts it directly to bytes without re-hashing.
+ * If it is a raw pre-image (e.g. "SS-2024-0001"), it hashes it via SHA-256.
+ */
+export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
+  const trimmed = orderId.trim();
+  const clean = trimmed.startsWith("0x") ? trimmed.slice(2) : trimmed;
+  if (HASHED_ORDER_ID_RE.test(clean)) {
+    return hexToBytes(clean);
+  }
+  return hashOrderId(orderId);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,12 +102,14 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
   const server = new rpc.Server(RPC_URL);
   const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-  const orderIdHashBytes = await hashOrderId(orderId);
+  const orderIdHashBytes = await resolveOrderIdHash(orderId);
   const orderIdHash = bytesToHex(orderIdHashBytes);
 
-  const account = await server.getAccount(
-    Keypair.random().publicKey() // dummy source for simulation
-  ).catch(() => null);
+  const account = await server
+    .getAccount(
+      Keypair.random().publicKey() // dummy source for simulation
+    )
+    .catch(() => null);
 
   if (!account) {
     // Fallback: just simulate without account
@@ -104,12 +123,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
         networkPassphrase: NETWORK_PASSPHRASE,
       }
     )
-      .addOperation(
-        contract.call(
-          "order",
-          xdr.ScVal.scvBytes(Buffer.from(orderIdHash, "hex"))
-        )
-      )
+      .addOperation(contract.call("order", xdr.ScVal.scvBytes(Buffer.from(orderIdHash, "hex"))))
       .setTimeout(30)
       .build();
 
@@ -147,25 +161,20 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
 
       for (const entry of orderMap) {
         const key =
-          entry.key().switch() === xdr.ScValType.scvSymbol()
-            ? entry.key().sym().toString()
-            : "";
+          entry.key().switch() === xdr.ScValType.scvSymbol() ? entry.key().sym().toString() : "";
         const val = entry.val();
 
         switch (key) {
           case "buyer":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.buyer = StrKey.encodeEd25519PublicKey(
-                val.address().accountId().ed25519()
-              );
+              order.buyer = StrKey.encodeEd25519PublicKey(val.address().accountId().ed25519());
             }
             break;
           case "amount":
             if (val.switch() === xdr.ScValType.scvI128()) {
               const parts = val.i128();
               order.amount =
-                (BigInt(parts.hi().toString()) << BigInt(64)) |
-                BigInt(parts.lo().toString());
+                (BigInt(parts.hi().toString()) << BigInt(64)) | BigInt(parts.lo().toString());
             }
             break;
           case "token":
@@ -187,9 +196,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       }
 
       // Format display amount
-      const tokenConfig = order.token
-        ? tokenForContract(order.token.toUpperCase())
-        : undefined;
+      const tokenConfig = order.token ? tokenForContract(order.token.toUpperCase()) : undefined;
       const decimals = tokenConfig?.decimals ?? 7;
       order.tokenSymbol = tokenConfig?.symbol ?? "TOKEN";
       order.amountDisplay = order.amount
@@ -211,15 +218,13 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
  * Dispatches an order, releasing the escrowed funds to the merchant.
  * Requires the connected wallet to be the merchant.
  */
-export async function dispatchOrder(
-  orderId: string
-): Promise<OrderActionResult> {
+export async function dispatchOrder(orderId: string): Promise<OrderActionResult> {
   try {
     const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
@@ -227,12 +232,7 @@ export async function dispatchOrder(
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(
-        contract.call(
-          "dispatch",
-          xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))
-        )
-      )
+      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -258,10 +258,7 @@ export async function dispatchOrder(
 
     // Sign with Freighter
     const signedXdr = await signWithFreighter(preparedTx.toXDR(), publicKey);
-    const signedTx = TransactionBuilder.fromXDR(
-      signedXdr,
-      NETWORK_PASSPHRASE
-    );
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
     // Submit
     const sendResult = await server.sendTransaction(signedTx);
@@ -300,7 +297,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
@@ -308,12 +305,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(
-        contract.call(
-          "refund",
-          xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))
-        )
-      )
+      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -337,10 +329,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
     // Prepare and sign
     const preparedTx = rpc.assembleTransaction(tx, simResult).build();
     const signedXdr = await signWithFreighter(preparedTx.toXDR(), publicKey);
-    const signedTx = TransactionBuilder.fromXDR(
-      signedXdr,
-      NETWORK_PASSPHRASE
-    );
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
     // Submit
     const sendResult = await server.sendTransaction(signedTx);
@@ -369,10 +358,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
 // Transaction Polling
 // ---------------------------------------------------------------------------
 
-async function pollTransaction(
-  server: rpc.Server,
-  txHash: string
-): Promise<OrderActionResult> {
+async function pollTransaction(server: rpc.Server, txHash: string): Promise<OrderActionResult> {
   const startTime = Date.now();
   const timeoutMs = TX_TIMEOUT_SECONDS * 1000;
 
