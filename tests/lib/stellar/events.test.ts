@@ -1,171 +1,140 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { StrKey, xdr, rpc } from "@stellar/stellar-sdk";
+import { StrKey, xdr, Address } from "@stellar/stellar-sdk";
+import { describe, expect, it } from "vitest";
 
-const CHECKOUT_CONTRACT =
-  "CAAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQC526";
-const FOREIGN_CONTRACT =
-  "CABAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAFNSZ";
+import { decodePaymentEvent } from "../../../lib/stellar/events";
+import { i128ToScVal } from "../../../lib/stellar/scval";
+
+// ---------------------------------------------------------------------------
+// Fixture builders for GetSuccessfulTransactionResponse-shaped objects.
+// decodePaymentEvent is pure over these — no RPC access needed.
+// ---------------------------------------------------------------------------
+
+const CONTRACT_ID = new Uint8Array(32).fill(7);
+const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+const MERCHANT = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+const ORDER_ID_HEX =
+  "a1" + "b2".repeat(31); // 64 hex chars == 32 bytes
+const TX_HASH = "0123456789abcdef".repeat(4);
+const LEDGER = 4242;
+
+const ext = () => new xdr.ExtensionPoint(0);
 
 function makeEvent(
-  contractStrKey: string,
-  symbol: string,
   topics: xdr.ScVal[],
-  data: xdr.ScVal
+  data: xdr.ScVal,
+  contractId: Uint8Array | null = CONTRACT_ID
 ): xdr.ContractEvent {
-  const rawContractId = StrKey.decodeContract(contractStrKey);
-  const allTopics = [xdr.ScVal.scvSymbol(symbol), ...topics];
-
   return new xdr.ContractEvent({
-    ext: new xdr.ExtensionPoint(0),
-    contractId: rawContractId,
+    ext: ext(),
+    contractId,
     type: xdr.ContractEventType.contract(),
     body: new xdr.ContractEventBody(
       0,
-      new xdr.ContractEventV0({
-        topics: allTopics,
-        data,
-      })
+      new xdr.ContractEventV0({ topics, data })
     ),
   });
 }
 
-function makeTxResponse(
-  events: xdr.ContractEvent[]
-): rpc.Api.GetSuccessfulTransactionResponse {
+function makeTx(events: xdr.ContractEvent[]): unknown {
   return {
-    status: rpc.Api.GetTransactionStatus.SUCCESS,
-    txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-    ledger: 12345,
-    createdAt: 1700000000,
-    applicationOrder: 1,
-    feeBump: false,
-    envelopeXdr: {} as any,
-    resultXdr: {} as any,
-    resultMetaXdr: {} as any,
-    events: {
-      contractEventsXdr: [events],
-    } as any,
+    txHash: TX_HASH,
+    ledger: LEDGER,
+    // stellar-sdk >= 16 hands back decoded objects in a nested array
+    events: { contractEventsXdr: [events] },
   };
 }
 
-describe("decodePaymentEvent", () => {
-  beforeEach(() => {
-    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", CHECKOUT_CONTRACT);
-  });
+const addressScVal = (strkey: string) =>
+  xdr.ScVal.scvAddress(new Address(strkey).toScVal().address());
 
-  it("ignores a foreign-contract 'pay' event and decodes the checkout-contract one", async () => {
-    // Dynamically re-import so config reflects the stubbed env
-    const { decodePaymentEvent } = await import("../../../lib/stellar/events");
+const payTopics = () => [
+  xdr.ScVal.scvSymbol("pay"),
+  addressScVal(TOKEN),
+  addressScVal(BUYER),
+  addressScVal(MERCHANT),
+  xdr.ScVal.scvBytes(Buffer.from(ORDER_ID_HEX, "hex")),
+];
 
-    const foreignEvent = makeEvent(
-      FOREIGN_CONTRACT,
-      "pay",
-      [
-        xdr.ScVal.scvString("USDC"),
-        xdr.ScVal.scvString("foreign_buyer"),
-        xdr.ScVal.scvString("foreign_merchant"),
-        xdr.ScVal.scvString("foreign_order"),
-      ],
-      xdr.ScVal.scvString("999999")
-    );
-
-    const checkoutEvent = makeEvent(
-      CHECKOUT_CONTRACT,
-      "pay",
-      [
-        xdr.ScVal.scvString("USDC"),
-        xdr.ScVal.scvString("checkout_buyer"),
-        xdr.ScVal.scvString("checkout_merchant"),
-        xdr.ScVal.scvString("order_456"),
-      ],
-      xdr.ScVal.scvString("5000000")
-    );
-
-    const tx = makeTxResponse([foreignEvent, checkoutEvent]);
-    const receipt = decodePaymentEvent(tx);
-
-    expect(receipt).not.toBeNull();
-    expect(receipt?.contractId).toBe(CHECKOUT_CONTRACT);
-    expect(receipt?.buyer).toBe("checkout_buyer");
-    expect(receipt?.merchant).toBe("checkout_merchant");
-    expect(receipt?.orderId).toBe("order_456");
-    expect(receipt?.token).toBe("USDC");
-    expect(receipt?.amount).toBe("5000000");
-    expect(receipt?.txHash).toBe(tx.txHash);
-    expect(receipt?.ledger).toBe(tx.ledger);
-  });
-
-  it("returns null if only foreign contract 'pay' events are present", async () => {
-    const { decodePaymentEvent } = await import("../../../lib/stellar/events");
-
-    const foreignEvent = makeEvent(
-      FOREIGN_CONTRACT,
-      "pay",
-      [
-        xdr.ScVal.scvString("USDC"),
-        xdr.ScVal.scvString("foreign_buyer"),
-        xdr.ScVal.scvString("foreign_merchant"),
-        xdr.ScVal.scvString("foreign_order"),
-      ],
-      xdr.ScVal.scvString("999999")
-    );
-
-    const tx = makeTxResponse([foreignEvent]);
-    const receipt = decodePaymentEvent(tx);
-
-    expect(receipt).toBeNull();
-  });
-
-  it("decodes checkout payment event when map data is emitted", async () => {
-    const { decodePaymentEvent } = await import("../../../lib/stellar/events");
-
-    const mapEntry = new xdr.ScMapEntry({
+const amountMap = (amount: bigint) =>
+  xdr.ScVal.scvMap([
+    new xdr.ScMapEntry({
       key: xdr.ScVal.scvSymbol("amount"),
-      val: xdr.ScVal.scvString("7500000"),
-    });
-    const mapData = xdr.ScVal.scvMap([mapEntry]);
+      val: i128ToScVal(amount),
+    }),
+  ]);
 
-    const checkoutEvent = makeEvent(
-      CHECKOUT_CONTRACT,
-      "pay",
-      [
-        xdr.ScVal.scvString("USDC"),
-        xdr.ScVal.scvString("map_buyer"),
-        xdr.ScVal.scvString("map_merchant"),
-        xdr.ScVal.scvString("order_789"),
-      ],
-      mapData
+describe("decodePaymentEvent", () => {
+  it("decodes a full pay event (topics + amount map + contract id)", () => {
+    const tx = makeTx([makeEvent(payTopics(), amountMap(123_400_000n))]);
+    const receipt = decodePaymentEvent(
+      tx as never
     );
-
-    const tx = makeTxResponse([checkoutEvent]);
-    const receipt = decodePaymentEvent(tx);
-
     expect(receipt).not.toBeNull();
-    expect(receipt?.contractId).toBe(CHECKOUT_CONTRACT);
-    expect(receipt?.amount).toBe("7500000");
+    expect(receipt?.txHash).toBe(TX_HASH);
+    expect(receipt?.ledger).toBe(LEDGER);
+    expect(receipt?.contractId).toBe(StrKey.encodeContract(CONTRACT_ID));
+    expect(receipt?.token).toBe(TOKEN);
+    expect(receipt?.buyer).toBe(BUYER);
+    expect(receipt?.merchant).toBe(MERCHANT);
+    // the 32-byte order id topic comes back as a 64-char hex string
+    expect(receipt?.orderId).toBe(ORDER_ID_HEX);
+    expect(receipt?.amount).toBe("123400000");
   });
 
-  it("returns null when no events match 'pay' symbol", async () => {
-    const { decodePaymentEvent } = await import("../../../lib/stellar/events");
-
-    const otherEvent = makeEvent(
-      CHECKOUT_CONTRACT,
-      "transfer",
-      [xdr.ScVal.scvString("USDC")],
-      xdr.ScVal.scvString("100")
+  it("skips events whose first topic is not the 'pay' symbol", () => {
+    const transferEvent = makeEvent(
+      [xdr.ScVal.scvSymbol("transfer"), addressScVal(TOKEN)],
+      amountMap(1n)
     );
-
-    const tx = makeTxResponse([otherEvent]);
-    const receipt = decodePaymentEvent(tx);
-
-    expect(receipt).toBeNull();
+    expect(decodePaymentEvent(makeTx([transferEvent]) as never)).toBeNull();
   });
 
-  it("returns null when transaction has no events", async () => {
-    const { decodePaymentEvent } = await import("../../../lib/stellar/events");
+  it("skips events whose first topic is a string instead of a symbol", () => {
+    const event = makeEvent([xdr.ScVal.scvString("pay")], amountMap(1n));
+    expect(decodePaymentEvent(makeTx([event]) as never)).toBeNull();
+  });
 
-    const tx = makeTxResponse([]);
-    const receipt = decodePaymentEvent(tx);
-    expect(receipt).toBeNull();
+  it("tolerates fewer than five topics (only fills the slots present)", () => {
+    const event = makeEvent(
+      [xdr.ScVal.scvSymbol("pay"), addressScVal(TOKEN)],
+      amountMap(5n),
+      null // no contract id -> system-style event
+    );
+    const receipt = decodePaymentEvent(makeTx([event]) as never);
+    expect(receipt).not.toBeNull();
+    expect(receipt?.token).toBe(TOKEN);
+    expect(receipt?.buyer).toBeUndefined();
+    expect(receipt?.merchant).toBeUndefined();
+    expect(receipt?.orderId).toBeUndefined();
+    expect(receipt?.amount).toBe("5");
+    expect(receipt?.contractId).toBeUndefined();
+  });
+
+  it("returns null when no pay event exists in the transaction", () => {
+    expect(decodePaymentEvent(makeTx([]) as never)).toBeNull();
+    expect(
+      decodePaymentEvent(
+        {
+          txHash: TX_HASH,
+          ledger: LEDGER,
+          events: undefined,
+        } as never
+      )
+    ).toBeNull();
+  });
+
+  it("decodes a non-map data ScVal with the generic scValToString path", () => {
+    const event = makeEvent(payTopics(), xdr.ScVal.scvString("42"));
+    const receipt = decodePaymentEvent(makeTx([event]) as never);
+    expect(receipt?.amount).toBe("42");
+  });
+
+  it("decodes from a base64 XDR round-trip of the event (what getTransaction returns)", () => {
+    const ev = makeEvent(payTopics(), amountMap(99n));
+    const fromWire = xdr.ContractEvent.fromXDR(ev.toXDR("base64"), "base64");
+    const receipt = decodePaymentEvent(makeTx([fromWire]) as never);
+    expect(receipt?.orderId).toBe(ORDER_ID_HEX);
+    expect(receipt?.amount).toBe("99");
   });
 });

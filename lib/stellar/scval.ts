@@ -61,7 +61,7 @@ export function scValToString(scVal: xdr.ScVal): string {
     return scVal.str().toString();
   }
   if (typeName === xdr.ScValType.scvAddress()) {
-    return scVal.address().toString();
+    return Address.fromScVal(scVal).toString();
   }
   if (
     typeName === xdr.ScValType.scvI128() ||
