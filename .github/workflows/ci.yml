@@ -34,8 +34,7 @@ jobs:
         run: npm run lint
 
       - name: Type check
-        run: npx tsc --noEmit --skipLibCheck
-        continue-on-error: true # Allow to pass while fixing type errors
+        run: npm run type-check
 
       - name: Run tests
         run: npm run test
