@@ -250,19 +250,58 @@ export function getAnimationDuration(normalDuration: number): number {
 // Color Contrast
 // =============================================================================
 
+function parseHexColor(hex: string): [number, number, number] | null {
+  let cleaned = hex.replace(/^#/, "").trim();
+  if (cleaned.length === 3) {
+    cleaned = cleaned
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (cleaned.length !== 6) return null;
+  const num = parseInt(cleaned, 16);
+  if (isNaN(num)) return null;
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function getChannelLuminance(val: number): number {
+  const sRGB = val / 255;
+  return sRGB <= 0.04045
+    ? sRGB / 12.92
+    : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * Calculates the relative luminance of an sRGB color.
+ */
+export function getRelativeLuminance(hex: string): number {
+  const rgb = parseHexColor(hex);
+  if (!rgb) return 0;
+  const [r, g, b] = rgb.map(getChannelLuminance);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Calculates the contrast ratio between two colors.
+ */
+export function getContrastRatio(foreground: string, background: string): number {
+  const l1 = getRelativeLuminance(foreground);
+  const l2 = getRelativeLuminance(background);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 /**
  * Checks if a color combination meets WCAG AA contrast requirements.
- * Note: This is a simplified check. For production, use a proper contrast library.
+ * WCAG AA requires 4.5:1 for normal text, 3:1 for large text.
  */
 export function meetsContrastRequirement(
   foreground: string,
   background: string,
   largeText = false
 ): boolean {
-  // This is a placeholder. In production, implement proper contrast calculation.
-  // WCAG AA requires 4.5:1 for normal text, 3:1 for large text.
-  console.warn(
-    "meetsContrastRequirement is a placeholder. Implement proper contrast checking."
-  );
-  return true;
+  const ratio = getContrastRatio(foreground, background);
+  const threshold = largeText ? 3.0 : 4.5;
+  return ratio >= threshold;
 }

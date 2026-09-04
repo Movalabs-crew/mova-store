@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { FaGithub, FaTwitter, FaDiscord } from "react-icons/fa";
 import sendMail from "../../lib/sendmail";
 
@@ -33,21 +33,23 @@ const ContactUs = () => {
   const [toast, setToast] = useState({ show: false, message: "" });
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const form = useRef();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     try {
       await sendMail(formData);
       showToast("Message sent successfully!");
       setFormData({ name: "", email: "", message: "" });
-    } catch (error) {
+      setError(null);
+    } catch (err) {
       setError("Failed to send message.");
       showToast("Unable to send message, please try again later");
     }
@@ -145,6 +147,15 @@ const ContactUs = () => {
               required
             />
           </div>
+          {error && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"
+            >
+              {error}
+            </div>
+          )}
           <button
             type="submit"
             className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
@@ -178,6 +189,15 @@ const ContactUs = () => {
               "Send Message"
             )}
           </button>
+          {error && (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="mt-4 text-center text-sm font-medium text-red-600"
+            >
+              {error}
+            </p>
+          )}
         </form>
           </div>
         </div>
