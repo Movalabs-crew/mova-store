@@ -108,7 +108,6 @@ jobs:
 
       - name: Audit dependencies
         run: npm audit --audit-level=high
-        continue-on-error: true # Report but don't fail yet
 
       - name: Check for secrets
         uses: trufflesecurity/trufflehog@main
