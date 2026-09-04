@@ -26,6 +26,9 @@ function BrandMark() {
 }
 
 function Navbar() {
+  const router = useRouter();
+  const [pendingHash, setPendingHash] = useState(null);
+
   useEffect(() => {
     const handleLinkClick = (event) => {
       event.preventDefault();
@@ -34,6 +37,12 @@ function Navbar() {
       const targetElement = document.getElementById(targetId);
       if (targetElement) {
         targetElement.scrollIntoView({ behavior: "smooth" });
+      } else {
+        // The anchor section (#aboutus / #contact) only exists on the home
+        // page: navigate there first, then scroll once it has rendered
+        // (handled by the pendingHash effect below).
+        setPendingHash(targetId);
+        router.push(`/${href}`);
       }
     };
 
@@ -45,9 +54,19 @@ function Navbar() {
         link.removeEventListener("click", handleLinkClick)
       );
     };
-  }, []);
+  }, [router]);
 
-  const router = useRouter();
+  // After navigating home for an anchor target, scroll to the section once
+  // the home page has rendered.
+  useEffect(() => {
+    if (router.pathname !== "/" || !pendingHash) return;
+    const targetId = pendingHash;
+    const timer = setTimeout(() => {
+      setPendingHash(null);
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth" });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [router.pathname, pendingHash]);
   const [toast, setToast] = useState({ show: false, message: "" });
   const showToast = (message) => {
     setToast({ show: true, message });
