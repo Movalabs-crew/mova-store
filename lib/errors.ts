@@ -184,6 +184,15 @@ const STELLAR_ERRORS: Record<string, AppError> = {
 // Auth Error Messages (Supabase)
 // =============================================================================
 
+const SUPABASE_AUTH_CODE_MAP: Record<string, string> = {
+  user_already_exists: "User already registered",
+  email_exists: "User already registered",
+  invalid_credentials: "Invalid login credentials",
+  email_not_confirmed: "Email not confirmed",
+  weak_password: "Password should be at least 6 characters",
+  validation_failed: "Unable to validate email address: invalid format",
+};
+
 const AUTH_ERRORS: Record<string, AppError> = {
   "User already registered": {
     code: "AUTH_EMAIL_EXISTS",
@@ -297,8 +306,14 @@ export function parseError(error: unknown): AppError {
   if (error instanceof Error) {
     // Check for auth errors
     const authCode = (error as { code?: string }).code;
-    if (authCode && AUTH_ERRORS[authCode]) {
-      return AUTH_ERRORS[authCode];
+    if (authCode) {
+      if (AUTH_ERRORS[authCode]) {
+        return AUTH_ERRORS[authCode];
+      }
+      const mapped = SUPABASE_AUTH_CODE_MAP[authCode];
+      if (mapped && AUTH_ERRORS[mapped]) {
+        return AUTH_ERRORS[mapped];
+      }
     }
 
     return parseErrorMessage(error.message);
