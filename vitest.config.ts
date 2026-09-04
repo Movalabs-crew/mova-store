@@ -3,10 +3,25 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react()],
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("test"),
+  },
+  plugins: [
+    react({
+      include: /\.(jsx|tsx|js|ts)$/,
+    }),
+  ],
+  esbuild: {
+    loader: "tsx",
+    include: /.*\.[tj]sx?$/,
+    exclude: [],
+  },
   test: {
     environment: "jsdom",
     globals: true,
+    env: {
+      NODE_ENV: "development",
+    },
     setupFiles: ["./tests/setup.ts"],
     include: ["**/*.{test,spec}.{js,jsx,ts,tsx}"],
     exclude: ["node_modules", "contracts", ".next", "out"],
