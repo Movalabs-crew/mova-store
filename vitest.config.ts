@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
+  mode: "test",
+  define: {
+    "process.env.NODE_ENV": '"test"',
+  },
   plugins: [react()],
   test: {
     environment: "jsdom",
