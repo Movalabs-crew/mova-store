@@ -1,5 +1,6 @@
 import Toast from "../../components/Toast";
 import { useState } from "react";
+import { validateEmail } from "../../lib/validation";
 
 export default function Newsletter() {
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -11,11 +12,14 @@ export default function Newsletter() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email.length !== 0) {
-      showToast("Thank you for subscribing!");
-    } else {
-      showToast("Please enter your email!");
+    const result = validateEmail(email);
+    if (!result.isValid) {
+      showToast(result.error || "Please enter a valid email address");
+      return;
     }
+
+    showToast("Thank you for subscribing!");
+    setEmail("");
     e.target.reset();
   };
 
@@ -25,18 +29,15 @@ export default function Newsletter() {
         Stay in the Loop
       </h2>
       <p className="text-lg sm:text-xl text-gray-600 mb-8 text-center max-w-xl">
-        New shoe drops, Stellar integration updates, and insights on crypto
-        commerce — straight to your inbox. No spam, unsubscribe anytime.
+        New shoe drops, Stellar integration updates, and insights on crypto commerce — straight to
+        your inbox. No spam, unsubscribe anytime.
       </p>
-      <form
-        className="w-full max-w-md"
-        onSubmit={handleSubmit}
-        noValidate={true}
-      >
+      <form className="w-full max-w-md" onSubmit={handleSubmit}>
         <div className="flex items-center border-b border-purple-700 py-2">
           <input
             type="email"
             name="email"
+            value={email}
             className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
             placeholder="Enter your email"
             aria-label="Email"
