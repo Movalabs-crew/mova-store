@@ -279,7 +279,7 @@ Common issues and solutions for Mova Store development and production.
 
 If you can't resolve an issue:
 
-1. **Search existing issues:** [GitHub Issues](https://github.com/yourusername/mova-store/issues)
+1. **Search existing issues:** [GitHub Issues](https://github.com/Movalabs-crew/mova-store/issues)
 2. **Check Stellar docs:** [developers.stellar.org](https://developers.stellar.org)
 3. **Ask in Discord:** [Stellar Discord](https://discord.gg/stellar)
 4. **Open a new issue** with:
