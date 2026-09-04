@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { formatAmount, MIN_NATIVE_RESERVE } from "../../../lib/stellar/account";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  formatAmount,
+  MIN_NATIVE_RESERVE,
+  loadAccount,
+  getNativeBalance,
+} from "../../../lib/stellar/account";
 
 describe("formatAmount", () => {
   it("formats MIN_NATIVE_RESERVE with 7 decimals correctly", () => {
@@ -41,5 +46,66 @@ describe("formatAmount", () => {
     const expectedFrac = (huge % 10000000n).toString().padStart(7, "0").replace(/0+$/, "");
     const expected = expectedFrac ? `${expectedInt}.${expectedFrac}` : expectedInt;
     expect(formatted).toBe(expected);
+  });
+});
+
+describe("loadAccount / getNativeBalance RPC error distinction", () => {
+  const publicKey = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7"; // valid StrKey-checksummed address
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function makeServer(accountErr?: unknown, account?: unknown, entryErr?: unknown, entry?: unknown) {
+    return {
+      getAccount: vi.fn().mockImplementation(() => {
+        if (accountErr) return Promise.reject(accountErr);
+        return Promise.resolve(account);
+      }),
+      getAccountEntry: vi.fn().mockImplementation(() => {
+        if (entryErr) return Promise.reject(entryErr);
+        return Promise.resolve(entry);
+      }),
+    } as unknown as Parameters<typeof loadAccount>[0];
+  }
+
+  it("does not call friendbot and rejects with RPC_ERROR when getAccount fails with a network error", async () => {
+    const server = makeServer(new Error("fetch failed: ECONNREFUSED"));
+    await expect(loadAccount(server, publicKey, { fund: true })).rejects.toMatchObject({
+      name: "WalletError",
+      code: "RPC_ERROR",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("still funds via friendbot when the rejection is an account-missing error", async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+    const account = { accountId: () => publicKey, sequenceNumber: () => "1" };
+    const server = makeServer(undefined, account);
+    server.getAccount
+      .mockRejectedValueOnce(new Error("account not found"))
+      .mockResolvedValueOnce(account);
+    const result = await loadAccount(server, publicKey, { fund: true });
+    expect(result.funded).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("friendbot");
+  });
+
+  it("surfaces an RPC failure from getNativeBalance instead of returning BigInt(0)", async () => {
+    const server = makeServer(undefined, undefined, new Error("502 Bad Gateway"));
+    await expect(getNativeBalance(server, publicKey)).rejects.toMatchObject({
+      code: "RPC_ERROR",
+    });
+  });
+
+  it("returns BigInt(0) only for a genuine account-missing error", async () => {
+    const server = makeServer(undefined, undefined, new Error("account not found"));
+    await expect(getNativeBalance(server, publicKey)).resolves.toBe(BigInt(0));
   });
 });

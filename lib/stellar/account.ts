@@ -43,8 +43,45 @@ export interface PaymentReadiness {
 }
 
 /**
+ * Decides whether a rejection from the RPC layer means "this account does not
+ * exist" (safe to fund / report as unfunded) versus an infrastructure failure
+ * (dead RPC, timeout, auth) that must NOT be mistaken for an empty account.
+ */
+export function isAccountMissingError(err: unknown): boolean {
+  if (err instanceof WalletError && err.code === "ACCOUNT_NOT_FOUND") {
+    return true;
+  }
+  const parts: string[] = [];
+  if (err instanceof Error) {
+    parts.push(err.message);
+  }
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === "string") {
+    parts.push(code);
+  }
+  const text = parts.join(" ").toLowerCase();
+  return (
+    /account\s+(is\s+)?(not\s+found|missing|does\s+not\s+exist)/.test(text) ||
+    /(not\s+found|missing)\s+account/.test(text) ||
+    text.includes("account_not_found")
+  );
+}
+
+/** Wrap any non-account-missing RPC failure in a distinct RPC_ERROR. */
+function toRpcError(err: unknown): WalletError {
+  const detail = err instanceof Error ? err.message : String(err);
+  return new WalletError(
+    `Stellar RPC request failed: ${detail}. The network may be down - ` +
+      "check your connection or RPC endpoint and retry.",
+    "RPC_ERROR"
+  );
+}
+
+/**
  * Load a buyer account, funding it on testnet when it does not exist yet.
  * On mainnet a missing account is a hard error.
+ * RPC/network failures are rethrown as RPC_ERROR and never trigger friendbot
+ * funding, so a dead RPC is distinguishable from a truly unfunded account.
  */
 export async function loadAccount(
   server: rpc.Server,
@@ -52,14 +89,29 @@ export async function loadAccount(
   opts: { fund?: boolean } = {}
 ): Promise<LoadedAccount> {
   const fund = opts.fund ?? true;
+  let account: Account;
   try {
-    const account = await server.getAccount(publicKey);
+    account = await server.getAccount(publicKey);
     return { account, funded: false };
-  } catch {
+  } catch (err) {
+    if (!isAccountMissingError(err)) {
+      throw toRpcError(err);
+    }
     if (!IS_MAINNET && fund) {
       await fundTestnetAccount(publicKey);
-      const account = await server.getAccount(publicKey);
-      return { account, funded: true };
+      try {
+        account = await server.getAccount(publicKey);
+        return { account, funded: true };
+      } catch (retryErr) {
+        if (!isAccountMissingError(retryErr)) {
+          throw toRpcError(retryErr);
+        }
+        throw new WalletError(
+          "Your Stellar account has no sequence number on this network. " +
+            "Fund it with XLM before paying.",
+          "ACCOUNT_NOT_FOUND"
+        );
+      }
     }
     throw new WalletError(
       "Your Stellar account has no sequence number on this network. " +
@@ -87,8 +139,13 @@ export async function getNativeBalance(
   try {
     const entry = await server.getAccountEntry(publicKey);
     return BigInt(entry.balance().toString());
-  } catch {
-    return BigInt(0);
+  } catch (err) {
+    if (isAccountMissingError(err)) {
+      return BigInt(0);
+    }
+    // Surface RPC/network failures instead of reporting a fake 0 balance,
+    // so an outage is not mistaken for an empty wallet.
+    throw toRpcError(err);
   }
 }
 
