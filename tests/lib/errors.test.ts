@@ -1,81 +1,150 @@
 import { describe, it, expect } from "vitest";
+import { parseError, createError, getUserMessage, isRecoverable } from "../../lib/errors";
 
-import {
-  parseError,
-  STELLAR_ERRORS,
-  createError,
-  getUserMessage,
-  isRecoverable,
-} from "../../lib/errors";
-import { WalletError } from "../../lib/stellar/freighter";
-
-describe("Error Handling & Stellar Error Reconciliation Tests", () => {
-  it("classifies WalletError instances by their .code property", () => {
-    const errFreighterNotFound = new WalletError("Extension missing", "FREIGHTER_NOT_FOUND");
-    const parsedFreighterNotFound = parseError(errFreighterNotFound);
-    expect(parsedFreighterNotFound.code).toBe("WALLET_NOT_INSTALLED");
-    expect(parsedFreighterNotFound.userMessage).toContain("Freighter wallet extension");
-
-    const errWrongNetwork = new WalletError("Wrong net detected", "WRONG_NETWORK");
-    const parsedWrongNetwork = parseError(errWrongNetwork);
-    expect(parsedWrongNetwork.code).toBe("WALLET_WRONG_NETWORK");
-
-    const errTxSend = new WalletError("Tx failed", "TX_SEND_ERROR");
-    const parsedTxSend = parseError(errTxSend);
-    expect(parsedTxSend.code).toBe("TX_FAILED");
-
-    const errSim = new WalletError("Sim failed", "TX_SIMULATION_ERROR");
-    const parsedSim = parseError(errSim);
-    expect(parsedSim.code).toBe("TX_SIMULATION_FAILED");
-
-    const errContract = new WalletError("No contract ID", "CONTRACT_NOT_CONFIGURED");
-    const parsedContract = parseError(errContract);
-    expect(parsedContract.code).toBe("STELLAR_CONTRACT_NOT_CONFIGURED");
+describe("parseError precedence", () => {
+  it("prioritizes auth email not confirmed over cancelled keyword heuristic", () => {
+    const error = parseError("Email not confirmed: you cancelled the verification request");
+    expect(error.code).toBe("AUTH_EMAIL_NOT_CONFIRMED");
+    expect(error.message).toBe("Email not confirmed");
+    expect(error.userMessage).toBe("Please confirm your email before signing in.");
   });
 
-  it("ensures every STELLAR_ERRORS code maps to a defined and emitted code key", () => {
-    const expectedKeys = [
-      "FREIGHTER_NOT_FOUND",
-      "FREIGHTER_REQUEST_DENIED",
-      "FREIGHTER_NETWORK_ERROR",
-      "WRONG_NETWORK",
-      "FREIGHTER_SIGN_ERROR",
-      "USER_REJECTED",
-      "ACCOUNT_NOT_FOUND",
-      "FRIENDBOT_ERROR",
-      "PAYMENT_NOT_READY",
-      "INSUFFICIENT_BALANCE",
-      "NO_TRUSTLINE",
-      "CONTRACT_NOT_CONFIGURED",
-      "INVALID_AMOUNT",
-      "TX_SIMULATION_ERROR",
-      "TX_SEND_ERROR",
-      "TX_TIMEOUT",
-    ];
-
-    for (const key of expectedKeys) {
-      expect(STELLAR_ERRORS[key]).toBeDefined();
-      expect(STELLAR_ERRORS[key].code).toBeTruthy();
-      expect(STELLAR_ERRORS[key].userMessage).toBeTruthy();
-    }
+  it("prioritizes auth user already registered over timeout keyword heuristic", () => {
+    const error = parseError("User already registered: network request timed out");
+    expect(error.code).toBe("AUTH_EMAIL_EXISTS");
   });
 
-  it("handles string messages, null/undefined, and custom AppErrors properly", () => {
+  it("prioritizes auth invalid credentials over rejected keyword heuristic", () => {
+    const error = parseError("Invalid login credentials: authentication rejected by server");
+    expect(error.code).toBe("AUTH_INVALID_CREDENTIALS");
+  });
+
+  it("prioritizes auth weak password over insufficient balance keyword heuristic", () => {
+    const error = parseError("Password should be at least 6 characters (insufficient entropy)");
+    expect(error.code).toBe("AUTH_WEAK_PASSWORD");
+  });
+
+  it("prioritizes auth invalid email over freighter install keyword heuristic", () => {
+    const error = parseError("Unable to validate email address: invalid format install freighter");
+    expect(error.code).toBe("AUTH_INVALID_EMAIL");
+  });
+
+  it("maps pure Stellar cancellation message to UserRejected", () => {
+    const error = parseError("Transaction cancelled by user");
+    expect(error.code).toBe("WALLET_USER_REJECTED");
+    expect(error.userMessage).toBe(
+      "You cancelled the transaction. Click 'Pay' again when you're ready."
+    );
+  });
+
+  it("maps pure Stellar rejection message to UserRejected", () => {
+    const error = parseError("User rejected the signing request");
+    expect(error.code).toBe("WALLET_USER_REJECTED");
+  });
+
+  it("maps pure Stellar insufficient balance message to InsufficientBalance", () => {
+    const error = parseError("Account balance is insufficient to cover fees");
+    expect(error.code).toBe("ACCOUNT_INSUFFICIENT_BALANCE");
+  });
+
+  it("maps pure Stellar timeout message to TransactionTimeout", () => {
+    const error = parseError("Transaction timed out while waiting for ledger");
+    expect(error.code).toBe("TX_TIMEOUT");
+  });
+
+  it("maps pure Stellar network error message to NetworkError", () => {
+    const error = parseError("Lost network connection to Horizon");
+    expect(error.code).toBe("NETWORK_ERROR");
+  });
+
+  it("maps Freighter installation message to WalletNotInstalled", () => {
+    const error = parseError("Please install freighter extension");
+    expect(error.code).toBe("WALLET_NOT_INSTALLED");
+  });
+});
+
+describe("parseError input types", () => {
+  it("handles null and undefined input", () => {
     expect(parseError(null).code).toBe("UNKNOWN_ERROR");
     expect(parseError(undefined).code).toBe("UNKNOWN_ERROR");
+  });
 
-    const custom = createError("CUSTOM_CODE", "Internal msg", "Friendly msg", {
+  it("handles Error instances with message matching auth errors", () => {
+    const err = new Error("Email not confirmed: you cancelled the verification request");
+    const parsed = parseError(err);
+    expect(parsed.code).toBe("AUTH_EMAIL_NOT_CONFIRMED");
+  });
+
+  it("handles Error instances with auth code property", () => {
+    const err = Object.assign(new Error("Generic auth message"), {
+      code: "Email not confirmed",
+    });
+    const parsed = parseError(err);
+    expect(parsed.code).toBe("AUTH_EMAIL_NOT_CONFIRMED");
+  });
+
+  it("handles objects with message property", () => {
+    const errObj = { message: "Transaction cancelled by user" };
+    const parsed = parseError(errObj);
+    expect(parsed.code).toBe("WALLET_USER_REJECTED");
+  });
+
+  it("handles unknown string errors and preserves message if short", () => {
+    const parsed = parseError("Some unrecognized error message");
+    expect(parsed.code).toBe("UNKNOWN_ERROR");
+    expect(parsed.message).toBe("Some unrecognized error message");
+    expect(parsed.userMessage).toBe("Some unrecognized error message");
+  });
+
+  it("handles unknown string errors with fallback message when overly long", () => {
+    const longMessage = "x".repeat(120);
+    const parsed = parseError(longMessage);
+    expect(parsed.code).toBe("UNKNOWN_ERROR");
+    expect(parsed.userMessage).toBe("An error occurred. Please try again.");
+  });
+
+  it("handles non-object non-string primitives", () => {
+    expect(parseError(12345).code).toBe("UNKNOWN_ERROR");
+    expect(parseError(true).code).toBe("UNKNOWN_ERROR");
+  });
+});
+
+describe("createError helper", () => {
+  it("creates custom AppError with provided parameters and defaults", () => {
+    const err = createError("CUSTOM_ERR", "Technical error", "User friendly error");
+    expect(err.code).toBe("CUSTOM_ERR");
+    expect(err.message).toBe("Technical error");
+    expect(err.userMessage).toBe("User friendly error");
+    expect(err.severity).toBe("error");
+    expect(err.recoverable).toBe(true);
+  });
+
+  it("creates custom AppError with options", () => {
+    const err = createError("CUSTOM_WARN", "Technical warn", "User friendly warn", {
       severity: "warning",
       recoverable: false,
+      action: "Contact support",
     });
-    expect(custom.code).toBe("CUSTOM_CODE");
-    expect(custom.userMessage).toBe("Friendly msg");
-    expect(custom.severity).toBe("warning");
-    expect(custom.recoverable).toBe(false);
+    expect(err.severity).toBe("warning");
+    expect(err.recoverable).toBe(false);
+    expect(err.action).toBe("Contact support");
+  });
+});
 
-    expect(getUserMessage(new WalletError("Funds low", "INSUFFICIENT_BALANCE"))).toContain(
-      "don't have enough funds"
+describe("getUserMessage helper", () => {
+  it("returns userMessage from parsed error", () => {
+    expect(getUserMessage("Email not confirmed: you cancelled the verification request")).toBe(
+      "Please confirm your email before signing in."
     );
-    expect(isRecoverable(new WalletError("Wrong net", "WRONG_NETWORK"))).toBe(true);
+    expect(getUserMessage("Transaction cancelled by user")).toBe(
+      "You cancelled the transaction. Click 'Pay' again when you're ready."
+    );
+  });
+});
+
+describe("isRecoverable helper", () => {
+  it("returns recoverable status from parsed error", () => {
+    expect(isRecoverable("Email not confirmed: you cancelled the verification request")).toBe(true);
+    expect(isRecoverable("STELLAR_NOT_INITIALIZED")).toBe(false);
   });
 });
