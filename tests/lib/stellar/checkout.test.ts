@@ -1,34 +1,47 @@
 import { describe, it, expect } from "vitest";
-import { orderIdHash } from "../../../lib/stellar/checkout";
-import { bytesToHex, hashOrderId } from "../../../lib/stellar/scval";
+import { usdToRawUnits } from "../../../lib/stellar/checkout";
+import { WalletError } from "../../../lib/stellar/freighter";
 
-describe("orderIdHash and hex encoding", () => {
-  it("computes 64-character lowercase hex order id matching bytesToHex(hashOrderId)", async () => {
-    const input = "abc";
-    const expectedBytes = await hashOrderId(input);
-    const expectedHex = bytesToHex(expectedBytes);
+function expectInvalidAmount(amountUsd: number): void {
+  try {
+    usdToRawUnits(amountUsd);
+    expect.fail(`expected usdToRawUnits(${String(amountUsd)}) to throw`);
+  } catch (err) {
+    expect(err).toBeInstanceOf(WalletError);
+    expect((err as WalletError).code).toBe("INVALID_AMOUNT");
+  }
+}
 
-    const result = await orderIdHash(input);
-
-    expect(result).toBe(expectedHex);
-    expect(result).toHaveLength(64);
-    expect(result).toMatch(/^[0-9a-f]{64}$/);
+describe("usdToRawUnits", () => {
+  it("converts 12.34 USD to 123400000n (floating-point safe)", () => {
+    expect(usdToRawUnits(12.34)).toBe(123400000n);
   });
 
-  it("handles arbitrary order id strings deterministically", async () => {
-    const orderIds = [
-      "order-12345",
-      "test_order_999",
-      "",
-      "special-!@#$%^&*()_+",
-    ];
+  it("converts 0.29 USD to 2900000n (floating-point safe)", () => {
+    expect(usdToRawUnits(0.29)).toBe(2900000n);
+  });
 
-    for (const id of orderIds) {
-      const hashed = await orderIdHash(id);
-      const manual = bytesToHex(await hashOrderId(id));
-      expect(hashed).toBe(manual);
-      expect(hashed).toHaveLength(64);
-      expect(hashed).toMatch(/^[0-9a-f]{64}$/);
-    }
+  it("converts 0.0000001 USD to 1n", () => {
+    expect(usdToRawUnits(0.0000001)).toBe(1n);
+  });
+
+  it("converts 1 USD to 10000000n", () => {
+    expect(usdToRawUnits(1)).toBe(10000000n);
+  });
+
+  it("throws WalletError with code INVALID_AMOUNT for zero", () => {
+    expectInvalidAmount(0);
+  });
+
+  it("throws WalletError with code INVALID_AMOUNT for a negative amount", () => {
+    expectInvalidAmount(-5);
+  });
+
+  it("throws WalletError with code INVALID_AMOUNT for NaN", () => {
+    expectInvalidAmount(Number.NaN);
+  });
+
+  it("throws WalletError with code INVALID_AMOUNT for Infinity", () => {
+    expectInvalidAmount(Number.POSITIVE_INFINITY);
   });
 });
