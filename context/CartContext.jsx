@@ -42,26 +42,26 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = (product) => {
     setCartItems((prevCartItems) => {
       const index = prevCartItems.findIndex((item) => item.id === product.id);
-      if (index === -1) return prevCartItems; // If item not found, return previous cart items
+      if (index === -1) return prevCartItems;
 
+      const removedItem = prevCartItems[index];
       const updatedCartItems = [...prevCartItems];
-      updatedCartItems.splice(index, 1); // Remove the item from the array
+      updatedCartItems.splice(index, 1);
       localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+
+      setItemCount((prevItemCount) => {
+        const newItemCount = Math.max(0, prevItemCount - 1);
+        localStorage.setItem("itemCount", newItemCount.toString());
+        return newItemCount;
+      });
+
+      setTotalPrice((prevTotalPrice) => {
+        const newTotalPrice = Math.max(0, prevTotalPrice - (removedItem.price || 0));
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+        return newTotalPrice;
+      });
+
       return updatedCartItems;
-    });
-
-    setItemCount((prevItemCount) => {
-      const newItemCount = prevItemCount - 1;
-      localStorage.setItem("itemCount", newItemCount.toString());
-      return newItemCount;
-    });
-
-    setTotalPrice((prevTotalPrice) => {
-      const removedItem = cartItems.find((item) => item.id === product.id);
-      if (!removedItem) return prevTotalPrice; // If item not found, return previous total price
-      const newTotalPrice = prevTotalPrice - removedItem.price;
-      localStorage.setItem("totalPrice", newTotalPrice.toString());
-      return newTotalPrice;
     });
   };
 
