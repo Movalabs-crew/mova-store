@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "../../context/CartContext";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,6 +13,8 @@ import { listProducts } from "../../lib/products";
 export default function Products() {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
     useCart();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams ? searchParams.get("search") || "" : "";
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -49,6 +52,12 @@ export default function Products() {
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
 
+  const filteredProducts = searchQuery.trim()
+    ? products.filter((prod) =>
+        prod.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+    : products;
+
   return (
     <>
       <div className="w-full max-w-screen-xl mx-auto py-8">
@@ -58,34 +67,46 @@ export default function Products() {
             Welcome to Mova Store
           </span>
 
+          {searchQuery && (
+            <p className="text-center text-gray-600 mb-4">
+              Showing search results for &ldquo;{searchQuery}&rdquo;
+            </p>
+          )}
+
           {error && <p className="text-red-500 text-center">{error}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {products.map((prod) => (
-              <div key={prod.id} className="p-4 border rounded-lg shadow">
-                <Link href={`/shop/${prod.id}`}>
-                  <Image
-                    src={prod.img} // Ensure this URL is correct
-                    alt={prod.name}
-                    width={200}
-                    height={200}
-                    className="mb-2"
-                  />
-                  <h1 className="text-xl font-bold">{prod.name}</h1>
-                  <h2 className="text-lg">${prod.price}</h2>
-                </Link>
-                <button
-                  className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
-                  onClick={() => {
-                    addToCart(prod);
-                    showToast("Item added to cart");
-                  }}
-                >
-                  <FaShoppingCart />
-                </button>
-              </div>
-            ))}
-          </div>
+          {filteredProducts.length === 0 && !error ? (
+            <p className="text-center text-gray-500 py-8">
+              No products found{searchQuery ? ` matching "${searchQuery}"` : ""}.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {filteredProducts.map((prod) => (
+                <div key={prod.id} className="p-4 border rounded-lg shadow">
+                  <Link href={`/shop/${prod.id}`}>
+                    <Image
+                      src={prod.img} // Ensure this URL is correct
+                      alt={prod.name}
+                      width={200}
+                      height={200}
+                      className="mb-2"
+                    />
+                    <h1 className="text-xl font-bold">{prod.name}</h1>
+                    <h2 className="text-lg">${prod.price}</h2>
+                  </Link>
+                  <button
+                    className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
+                    onClick={() => {
+                      addToCart(prod);
+                      showToast("Item added to cart");
+                    }}
+                  >
+                    <FaShoppingCart />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
