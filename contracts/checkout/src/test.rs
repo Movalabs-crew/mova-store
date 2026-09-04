@@ -2,9 +2,10 @@
 
 use soroban_sdk::testutils::{Address as _, Events};
 use soroban_sdk::token::{StellarAssetClient, TokenClient};
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, Event as _};
 
 use crate::errors::Error;
+use crate::events::{OrderCreated, OrderShipped, PaymentReceived};
 use crate::order::Status;
 use crate::{Checkout, CheckoutClient};
 
@@ -437,17 +438,48 @@ fn test_events_emitted() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
     let id = order_id(&env, 5);
+    let amount = 10_000;
+    let timestamp = env.ledger().timestamp();
 
-    client.create_order(&buyer, &id, &token, &10_000);
-    client.pay(&token, &buyer, &id, &10_000);
-    client.dispatch(&id);
-
-    // At least one contract event should be recorded for the lifecycle.
+    client.create_order(&buyer, &id, &token, &amount);
     let events = env.events().all().filter_by_contract(&checkout);
-    assert!(
-        !events.events().is_empty(),
-        "expected contract events for create/pay/dispatch"
+    assert_eq!(
+        events.events(),
+        &[OrderCreated {
+            token: token.clone(),
+            buyer: buyer.clone(),
+            order_id: id.clone(),
+            amount,
+            timestamp,
+        }
+        .to_xdr(&env, &checkout)]
+    );
+
+    client.pay(&token, &buyer, &id, &amount);
+    let events = env.events().all().filter_by_contract(&checkout);
+    assert_eq!(
+        events.events(),
+        &[PaymentReceived {
+            token: token.clone(),
+            buyer: buyer.clone(),
+            merchant: merchant.clone(),
+            order_id: id.clone(),
+            amount,
+        }
+        .to_xdr(&env, &checkout)]
+    );
+
+    client.dispatch(&id);
+    let events = env.events().all().filter_by_contract(&checkout);
+    assert_eq!(
+        events.events(),
+        &[OrderShipped {
+            order_id: id,
+            merchant,
+            amount,
+        }
+        .to_xdr(&env, &checkout)]
     );
 }
