@@ -64,6 +64,8 @@ export class PaymentEventIndexer {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
   private started = false;
+  private initializing = false;
+  private initialized = false;
 
   constructor(
     opts: {
@@ -96,7 +98,8 @@ export class PaymentEventIndexer {
     this.running = true;
     this.started = true;
 
-    void this.initialize(callbacks);
+    this.timer = setInterval(() => void this.tick(callbacks), this.pollMs);
+    void this.tick(callbacks);
   }
 
   stop(): void {
@@ -107,7 +110,23 @@ export class PaymentEventIndexer {
     }
   }
 
-  private async initialize(callbacks: IndexerCallbacks): Promise<void> {
+  private async tick(callbacks: IndexerCallbacks): Promise<void> {
+    if (!this.running) return;
+
+    if (!this.initialized) {
+      await this.ensureInitialized(callbacks);
+      if (!this.initialized) {
+        return;
+      }
+    }
+
+    await this.poll(callbacks);
+  }
+
+  private async ensureInitialized(callbacks: IndexerCallbacks): Promise<void> {
+    if (this.initializing) return;
+    this.initializing = true;
+
     try {
       const latest = await this.server.getLatestLedger();
       this.latestLedger = latest.sequence;
@@ -115,18 +134,20 @@ export class PaymentEventIndexer {
         1,
         this.latestLedger - EVENT_START_LEDGER_BACKFILL
       );
+      this.initialized = true;
+      this.lastError = undefined;
       callbacks.onStatus?.(this.status);
     } catch (err) {
       this.lastError = String(err instanceof Error ? err.message : err);
       callbacks.onError?.(new Error(`Could not reach the Stellar RPC: ${this.lastError}`));
+      callbacks.onStatus?.(this.status);
+    } finally {
+      this.initializing = false;
     }
-
-    this.timer = setInterval(() => void this.poll(callbacks), this.pollMs);
-    void this.poll(callbacks);
   }
 
   private async poll(callbacks: IndexerCallbacks): Promise<void> {
-    if (!this.running) return;
+    if (!this.running || !this.initialized) return;
 
     try {
       const res = await this.fetchEvents();
