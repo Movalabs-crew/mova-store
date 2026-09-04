@@ -1,6 +1,8 @@
 import Toast from "../../components/Toast";
 import { useState } from "react";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function Newsletter() {
   const [toast, setToast] = useState({ show: false, message: "" });
   const [email, setEmail] = useState("");
@@ -11,12 +13,16 @@ export default function Newsletter() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email.length !== 0) {
+    const value = email;
+    // Clear state *and* the form so a stale email can never be
+    // reused by the next submission.
+    setEmail("");
+    e.target.reset();
+    if (value && EMAIL_RE.test(value)) {
       showToast("Thank you for subscribing!");
     } else {
-      showToast("Please enter your email!");
+      showToast("Please enter a valid email!");
     }
-    e.target.reset();
   };
 
   return (
@@ -40,6 +46,7 @@ export default function Newsletter() {
             className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
             placeholder="Enter your email"
             aria-label="Email"
+            value={email}
             onChange={(e) => {
               setEmail(e.target.value);
             }}
