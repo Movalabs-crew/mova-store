@@ -80,10 +80,9 @@ export function decodePaymentEvent(
       ledger: tx.ledger,
     };
     try {
-      if (event.contractId()) {
-        receipt.contractId = StrKey.encodeContract(
-          Buffer.from(event.contractId() as unknown as Uint8Array)
-        );
+      const contractId = event.contractId();
+      if (contractId) {
+        receipt.contractId = StrKey.encodeContract(contractId as unknown as any);
       }
     } catch {
       // system events have no contract id
