@@ -22,8 +22,7 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf =
-    typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
+  const buf = typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
   if (buf.length !== 32) {
     throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
   }
@@ -100,18 +99,36 @@ function bigintSafeReplacer(_key: string, value: unknown) {
   return typeof value === "bigint" ? value.toString() : value;
 }
 
+/**
+ * Convert a hexadecimal string to a Uint8Array byte array.
+ *
+ * @param hex - Hexadecimal string, optionally prefixed with 0x or 0X.
+ * @returns Decoded byte array as Uint8Array.
+ * @throws {Error} If the hex string has an odd length or contains invalid hex characters.
+ */
 export function hexToBytes(hex: string): Uint8Array {
   const clean = hex.replace(/^0x/i, "");
   if (clean.length % 2 !== 0) {
     throw new Error("invalid hex string (odd length)");
   }
   const out = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  for (let i = 0; i < clean.length; i += 2) {
+    const chunk = clean.slice(i, i + 2);
+    const invalidChar = chunk.match(/[^0-9a-fA-F]/)?.[0];
+    if (invalidChar !== undefined) {
+      throw new Error(`invalid hex character: "${invalidChar}"`);
+    }
+    out[i / 2] = parseInt(chunk, 16);
   }
   return out;
 }
 
+/**
+ * Convert a Uint8Array byte array to a lowercase hexadecimal string.
+ *
+ * @param bytes - Byte array to encode.
+ * @returns Lowercase hexadecimal string.
+ */
 export function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
