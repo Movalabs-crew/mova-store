@@ -25,12 +25,11 @@ export default function Sidebar() {
       <aside className="w-64 bg-white text-gray-700 flex-shrink-0  hidden sm:block pt-10">
         <nav className="divide-y divide-gray-200">
           <ul className="px-5 py-6 space-y-2">
-            <li onClick={openModal}>
-              <input
-                type="text"
-                className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
-                placeholder="Search Shoes"
-              />
+            <li>
+              <Link href="/search" className="w-full flex items-center p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <FaSearch className="mr-2 text-gray-400" />
+                <span className="text-gray-400 text-sm">Search Shoes</span>
+              </Link>
             </li>
             <li>
               <Link
@@ -103,7 +102,7 @@ export default function Sidebar() {
         </nav>
       </aside>
 
-      {/* small screen mobile sidevar */}
+      {/* small screen mobile sidebar */}
 
       <aside className="flex flex-col justify-center  w-10 bg-purple-600 text-gray-700 flex-shrink-0  sm:hidden  pt-10">
         <nav className="divide-y divide-gray-200">
@@ -159,13 +158,6 @@ export default function Sidebar() {
           </ul>
         </nav>
       </aside>
-      <Modal show={showModal} onClose={closeModal}>
-        <input
-          type="text"
-          className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
-          placeholder="Search Shoes"
-        />
-      </Modal>
     </>
   );
 }
