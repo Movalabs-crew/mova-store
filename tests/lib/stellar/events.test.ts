@@ -1,7 +1,6 @@
 import { StrKey, xdr, Address } from "@stellar/stellar-sdk";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { decodePaymentEvent } from "../../../lib/stellar/events";
 import { i128ToScVal } from "../../../lib/stellar/scval";
 
 // ---------------------------------------------------------------------------
@@ -9,7 +8,24 @@ import { i128ToScVal } from "../../../lib/stellar/scval";
 // decodePaymentEvent is pure over these — no RPC access needed.
 // ---------------------------------------------------------------------------
 
+// decodePaymentEvent (via lib/stellar/config.ts) reads
+// NEXT_PUBLIC_CHECKOUT_CONTRACT_ID at module scope and ignores pay events
+// emitted by any other contract. Point the env var at the fixture contract
+// and load the module after stubbing.
 const CONTRACT_ID = new Uint8Array(32).fill(7);
+const CHECKOUT_CONTRACT_ID_STR = StrKey.encodeContract(CONTRACT_ID as never);
+
+vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", CHECKOUT_CONTRACT_ID_STR);
+vi.resetModules();
+
+let decodePaymentEvent: (
+  tx: unknown
+) => import("../../../lib/stellar/events").PaymentReceipt | null;
+
+beforeAll(async () => {
+  const ev = await import("../../../lib/stellar/events");
+  decodePaymentEvent = ev.decodePaymentEvent as never;
+});
 const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const MERCHANT = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
@@ -73,7 +89,7 @@ describe("decodePaymentEvent", () => {
     expect(receipt).not.toBeNull();
     expect(receipt?.txHash).toBe(TX_HASH);
     expect(receipt?.ledger).toBe(LEDGER);
-    expect(receipt?.contractId).toBe(StrKey.encodeContract(CONTRACT_ID));
+    expect(receipt?.contractId).toBe(CHECKOUT_CONTRACT_ID_STR);
     expect(receipt?.token).toBe(TOKEN);
     expect(receipt?.buyer).toBe(BUYER);
     expect(receipt?.merchant).toBe(MERCHANT);
