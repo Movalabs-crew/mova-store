@@ -325,6 +325,18 @@ export function parseError(error: unknown): AppError {
 function parseErrorMessage(message: string): AppError {
   const lowerMessage = message.toLowerCase();
 
+  // Check auth errors first so a phrase like
+  // "Email not confirmed: you cancelled the verification request" is not
+  // swallowed by the broad Stellar 'cancelled' heuristic below.
+  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
+    if (
+      lowerMessage.includes(key.toLowerCase()) ||
+      lowerMessage.includes(appError.code.toLowerCase())
+    ) {
+      return appError;
+    }
+  }
+
   // Check Stellar errors by key or code
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
     if (
@@ -347,13 +359,6 @@ function parseErrorMessage(message: string): AppError {
   }
   if (lowerMessage.includes("freighter") && (lowerMessage.includes("install") || lowerMessage.includes("not installed"))) {
     return STELLAR_ERRORS.FREIGHTER_NOT_FOUND;
-  }
-
-  // Check auth errors by message
-  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
-    if (lowerMessage.includes(key.toLowerCase()) || lowerMessage.includes(appError.code.toLowerCase())) {
-      return appError;
-    }
   }
 
   // Return generic error with original message
