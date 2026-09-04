@@ -8,6 +8,7 @@ import {
   refundOrder,
   OrderEvent,
   eventToOrder,
+  mergeOrderEvent,
   OrderStatus,
 } from "../../../lib/stellar/orders";
 import { NETWORK, CHECKOUT_CONTRACT_ID } from "../../../lib/stellar/config";
@@ -199,10 +200,7 @@ const OrdersManagementContent = () => {
             // Update existing order or add new one
             const existing = newMap.get(order.orderId);
             if (existing) {
-              // Update status if the new event is more recent
-              if (event.ledger > (existing.ledger || 0)) {
-                newMap.set(order.orderId, { ...existing, ...order });
-              }
+              newMap.set(order.orderId, mergeOrderEvent(existing, order));
             } else {
               newMap.set(order.orderId, order);
             }
