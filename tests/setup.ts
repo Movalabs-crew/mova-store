@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 import React from "react";
+import { webcrypto } from "node:crypto";
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
@@ -31,26 +32,14 @@ vi.mock("next/image", () => ({
   }) => React.createElement("img", { src, alt, ...props }),
 }));
 
-// Mock window.crypto for tests
+// Replace fake crypto mock with REAL SHA-256 via Node webcrypto
 Object.defineProperty(globalThis, "crypto", {
   value: {
-    subtle: {
-      digest: async (_algorithm: string, data: ArrayBuffer) => {
-        const text = new TextDecoder().decode(data);
-        const hash = new Uint8Array(32);
-        for (let i = 0; i < text.length && i < 32; i++) {
-          hash[i] = text.charCodeAt(i);
-        }
-        return hash.buffer;
-      },
-    },
-    getRandomValues: (arr: Uint8Array) => {
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
-      }
-      return arr;
-    },
+    subtle: webcrypto.subtle,
+    getRandomValues: (arr: Uint8Array) => webcrypto.getRandomValues(arr),
   },
+  writable: false,
+  configurable: true,
 });
 
 // Mock environment variables
