@@ -126,3 +126,18 @@ export async function hashOrderId(orderId: string): Promise<Uint8Array> {
   const digest = await crypto.subtle.digest("SHA-256", data);
   return new Uint8Array(digest);
 }
+
+/**
+ * Resolves an order identifier into its 32-byte hash representation.
+ * If the input is already a 64-character hex string (e.g. from indexer contract events),
+ * it converts it directly to raw bytes without re-hashing. Otherwise, it computes the
+ * SHA-256 digest of the pre-image string.
+ */
+export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
+  const trimmed = orderId.trim();
+  const hexPattern = /^[0-9a-fA-F]{64}$/;
+  if (hexPattern.test(trimmed)) {
+    return hexToBytes(trimmed);
+  }
+  return hashOrderId(orderId);
+}
