@@ -328,6 +328,16 @@ function parseErrorMessage(message: string): AppError {
     }
   }
 
+  // Check auth errors by message
+  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
+    if (
+      lowerMessage.includes(key.toLowerCase()) ||
+      lowerMessage.includes(appError.code.toLowerCase())
+    ) {
+      return appError;
+    }
+  }
+
   // Check for common error patterns
   if (lowerMessage.includes("insufficient") || lowerMessage.includes("balance")) {
     return STELLAR_ERRORS.InsufficientBalance;
@@ -343,13 +353,6 @@ function parseErrorMessage(message: string): AppError {
   }
   if (lowerMessage.includes("freighter") && lowerMessage.includes("install")) {
     return STELLAR_ERRORS.WalletNotInstalled;
-  }
-
-  // Check auth errors by message
-  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
-    if (lowerMessage.includes(key.toLowerCase()) || lowerMessage.includes(appError.code.toLowerCase())) {
-      return appError;
-    }
   }
 
   // Return generic error with original message
