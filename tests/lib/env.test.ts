@@ -60,3 +60,27 @@ describe("isProduction", () => {
     expect(isProduction()).toBe(false);
   });
 });
+
+describe("loadStellarConfig mainnet RPC default", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("matches config.ts and MAINNET_DEPLOYMENT.md when the env var is unset", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+
+    vi.resetModules();
+
+    const { loadStellarConfig } = await import("../../lib/env");
+    const { RPC_URL } = await import("../../lib/stellar/config");
+    const { readFileSync } = await import("node:fs");
+
+    expect(loadStellarConfig().rpcUrl).toBe(RPC_URL);
+    expect(RPC_URL).toBe("https://soroban-rpc.stellar.org");
+
+    const doc = readFileSync("docs/MAINNET_DEPLOYMENT.md", "utf8");
+    expect(doc).toContain(`NEXT_PUBLIC_STELLAR_RPC_URL=${RPC_URL}`);
+  });
+});
