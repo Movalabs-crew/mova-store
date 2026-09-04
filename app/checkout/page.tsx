@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useCart } from "../../context/CartContext";
 
 import Toast from "../../components/Toast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -25,6 +24,14 @@ import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
 import { SiStellar } from "react-icons/si";
+import {
+  validateEmail,
+  validateName,
+  validateAddress,
+  validateCardNumber,
+  validateCardExpiry,
+  validateCardCVV,
+} from "../../lib/validation";
 
 const Checkout = () => {
 
@@ -276,15 +283,17 @@ const Checkout = () => {
                         value={formData.cardNumber}
                         onChange={(e) => {
                           let { value } = e.target;
-                          if (value.length > 16) {
-                            value = value.slice(0, 16);
+                          value = value.replace(/\s+/g, "").replace(/[^0-9]/g, "");
+                          if (value.length > 19) {
+                            value = value.slice(0, 19);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             cardNumber: value,
                           }));
                         }}
-                        maxLength={16}
+                        maxLength={19}
+                        placeholder="16-digit card number"
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
@@ -300,17 +309,20 @@ const Checkout = () => {
                         value={formData.expiryDate}
                         onChange={(e) => {
                           let { value } = e.target;
-                          value = value.replace(/[^0-9]/g, "");
-                          if (value.length > 6) {
-                            value = value.slice(0, 6);
+                          value = value.replace(/[^0-9/]/g, "");
+                          if (value.length === 2 && !value.includes("/") && formData.expiryDate.length === 1) {
+                            value = value + "/";
+                          }
+                          if (value.length > 5) {
+                            value = value.slice(0, 5);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             expiryDate: value,
                           }));
                         }}
-                        placeholder="DD/MM/YY"
-                        maxLength={6}
+                        placeholder="MM/YY"
+                        maxLength={5}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                         required
                       />
@@ -323,19 +335,21 @@ const Checkout = () => {
                     <div className="relative flex justify-center items-center">
                       <input
                         type="text"
-                        name="cardNumber"
+                        name="cvv"
                         value={formData.cvv}
                         onChange={(e) => {
                           let { value } = e.target;
-                          if (value.length > 3) {
-                            value = value.slice(0, 3);
+                          value = value.replace(/[^0-9]/g, "");
+                          if (value.length > 4) {
+                            value = value.slice(0, 4);
                           }
                           setFormData((prevData) => ({
                             ...prevData,
                             cvv: value,
                           }));
                         }}
-                        maxLength={3}
+                        placeholder="3 or 4 digits"
+                        maxLength={4}
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
@@ -407,7 +421,8 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-purple-500 text-white flex justify-center items-center py-2 rounded hover:bg-purple-700 transition-colors"
+                  disabled={isOtpSending}
+                  className="w-full bg-purple-500 text-white flex justify-center items-center py-2 rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isOtpSending ? (
                     <>
