@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction } from "../../lib/env";
+import { isAdminEmail, isDevelopment, isProduction, validateEnv } from "../../lib/env";
 
 describe("isAdminEmail", () => {
   beforeEach(() => {
@@ -58,5 +58,45 @@ describe("isProduction", () => {
   it("returns false in development", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(isProduction()).toBe(false);
+  });
+});
+
+describe("validateEnv", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("throws an error naming missing fields when required variables are unset", () => {
+    // Ensure required env vars are empty/unset
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "");
+
+    expect(() => validateEnv()).toThrowError(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+    expect(() => validateEnv()).toThrowError(/NEXT_PUBLIC_SUPABASE_URL/);
+    expect(() => validateEnv()).toThrowError(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  });
+
+  it("returns populated configuration when all required environment variables are set", () => {
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CA1234567890TESTCONTRACTID");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key-123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "service_abc");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "template_xyz");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pubkey_789");
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "admin@store.org");
+
+    const config = validateEnv();
+
+    expect(config.stellar.checkoutContractId).toBe("CA1234567890TESTCONTRACTID");
+    expect(config.supabase.url).toBe("https://project.supabase.co");
+    expect(config.supabase.anonKey).toBe("test-anon-key-123");
+    expect(config.emailjs.serviceId).toBe("service_abc");
+    expect(config.emailjs.templateId).toBe("template_xyz");
+    expect(config.emailjs.publicKey).toBe("pubkey_789");
+    expect(config.admin.adminEmails).toContain("admin@store.org");
   });
 });

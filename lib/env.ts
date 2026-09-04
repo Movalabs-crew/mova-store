@@ -217,6 +217,9 @@ export function validateEnv(): EnvConfig {
       `\n⚠️  Environment Configuration Errors:\n${errorList}\n\n` +
         `Please copy .env.local.example to .env.local and fill in the required values.\n`
     );
+    throw new Error(
+      `Environment configuration errors:\n${errorList}\n\nPlease copy .env.local.example to .env.local and fill in the required values.`
+    );
   }
 
   return { stellar, emailjs, supabase, admin };
