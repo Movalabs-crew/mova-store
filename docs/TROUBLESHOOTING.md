@@ -198,7 +198,7 @@ Common issues and solutions for Mova Store development and production.
 **Solutions:**
 1. Install wasm target:
    ```bash
-   rustup target add wasm32-unknown-unknown
+   rustup target add wasm32v1-none
    ```
 2. Update Rust:
    ```bash
@@ -208,7 +208,7 @@ Common issues and solutions for Mova Store development and production.
    ```bash
    cd contracts/checkout
    cargo clean
-   cargo build --target wasm32-unknown-unknown --release
+   cargo build --target wasm32v1-none --release
    ```
 
 ### Deploy fails with "account not found"
@@ -289,24 +289,3 @@ If you can't resolve an issue:
    - Relevant logs
 
 ---
-
-## Debug Mode
-
-Enable verbose logging:
-
-```javascript
-// In browser console
-localStorage.setItem('debug', 'mova-store:*');
-```
-
-Check Stellar transaction details:
-
-```bash
-stellar tx details <TX_HASH> --network testnet
-```
-
-Monitor contract events:
-
-```bash
-stellar events --id <CONTRACT_ID> --network testnet --start-ledger <LEDGER>
-```
