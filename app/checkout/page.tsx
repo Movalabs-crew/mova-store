@@ -21,6 +21,7 @@ import {
 import { BsBank, BsCalendarDate } from "react-icons/bs";
 import { SiKlarna } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
+import { validateOTP } from "../../lib/validation";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
@@ -28,7 +29,12 @@ import { SiStellar } from "react-icons/si";
 
 const Checkout = () => {
 
-  const [otp, setOtp] = useState(Math.floor(Math.random() * 1000000) + 1);
+  // OTP is stored as a zero-padded 6-digit string so it always matches the format
+  // shown in the email (e.g. "000042") and can be compared with exact string
+  // equality instead of a loose numeric parse.
+  const [otp, setOtp] = useState<string>(() =>
+    String(Math.floor(Math.random() * 1000000)).padStart(6, "0")
+  );
   const [totalPrice, setTotalPrice] = useState(0);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [stage, setStage] = useState(1);
@@ -97,7 +103,14 @@ const Checkout = () => {
   const handleEmailConfirmationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsOtpSending(true);
-    if (parseInt(enteredOtp) === otp) {
+    // Validate the raw trimmed input as a 6-digit code, then compare it against the
+    // zero-padded OTP with exact string equality. We deliberately compare the raw
+    // input rather than validateOTP's sanitized value, because the validator strips
+    // non-digits ("000042abc" -> "000042") and would otherwise let digits-followed-
+    // by-junk through.
+    const entered = enteredOtp.trim();
+    const { isValid } = validateOTP(entered);
+    if (isValid && entered === otp) {
       setStage(3);
       localStorage.clear();
       showToast("OTP confirmed successfully.");
@@ -365,6 +378,9 @@ const Checkout = () => {
                     value={enteredOtp}
                     onChange={handleOtpChange}
                     required
+                    maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
                     placeholder="OTP"
                     className="w-64 px-3 py-2 border rounded"
                   />
