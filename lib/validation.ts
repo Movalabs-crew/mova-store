@@ -278,6 +278,30 @@ export function validateOTP(otp: string): ValidationResult {
   return { isValid: true, sanitized };
 }
 
+/**
+ * Generates a zero-padded 6-digit OTP in the range 000000–999999.
+ * Pass `value` to format a specific number (used by tests).
+ */
+export function generateOTP(
+  value = Math.floor(Math.random() * 1_000_000)
+): string {
+  const n = Math.floor(Math.abs(value)) % 1_000_000;
+  return n.toString().padStart(6, "0");
+}
+
+/**
+ * Compares entered OTP to a stored zero-padded 6-digit code.
+ * Trims and pads the input, requires validateOTP, and uses exact string equality
+ * so trailing junk (e.g. "123x", "123.4") cannot match.
+ */
+export function compareOTP(entered: string, expected: string): boolean {
+  const padded = entered.trim().padStart(6, "0");
+  const result = validateOTP(padded);
+  return Boolean(
+    result.isValid && result.sanitized === padded && padded === expected
+  );
+}
+
 // =============================================================================
 // STELLAR ADDRESS VALIDATION
 // =============================================================================
