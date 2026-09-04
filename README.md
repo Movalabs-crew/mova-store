@@ -79,6 +79,7 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
   - [Step 3 — Set up a testnet identity](#step-3--set-up-a-testnet-identity)
   - [Step 4 — Deploy to testnet](#step-4--deploy-to-testnet)
   - [Step 5 — Initialize with your merchant wallet](#step-5--initialize-with-your-merchant-wallet)
+  - [Step 5b — Whitelist the tokens you accept](#step-5b--whitelist-the-tokens-you-accept)
   - [Step 6 — Wire the deployed contract to the storefront](#step-6--wire-the-deployed-contract-to-the-storefront)
   - [Convenience script](#convenience-script)
 - [Paying with USDC (testnet)](#paying-with-usdc-testnet)
@@ -228,7 +229,7 @@ Install the following before getting started:
 
 | Tool             | Version / Notes                                              | Install                                     |
 | ---------------- | ------------------------------------------------------------ | ------------------------------------------- |
-| **Node.js**      | 18.18+ (bundles `npm`)                                       | https://nodejs.org                          |
+| **Node.js**      | 18.18+ (Node 20 recommended, see `.nvmrc`)                 | https://nodejs.org or `nvm use`            |
 | **Rust**         | stable, with the `wasm32v1-none` target                      | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
 | **Stellar CLI**  | latest (`stellar --version`)                                 | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
 | **Freighter**    | browser wallet extension (Chrome / Firefox)                  | https://freighter.app                       |
@@ -239,6 +240,7 @@ Install the following before getting started:
 Verify your setup:
 
 ```bash
+nvm use             # use version from .nvmrc (v20)
 node --version      # v18.18+ or newer
 cargo --version     # 1.7x+
 stellar --version   # latest
