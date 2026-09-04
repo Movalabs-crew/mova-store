@@ -3,11 +3,19 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
-  mode: "test",
   define: {
-    "process.env.NODE_ENV": '"test"',
+    "process.env.NODE_ENV": JSON.stringify("test"),
   },
-  plugins: [react()],
+  plugins: [
+    react({
+      include: /\.(jsx|tsx|js|ts)$/,
+    }),
+  ],
+  esbuild: {
+    loader: "tsx",
+    include: /.*\.[tj]sx?$/,
+    exclude: [],
+  },
   test: {
     environment: "jsdom",
     globals: true,

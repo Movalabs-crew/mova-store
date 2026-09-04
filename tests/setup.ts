@@ -3,6 +3,13 @@ import { vi } from "vitest";
 import React from "react";
 const nodeCrypto = require("crypto");
 
+// Ensure test environment for React/Testing Library
+// @ts-ignore
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+if (typeof process !== "undefined" && process.env) {
+  process.env.NODE_ENV = "test";
+}
+
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -20,15 +27,8 @@ vi.mock("next/navigation", () => ({
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
-  default: ({
-    src,
-    alt,
-    ...props
-  }: {
-    src: string;
-    alt: string;
-    [key: string]: unknown;
-  }) => React.createElement("img", { src, alt, ...props }),
+  default: ({ src, alt, ...props }: { src: string; alt: string; [key: string]: unknown }) =>
+    React.createElement("img", { src, alt, ...props }),
 }));
 
 // Replace fake crypto mock with REAL SHA-256 via Node webcrypto
