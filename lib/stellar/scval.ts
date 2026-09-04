@@ -19,15 +19,26 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
 }
 
 /**
+ * Wraps raw bytes in an scvBytes ScVal.
+ *
+ * The XDR encoder accepts a plain Uint8Array at runtime (what browsers
+ * provide), but the SDK's published types are Node-oriented, so the
+ * argument is widened to satisfy the declaration.
+ */
+export function scvBytes(bytes: Uint8Array): xdr.ScVal {
+  return xdr.ScVal.scvBytes(bytes as never);
+}
+
+/**
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
   const buf =
-    typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
+    typeof bytes === "string" ? hexToBytes(bytes) : bytes;
   if (buf.length !== 32) {
     throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
   }
-  return xdr.ScVal.scvBytes(buf);
+  return scvBytes(buf);
 }
 
 /**
