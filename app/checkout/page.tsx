@@ -37,6 +37,8 @@ const Checkout = () => {
 
   const [otp, setOtp] = useState(Math.floor(Math.random() * 1000000) + 1);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [stage, setStage] = useState(1);
   const [isOtpSending, setIsOtpSending] = useState(false);
@@ -81,31 +83,10 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    const emailCheck = validateEmail(formData.email);
-    if (!emailCheck.isValid) {
-      showToast(emailCheck.error || "Please enter a valid email address");
+    if (isEmptyCart) {
+      showToast("Your cart is empty. Please add items before checking out.");
       return;
     }
-
-    const cardCheck = validateCardNumber(formData.cardNumber);
-    if (!cardCheck.isValid) {
-      showToast(cardCheck.error || "Please enter a valid card number");
-      return;
-    }
-
-    const expiryCheck = validateCardExpiry(formData.expiryDate);
-    if (!expiryCheck.isValid) {
-      showToast(expiryCheck.error || "Please enter a valid expiry date");
-      return;
-    }
-
-    const cvvCheck = validateCardCVV(formData.cvv);
-    if (!cvvCheck.isValid) {
-      showToast(cvvCheck.error || "Please enter a valid CVV");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       await sendMail({
@@ -147,11 +128,23 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    const storedTotalPrice = localStorage.getItem("totalPrice");
-    if (storedTotalPrice) {
-      setTotalPrice(parseFloat(storedTotalPrice));
+    try {
+      const storedItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+      const storedTotalPrice = localStorage.getItem("totalPrice");
+      if (Array.isArray(storedItems)) {
+        setCartItems(storedItems);
+      }
+      if (storedTotalPrice) {
+        setTotalPrice(parseFloat(storedTotalPrice));
+      }
+    } catch {
+      setCartItems([]);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
+
+  const isEmptyCart = isLoaded && (cartItems.length === 0 || totalPrice <= 0);
 
   useEffect(() => {
     if (stage === 3) {
@@ -160,6 +153,23 @@ const Checkout = () => {
       localStorage.removeItem("cartItems");
     }
   }, [stage]);
+
+  if (isEmptyCart) {
+    return (
+      <div className="container mx-auto px-4 py-16 my-10 max-w-lg text-center bg-white rounded-lg shadow-md border-2 border-purple-300">
+        <h2 className="text-2xl font-bold text-gray-800 mb-3">Your cart is empty</h2>
+        <p className="text-gray-600 mb-6">
+          Looks like you have not added any items to your cart yet. Please add items to proceed with checkout.
+        </p>
+        <Link
+          href="/shop"
+          className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-700 hover:bg-purple-800 transition-colors"
+        >
+          <MdArrowBack className="mr-2" /> Back to Shop
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -349,7 +359,7 @@ const Checkout = () => {
                 </div>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isEmptyCart}
                   className="w-full flex justify-center items-center bg-purple-500 text-white py-2 rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
