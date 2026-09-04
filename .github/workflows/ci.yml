@@ -145,7 +145,7 @@ jobs:
   # Summary job that requires all checks to pass
   ci-success:
     name: CI Success
-    needs: [frontend, contracts, security]
+    needs: [frontend, contracts, security, rust-security]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -159,6 +159,14 @@ jobs:
           fi
           if [[ "${{ needs.contracts.result }}" != "success" ]]; then
             echo "Contracts job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "Security job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.rust-security.result }}" != "success" ]]; then
+            echo "Rust security job failed"
             exit 1
           fi
           echo "All required checks passed!"
