@@ -1,62 +1,94 @@
 "use client"
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
+const readStoredItems = () => {
+  try {
+    const raw = localStorage.getItem("cartItems");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // fall through to empty
+  }
+  return [];
+};
+
+const readStoredCount = () => {
+  try {
+    const raw = localStorage.getItem("itemCount");
+    if (raw) {
+      const parsed = parseInt(raw, 10);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+  } catch {
+    // fall through to zero
+  }
+  return 0;
+};
+
+const readStoredTotal = () => {
+  try {
+    const raw = localStorage.getItem("totalPrice");
+    if (raw) {
+      const parsed = parseFloat(raw);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+  } catch {
+    // fall through to zero
+  }
+  return 0;
+};
+
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [itemCount, setItemCount] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
+  // Adds that land before the hydration effect has run. They are queued here
+  // and merged with the stored snapshot once hydration completes, so a fast
+  // "Add to cart" click after a hard load can no longer clobber the saved cart.
+  const pendingAdds = useRef([]);
 
   useEffect(() => {
-    let storedCartItems = [];
-    let storedItemCount = 0;
-    let storedTotalPrice = 0;
+    const storedCartItems = readStoredItems();
+    const storedItemCount = readStoredCount();
+    const storedTotalPrice = readStoredTotal();
 
-    try {
-      const rawItems = localStorage.getItem("cartItems");
-      if (rawItems) {
-        const parsed = JSON.parse(rawItems);
-        if (Array.isArray(parsed)) {
-          storedCartItems = parsed;
-        }
-      }
-    } catch {
-      storedCartItems = [];
+    const pending = pendingAdds.current;
+    pendingAdds.current = [];
+
+    if (pending.length > 0) {
+      const merged = [...storedCartItems, ...pending];
+      const mergedCount = storedItemCount + pending.length;
+      const mergedTotal =
+        storedTotalPrice + pending.reduce((sum, item) => sum + (item.price || 0), 0);
+
+      setCartItems(merged);
+      setItemCount(mergedCount);
+      setTotalPrice(mergedTotal);
+      localStorage.setItem("cartItems", JSON.stringify(merged));
+      localStorage.setItem("itemCount", mergedCount.toString());
+      localStorage.setItem("totalPrice", mergedTotal.toString());
+    } else {
+      setCartItems(storedCartItems);
+      setItemCount(storedItemCount);
+      setTotalPrice(storedTotalPrice);
     }
 
-    try {
-      const rawCount = localStorage.getItem("itemCount");
-      if (rawCount) {
-        const parsedCount = parseInt(rawCount, 10);
-        if (Number.isFinite(parsedCount) && parsedCount >= 0) {
-          storedItemCount = parsedCount;
-        }
-      }
-    } catch {
-      storedItemCount = 0;
-    }
-
-    try {
-      const rawPrice = localStorage.getItem("totalPrice");
-      if (rawPrice) {
-        const parsedPrice = parseFloat(rawPrice);
-        if (Number.isFinite(parsedPrice) && parsedPrice >= 0) {
-          storedTotalPrice = parsedPrice;
-        }
-      }
-    } catch {
-      storedTotalPrice = 0;
-    }
-
-    setCartItems(storedCartItems);
-    setItemCount(storedItemCount);
-    setTotalPrice(storedTotalPrice);
+    setHydrated(true);
   }, []);
 
   const addToCart = (product) => {
+    if (!hydrated) {
+      pendingAdds.current.push(product);
+      return;
+    }
+
     setCartItems((prevCartItems) => {
       const updatedCartItems = [...prevCartItems, product];
       localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
@@ -104,6 +136,7 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
     setItemCount(0);
     setTotalPrice(0);
+    pendingAdds.current = [];
     localStorage.removeItem("cartItems");
     localStorage.removeItem("itemCount");
     localStorage.removeItem("totalPrice");
@@ -115,6 +148,7 @@ export const CartProvider = ({ children }) => {
         cartItems,
         itemCount,
         totalPrice,
+        hydrated,
         addToCart,
         removeFromCart,
         clearCart,
