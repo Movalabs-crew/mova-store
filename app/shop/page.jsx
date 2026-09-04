@@ -8,27 +8,42 @@ import Cart from "../../components/Cart";
 import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
 import { listProducts } from "../../lib/products";
+import { ProductGridSkeleton } from "../../components/Skeleton";
 
 export default function Products() {
-  const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
-    useCart();
+  const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchProducts = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const data = await listProducts();
-        setProducts(data);
+        if (isMounted) {
+          setProducts(data || []);
+        }
       } catch (err) {
-        setError(err.message);
+        if (isMounted) {
+          setError(err.message);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProducts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const showToast = (message) => {
@@ -58,34 +73,45 @@ export default function Products() {
             Welcome to Mova Store
           </span>
 
-          {error && <p className="text-red-500 text-center">{error}</p>}
+          {error && <p className="text-red-500 text-center py-4">{error}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {products.map((prod) => (
-              <div key={prod.id} className="p-4 border rounded-lg shadow">
-                <Link href={`/shop/${prod.id}`}>
-                  <Image
-                    src={prod.img} // Ensure this URL is correct
-                    alt={prod.name}
-                    width={200}
-                    height={200}
-                    className="mb-2"
-                  />
-                  <h1 className="text-xl font-bold">{prod.name}</h1>
-                  <h2 className="text-lg">${prod.price}</h2>
-                </Link>
-                <button
-                  className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
-                  onClick={() => {
-                    addToCart(prod);
-                    showToast("Item added to cart");
-                  }}
-                >
-                  <FaShoppingCart />
-                </button>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div data-testid="products-loading" className="py-4">
+              <ProductGridSkeleton />
+            </div>
+          ) : !error && products.length === 0 ? (
+            <div data-testid="products-empty" className="text-center text-gray-500 py-16">
+              <p className="text-xl font-medium">No products yet</p>
+              <p className="text-sm text-gray-400 mt-2">Check back soon for new arrivals!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {products.map((prod) => (
+                <div key={prod.id} className="p-4 border rounded-lg shadow">
+                  <Link href={`/shop/${prod.id}`}>
+                    <Image
+                      src={prod.img} // Ensure this URL is correct
+                      alt={prod.name}
+                      width={200}
+                      height={200}
+                      className="mb-2"
+                    />
+                    <h1 className="text-xl font-bold">{prod.name}</h1>
+                    <h2 className="text-lg">${prod.price}</h2>
+                  </Link>
+                  <button
+                    className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
+                    onClick={() => {
+                      addToCart(prod);
+                      showToast("Item added to cart");
+                    }}
+                  >
+                    <FaShoppingCart />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
@@ -101,10 +127,7 @@ export default function Products() {
         ) : (
           <div>
             {cartItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between items-center mb-2"
-              >
+              <div key={item.id} className="flex justify-between items-center mb-2">
                 <div className="w-16 h-16 flex-shrink-0">
                   <Image
                     src={item.img} // Ensure this URL is correct
@@ -129,11 +152,7 @@ export default function Products() {
         <div className="flex justify-between items-center mt-4 mx-5 sm:mx-10">
           <div>
             {cartItems.length > 0 && <strong>Total:</strong>}
-            {totalPrice ? (
-              <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span>
-            ) : (
-              ""
-            )}
+            {totalPrice ? <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span> : ""}
           </div>
           {cartItems.length > 0 && (
             <button
