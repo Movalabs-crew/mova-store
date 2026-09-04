@@ -69,6 +69,27 @@ describe("lib/products data layer", () => {
       const mapped = mapProduct(raw);
       expect(mapped?.price).toBe(25);
     });
+
+    it("surfaces updated_at when present on raw product row", () => {
+      const raw = {
+        id: "prod-456",
+        name: "Jacket",
+        price: "89.99",
+        img: "https://example.com/jacket.jpg",
+        created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-04T12:00:00Z",
+      };
+      const mapped = mapProduct(raw);
+      expect(mapped).toEqual({
+        id: "prod-456",
+        name: "Jacket",
+        price: 89.99,
+        img: "https://example.com/jacket.jpg",
+        created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-04T12:00:00Z",
+      });
+      expect(mapped?.updated_at).toBe("2026-09-04T12:00:00Z");
+    });
   });
 
   describe("listProducts", () => {
