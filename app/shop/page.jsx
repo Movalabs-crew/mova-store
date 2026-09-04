@@ -8,6 +8,7 @@ import Cart from "../../components/Cart";
 import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
 import { listProducts } from "../../lib/products";
+import { ProductGridSkeleton } from "../../components/Skeleton";
 
 export default function Products() {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
@@ -17,6 +18,7 @@ export default function Products() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -25,6 +27,8 @@ export default function Products() {
         setProducts(data);
       } catch (err) {
         setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -60,6 +64,18 @@ export default function Products() {
 
           {error && <p className="text-red-500 text-center">{error}</p>}
 
+          {loading ? (
+            <ProductGridSkeleton />
+          ) : products.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="text-2xl font-semibold text-mova-ink">
+                No products yet
+              </p>
+              <p className="text-gray-500 mt-2">
+                Check back soon - new arrivals are on the way.
+              </p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {products.map((prod) => (
               <div key={prod.id} className="p-4 border rounded-lg shadow">
@@ -86,6 +102,7 @@ export default function Products() {
               </div>
             ))}
           </div>
+          )}
         </section>
       </div>
 
