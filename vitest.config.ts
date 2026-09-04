@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    env: {
+      NODE_ENV: "development",
+    },
     setupFiles: ["./tests/setup.ts"],
     include: ["**/*.{test,spec}.{js,jsx,ts,tsx}"],
     exclude: ["node_modules", "contracts", ".next", "out"],
