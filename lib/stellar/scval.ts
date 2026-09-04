@@ -107,7 +107,11 @@ export function hexToBytes(hex: string): Uint8Array {
   }
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    const chunk = clean.slice(i * 2, i * 2 + 2);
+    if (!/^[0-9a-fA-F]{2}$/.test(chunk)) {
+      throw new Error(`invalid hex character at position ${i * 2}: "${chunk}"`);
+    }
+    out[i] = parseInt(chunk, 16);
   }
   return out;
 }
