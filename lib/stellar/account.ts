@@ -17,6 +17,17 @@ import { readTokenBalance, readTokenDecimals } from "./simulate";
 /** Classic account minimum reserve: 1 XLM (10,000,000 stroops). */
 export const MIN_NATIVE_RESERVE = BigInt(10000000);
 
+/**
+ * The SDK reports a missing account as `Error("Account not found: <address>")`
+ * (see rpc.Server#getAccount / getAccountEntry). Anything else - timeouts,
+ * 5xx responses, offline - is an RPC failure and must not be treated as an
+ * "account missing" case.
+ */
+export function isAccountNotFoundError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /account not found/i.test(message);
+}
+
 export interface LoadedAccount {
   account: Account;
   funded: boolean;
@@ -55,16 +66,24 @@ export async function loadAccount(
   try {
     const account = await server.getAccount(publicKey);
     return { account, funded: false };
-  } catch {
-    if (!IS_MAINNET && fund) {
-      await fundTestnetAccount(publicKey);
-      const account = await server.getAccount(publicKey);
-      return { account, funded: true };
+  } catch (err) {
+    if (isAccountNotFoundError(err)) {
+      if (!IS_MAINNET && fund) {
+        await fundTestnetAccount(publicKey);
+        const account = await server.getAccount(publicKey);
+        return { account, funded: true };
+      }
+      throw new WalletError(
+        "Your Stellar account has no sequence number on this network. " +
+          "Fund it with XLM before paying.",
+        "ACCOUNT_NOT_FOUND"
+      );
     }
     throw new WalletError(
-      "Your Stellar account has no sequence number on this network. " +
-        "Fund it with XLM before paying.",
-      "ACCOUNT_NOT_FOUND"
+      `Could not verify your Stellar account: ${
+        err instanceof Error ? err.message : String(err)
+      }. The RPC node may be unreachable - try again in a moment.`,
+      "RPC_ERROR"
     );
   }
 }
@@ -87,8 +106,16 @@ export async function getNativeBalance(
   try {
     const entry = await server.getAccountEntry(publicKey);
     return BigInt(entry.balance().toString());
-  } catch {
-    return BigInt(0);
+  } catch (err) {
+    if (isAccountNotFoundError(err)) {
+      return BigInt(0);
+    }
+    throw new WalletError(
+      `Could not read the native balance: ${
+        err instanceof Error ? err.message : String(err)
+      }. The RPC node may be unreachable - try again in a moment.`,
+      "RPC_ERROR"
+    );
   }
 }
 
