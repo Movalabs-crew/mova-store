@@ -111,3 +111,47 @@ describe("ScVal helpers", () => {
     });
   });
 });
+
+describe("hexToBytes validation (#8)", () => {
+  it("parses valid hex (case-insensitive) and round-trips lowercase", () => {
+    expect(Array.from(hexToBytes("00ff10"))).toEqual([0, 255, 16]);
+    expect(Array.from(hexToBytes("ABcd"))).toEqual([171, 205]);
+    expect(bytesToHex(hexToBytes("ABcd00"))).toBe("abcd00");
+  });
+
+  it("accepts an optional 0x prefix", () => {
+    expect(Array.from(hexToBytes("0x01ff"))).toEqual([1, 255]);
+  });
+
+  it("throws on non-hex characters instead of coercing NaN to 0", () => {
+    expect(() => hexToBytes("gggg")).toThrow(/invalid hex character/);
+    expect(() => hexToBytes("0xzz")).toThrow(/invalid hex character/);
+    // parseInt("0g", 16) === 0, so this would silently zero-fill without
+    // explicit per-chunk validation.
+    expect(() => hexToBytes("0g0g")).toThrow(/invalid hex character/);
+  });
+
+  it("still rejects odd-length input", () => {
+    expect(() => hexToBytes("abc")).toThrow(/odd length/);
+  });
+});
+
+describe("bytes32ToScVal with hex input (#8)", () => {
+  it("rejects a 64-character non-hex string instead of zero-filling", () => {
+    expect(() => bytes32ToScVal("g".repeat(64))).toThrow(
+      /invalid hex character/
+    );
+    expect(() => bytes32ToScVal("zz".repeat(32))).toThrow(
+      /invalid hex character/
+    );
+  });
+
+  it("accepts a valid 64-character hex string as 32 bytes", () => {
+    const scv = bytes32ToScVal("00".repeat(31) + "ff");
+    expect(scv.switch()).toBe(xdr.ScValType.scvBytes());
+  });
+
+  it("still enforces the 32-byte length for valid hex", () => {
+    expect(() => bytes32ToScVal("ff")).toThrow(/exactly 32 bytes/);
+  });
+});
