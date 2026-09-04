@@ -181,6 +181,7 @@ mova-store/
 │   ├── admin/                      #   admin product management
 │   └── profile/login/              #   authentication
 ├── components/                     # Shared UI (Stellar checkout/wallet buttons, Toast…)
+├── context/                        # React context providers (CartContext)
 ├── lib/                            # Client-side libraries
 │   ├── stellar/                    #   Soroban payment library
 │   │   ├── config.ts               #     network / contract / token config
@@ -191,7 +192,7 @@ mova-store/
 │   │   ├── simulate.ts             #     pre-flight resource-fee simulation
 │   │   ├── indexer.ts              #     getEvents cursor listener
 │   │   └── events.ts               #     contract event decoding
-│   └── AuthContext.jsx             #   auth + cart context
+│   └── AuthContext.js              #   auth + cart context
 ├── contracts/
 │   └── checkout/                   # Contracts — Rust Soroban smart contract
 │       ├── src/
@@ -204,9 +205,12 @@ mova-store/
 │       ├── Cargo.toml
 │       └── README.md               #   contract interface + manual CLI examples
 ├── docs/
-│   └── ARCHITECTURE.md             # Deep Stellar integration design rationale
+│   ├── ARCHITECTURE.md             # Deep Stellar integration design rationale
+│   ├── MAINNET_DEPLOYMENT.md       # Production deployment and verification guide
+│   └── TROUBLESHOOTING.md          # Common issues, debugging steps and resolutions
 ├── scripts/
 │   └── deploy-testnet.sh           # one-command build + deploy + initialize
+├── supabase/                       # Supabase schema migrations and setup instructions
 ├── public/                         # Static assets (product images)
 ├── .env.local.example              # Config — environment variable template
 ├── package.json                    # Frontend dependencies + scripts
