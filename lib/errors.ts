@@ -104,7 +104,8 @@ export const STELLAR_ERRORS: Record<string, AppError> = {
   INSUFFICIENT_BALANCE: {
     code: "ACCOUNT_INSUFFICIENT_BALANCE",
     message: "Insufficient balance",
-    userMessage: "You don't have enough funds to complete this payment. Please add more to your wallet.",
+    userMessage:
+      "You don't have enough funds to complete this payment. Please add more to your wallet.",
     severity: "error",
     recoverable: true,
     action: "Add funds",
@@ -112,7 +113,8 @@ export const STELLAR_ERRORS: Record<string, AppError> = {
   NO_TRUSTLINE: {
     code: "ACCOUNT_NO_TRUSTLINE",
     message: "No trustline for token",
-    userMessage: "Your wallet needs to trust USDC before receiving payments. We'll set this up for you.",
+    userMessage:
+      "Your wallet needs to trust USDC before receiving payments. We'll set this up for you.",
     severity: "info",
     recoverable: true,
   },
@@ -151,7 +153,8 @@ export const STELLAR_ERRORS: Record<string, AppError> = {
   TX_TIMEOUT: {
     code: "TX_TIMEOUT",
     message: "Transaction timed out",
-    userMessage: "The transaction is taking longer than expected. Please check your wallet for the status.",
+    userMessage:
+      "The transaction is taking longer than expected. Please check your wallet for the status.",
     severity: "warning",
     recoverable: true,
     action: "Check wallet",
@@ -171,7 +174,7 @@ const SUPABASE_AUTH_CODE_MAP: Record<string, string> = {
   validation_failed: "Unable to validate email address: invalid format",
 };
 
-const AUTH_ERRORS: Record<string, AppError> = {
+export const AUTH_ERRORS: Record<string, AppError> = {
   "User already registered": {
     code: "AUTH_EMAIL_EXISTS",
     message: "Email already in use",
@@ -325,6 +328,16 @@ export function parseError(error: unknown): AppError {
 function parseErrorMessage(message: string): AppError {
   const lowerMessage = message.toLowerCase();
 
+  // Check auth errors by message key or code first
+  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
+    if (
+      lowerMessage.includes(key.toLowerCase()) ||
+      lowerMessage.includes(appError.code.toLowerCase())
+    ) {
+      return appError;
+    }
+  }
+
   // Check Stellar errors by key or code
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
     if (
@@ -345,15 +358,11 @@ function parseErrorMessage(message: string): AppError {
   if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
     return STELLAR_ERRORS.TX_TIMEOUT;
   }
-  if (lowerMessage.includes("freighter") && (lowerMessage.includes("install") || lowerMessage.includes("not installed"))) {
+  if (
+    lowerMessage.includes("freighter") &&
+    (lowerMessage.includes("install") || lowerMessage.includes("not installed"))
+  ) {
     return STELLAR_ERRORS.FREIGHTER_NOT_FOUND;
-  }
-
-  // Check auth errors by message
-  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
-    if (lowerMessage.includes(key.toLowerCase()) || lowerMessage.includes(appError.code.toLowerCase())) {
-      return appError;
-    }
   }
 
   // Return generic error with original message

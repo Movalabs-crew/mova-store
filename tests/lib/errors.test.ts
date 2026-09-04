@@ -78,4 +78,28 @@ describe("Error Handling & Stellar Error Reconciliation Tests", () => {
     );
     expect(isRecoverable(new WalletError("Wrong net", "WRONG_NETWORK"))).toBe(true);
   });
+
+  describe("AUTH_ERRORS vs broad Stellar keyword heuristics precedence", () => {
+    it("matches exact auth message when it contains broad keyword like 'cancelled'", () => {
+      const err = parseError("Email not confirmed: you cancelled the verification request");
+      expect(err.code).toBe("AUTH_EMAIL_NOT_CONFIRMED");
+      expect(err.message).toBe("Email not confirmed");
+      expect(err.userMessage).toBe("Please confirm your email before signing in.");
+      expect(err.code).not.toBe(STELLAR_ERRORS.USER_REJECTED.code);
+    });
+
+    it("matches pure Stellar message 'Transaction cancelled by user' to USER_REJECTED", () => {
+      const err = parseError("Transaction cancelled by user");
+      expect(err.code).toBe(STELLAR_ERRORS.USER_REJECTED.code);
+      expect(err.userMessage).toContain("cancelled the transaction");
+    });
+
+    it("prioritizes auth errors over other common keywords like 'insufficient' or 'timeout'", () => {
+      const authWithBalance = parseError("User already registered with insufficient permissions");
+      expect(authWithBalance.code).toBe("AUTH_EMAIL_EXISTS");
+
+      const authWithTimeout = parseError("Invalid login credentials timed out");
+      expect(authWithTimeout.code).toBe("AUTH_INVALID_CREDENTIALS");
+    });
+  });
 });
