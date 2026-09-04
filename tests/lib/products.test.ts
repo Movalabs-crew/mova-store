@@ -160,7 +160,9 @@ describe("lib/products data layer", () => {
         error: null,
       });
       mockStorageFrom.getPublicUrl.mockReturnValue({
-        data: { publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png" },
+        data: {
+          publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png",
+        },
       });
 
       const url = await uploadProductImage(mockFile);
@@ -285,9 +287,7 @@ describe("lib/products data layer", () => {
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ delete: mockDelete });
 
-      await expect(deleteProduct("p-del")).rejects.toThrow(
-        "Foreign key constraint violation"
-      );
+      await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
     });
   });
 });

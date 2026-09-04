@@ -46,7 +46,9 @@ describe("ContactUs component", () => {
 
     const nameInput = screen.getByPlaceholderText("Your Name");
     fireEvent.change(nameInput, { target: { value: "Bob" } });
-    fireEvent.change(screen.getByPlaceholderText("Your Email"), { target: { value: "bob@example.com" } });
+    fireEvent.change(screen.getByPlaceholderText("Your Email"), {
+      target: { value: "bob@example.com" },
+    });
     fireEvent.change(screen.getByPlaceholderText("Your Message"), { target: { value: "Test" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Send Message" }));

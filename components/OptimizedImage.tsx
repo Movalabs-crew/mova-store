@@ -44,10 +44,7 @@ export default function OptimizedImage({
     <div className={`relative overflow-hidden ${className}`}>
       {/* Loading skeleton */}
       {showSkeleton && isLoading && (
-        <div
-          className="absolute inset-0 bg-gray-200 animate-pulse"
-          aria-hidden="true"
-        />
+        <div className="absolute inset-0 bg-gray-200 animate-pulse" aria-hidden="true" />
       )}
 
       <Image
@@ -152,14 +149,7 @@ export function HeroImage({
 }) {
   return (
     <div className={`relative w-full h-[60vh] min-h-[400px] ${className}`}>
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        priority
-        className="object-cover"
-        sizes="100vw"
-      />
+      <Image src={src} alt={alt} fill priority className="object-cover" sizes="100vw" />
     </div>
   );
 }

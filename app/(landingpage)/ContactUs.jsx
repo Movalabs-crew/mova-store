@@ -68,21 +68,16 @@ const ContactUs = () => {
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Get in Touch
-          </h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Get in Touch</h2>
           <p className="text-white/90 max-w-xl mx-auto">
-            Questions, feedback, or want to contribute? Reach out through
-            any channel below.
+            Questions, feedback, or want to contribute? Reach out through any channel below.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Social Links */}
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8">
-            <h3 className="text-xl font-semibold text-white mb-6">
-              Connect with us
-            </h3>
+            <h3 className="text-xl font-semibold text-white mb-6">Connect with us</h3>
             <div className="space-y-4">
               {socialLinks.map((link) => (
                 <a
@@ -96,9 +91,7 @@ const ContactUs = () => {
                     <link.icon size={24} />
                   </span>
                   <div>
-                    <p className="font-semibold text-white group-hover:underline">
-                      {link.name}
-                    </p>
+                    <p className="font-semibold text-white group-hover:underline">{link.name}</p>
                     <p className="text-sm text-white/70">{link.description}</p>
                   </div>
                 </a>
@@ -114,91 +107,89 @@ const ContactUs = () => {
 
           {/* Contact Form */}
           <div className="bg-white shadow-lg rounded-xl p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Send us a message
-            </h3>
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 mb-4">
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Your Name"
-              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Your Email"
-              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
-            <textarea
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              placeholder="Your Message"
-              rows="4"
-              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
-          </div>
-          {error && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"
-            >
-              {error}
-            </div>
-          )}
-          <button
-            type="submit"
-            className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 mr-3 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">Send us a message</h3>
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 gap-4 mb-4">
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Your Name"
+                  className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Your Email"
+                  className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="Your Message"
+                  rows="4"
+                  className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+              </div>
+              {error && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                Sending...
-              </>
-            ) : (
-              "Send Message"
-            )}
-          </button>
-          {error && (
-            <p
-              role="alert"
-              aria-live="polite"
-              className="mt-4 text-center text-sm font-medium text-red-600"
-            >
-              {error}
-            </p>
-          )}
-        </form>
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 mr-3 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  "Send Message"
+                )}
+              </button>
+              {error && (
+                <p
+                  role="alert"
+                  aria-live="polite"
+                  className="mt-4 text-center text-sm font-medium text-red-600"
+                >
+                  {error}
+                </p>
+              )}
+            </form>
           </div>
         </div>
       </div>

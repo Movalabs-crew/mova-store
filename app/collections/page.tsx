@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import Image from "next/image";
 import shoeImage1 from "/public/images/shoe4.png";
 import shoeImage2 from "/public/images/shoe3.png";
 import shoeImage3 from "/public/images/shoe3.png";

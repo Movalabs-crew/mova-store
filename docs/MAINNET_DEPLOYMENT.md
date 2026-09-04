@@ -19,6 +19,7 @@ Before deploying to mainnet, ensure you have:
 ### Create a Secure Merchant Wallet
 
 1. **Generate a new keypair** for your merchant wallet:
+
    ```bash
    stellar keys generate merchant-mainnet
    ```
@@ -258,6 +259,7 @@ stellar contract invoke \
 ## Support
 
 For issues specific to:
+
 - **Mova Store:** Open a GitHub issue
 - **Stellar/Soroban:** [Stellar Discord](https://discord.gg/stellar)
 - **Freighter:** [Freighter Support](https://freighter.app)

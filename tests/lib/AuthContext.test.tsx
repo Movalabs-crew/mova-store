@@ -24,13 +24,14 @@ describe("AuthContext getSession rejection handling", () => {
     vi.clearAllMocks();
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    React.createElement(AuthProvider, null, children)
-  );
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(AuthProvider, null, children);
 
   it("handles rejected getSession gracefully, setting loading to false and user to null", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    (supabase.auth.getSession as any).mockRejectedValue(new Error("Supabase outage / network offline"));
+    (supabase.auth.getSession as any).mockRejectedValue(
+      new Error("Supabase outage / network offline")
+    );
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 

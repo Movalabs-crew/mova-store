@@ -32,17 +32,14 @@ describe("usdToRawUnits", () => {
     ["Infinity", Number.POSITIVE_INFINITY],
   ];
 
-  it.each(cases)(
-    "throws WalletError with code INVALID_AMOUNT for %s",
-    (_label, value) => {
-      let caught: unknown;
-      try {
-        usdToRawUnits(value);
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBeInstanceOf(WalletError);
-      expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  it.each(cases)("throws WalletError with code INVALID_AMOUNT for %s", (_label, value) => {
+    let caught: unknown;
+    try {
+      usdToRawUnits(value);
+    } catch (err) {
+      caught = err;
     }
-  );
+    expect(caught).toBeInstanceOf(WalletError);
+    expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  });
 });

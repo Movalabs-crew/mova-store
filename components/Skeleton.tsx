@@ -104,13 +104,7 @@ export function TableRowSkeleton({ columns = 4 }: { columns?: number }) {
 /**
  * Table Skeleton
  */
-export function TableSkeleton({
-  rows = 5,
-  columns = 4,
-}: {
-  rows?: number;
-  columns?: number;
-}) {
+export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
   return (
     <table className="w-full">
       <thead>
