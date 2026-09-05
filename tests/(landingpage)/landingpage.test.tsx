@@ -5,6 +5,7 @@ import FAQ from "../../app/(landingpage)/FAQ";
 import Newsletter from "../../app/(landingpage)/newsletter";
 import ContactUs from "../../app/(landingpage)/ContactUs";
 import * as sendMailModule from "../../lib/sendmail";
+import Slider from "../../app/(landingpage)/Slider";
 
 describe("Landing Page Components", () => {
   describe("FAQ Component", () => {
@@ -86,6 +87,22 @@ describe("Landing Page Components", () => {
       await waitFor(() => {
         expect(screen.getByText("Unable to send message, please try again later")).toBeDefined();
       });
+    });
+  });
+
+  describe("Slider Component", () => {
+    it("renders exactly 5 images with unique stable keys and no duplicated DOM", () => {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      render(<Slider />);
+
+      const images = screen.getAllByRole("img");
+      expect(images).toHaveLength(5);
+
+      const srcs = images.map((img) => img.getAttribute("src"));
+      expect(new Set(srcs).size).toBe(5);
+
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
   });
 });
