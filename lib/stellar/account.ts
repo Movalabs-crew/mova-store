@@ -190,9 +190,14 @@ export async function assertPaymentReady(
     );
   }
 
-  if (nativeBalanceRaw < MIN_NATIVE_RESERVE) {
+  const minNativeRequired = token.isNative
+    ? requiredRaw + MIN_NATIVE_RESERVE
+    : MIN_NATIVE_RESERVE;
+
+  if (nativeBalanceRaw < minNativeRequired) {
     issues.push(
-      `Your account needs at least ${formatAmount(MIN_NATIVE_RESERVE, 7)} XLM to cover ` +
+      `Your account needs at least ${formatAmount(minNativeRequired, 7)} XLM to cover ` +
+        (token.isNative ? "payment and " : "") +
         `network fees and the contract footprint.`
     );
   }
@@ -207,7 +212,7 @@ export async function assertPaymentReady(
     trustlineAuthorized: token.isNative || trustline.authorized,
     requiredRaw,
     sufficientBalance: tokenBalanceRaw >= requiredRaw,
-    sufficientReserve: nativeBalanceRaw >= MIN_NATIVE_RESERVE,
+    sufficientReserve: nativeBalanceRaw >= minNativeRequired,
     issues,
   };
 
