@@ -67,6 +67,11 @@ describe("ScVal helpers", () => {
       );
       expect(() => bytes32ToScVal("aabbcc")).toThrow("order_id must be exactly 32 bytes");
     });
+
+    it("throws when passed a 64-character non-hex string instead of producing zero bytes", () => {
+      const nonHex64 = "g".repeat(64);
+      expect(() => bytes32ToScVal(nonHex64)).toThrow(/invalid hex character/);
+    });
   });
 
   describe("hexToBytes and bytesToHex", () => {
@@ -76,8 +81,21 @@ describe("ScVal helpers", () => {
       expect(bytesToHex(bytes)).toBe("a1b2c3");
     });
 
+    it("returns an empty Uint8Array for empty string", () => {
+      const bytes = hexToBytes("");
+      expect(bytes).toBeInstanceOf(Uint8Array);
+      expect(bytes.length).toBe(0);
+      expect(bytesToHex(bytes)).toBe("");
+    });
+
     it("throws on odd-length hex strings", () => {
       expect(() => hexToBytes("123")).toThrow("invalid hex string (odd length)");
+    });
+
+    it("throws on invalid hex characters instead of returning zero bytes", () => {
+      expect(() => hexToBytes("gggg")).toThrow(/invalid hex character: "g" in "gg"/);
+      expect(() => hexToBytes("0xzz")).toThrow(/invalid hex character: "z" in "zz"/);
+      expect(() => hexToBytes("12xy")).toThrow(/invalid hex character: "x" in "xy"/);
     });
   });
 
