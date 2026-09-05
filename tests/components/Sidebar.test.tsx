@@ -74,4 +74,3 @@ describe("Sidebar component", () => {
     expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
   });
 });
-

@@ -37,14 +37,14 @@ cp .env.local.example .env.local
 
 ### Sensitive Data Handling
 
-| Data Type | Storage | Notes |
-|-----------|---------|-------|
-| API Keys | Environment variables | Never hardcode |
-| Supabase Config | Environment variables | Client-side anon key is safe; never commit service role key |
-| EmailJS Credentials | Environment variables | Required for email functionality |
-| Stellar Contract IDs | Environment variables | Public but environment-specific |
-| User Passwords | Supabase Auth | Handled by Supabase, never stored locally |
-| Payment Data | On-chain (Stellar) | Non-custodial, no card data stored |
+| Data Type            | Storage               | Notes                                                       |
+| -------------------- | --------------------- | ----------------------------------------------------------- |
+| API Keys             | Environment variables | Never hardcode                                              |
+| Supabase Config      | Environment variables | Client-side anon key is safe; never commit service role key |
+| EmailJS Credentials  | Environment variables | Required for email functionality                            |
+| Stellar Contract IDs | Environment variables | Public but environment-specific                             |
+| User Passwords       | Supabase Auth         | Handled by Supabase, never stored locally                   |
+| Payment Data         | On-chain (Stellar)    | Non-custodial, no card data stored                          |
 
 ### Smart Contract Security
 
@@ -138,5 +138,6 @@ Before mainnet deployment:
 ## Contact
 
 For security-related inquiries:
+
 - Email: security@movalabs.dev
 - Response time: Within 48 hours

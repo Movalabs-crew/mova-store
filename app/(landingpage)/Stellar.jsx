@@ -22,7 +22,10 @@ const steps = [
 
 const Stellar = () => {
   return (
-    <section id="stellar" className="bg-gradient-to-r from-purple-900 via-purple-700 to-purple-600 py-16 px-6">
+    <section
+      id="stellar"
+      className="bg-gradient-to-r from-purple-900 via-purple-700 to-purple-600 py-16 px-6"
+    >
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10">
         <div className="md:w-1/2 text-center md:text-left">
           <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-1.5 mb-5 text-sm font-medium text-white">
@@ -33,33 +36,31 @@ const Stellar = () => {
             Pay With Stellar
           </h2>
           <p className="text-white/90 text-lg leading-relaxed mb-8">
-            Pay for your order in USDC on the Stellar network — no card fees,
-            no bank delays, no middleman. This is a live demonstration of how
-            Stellar payments can power any e-commerce store: fast settlement,
-            verifiable receipts, and costs that traditional processors can't match.
+            Pay for your order in USDC on the Stellar network — no card fees, no bank delays, no
+            middleman. This is a live demonstration of how Stellar payments can power any e-commerce
+            store: fast settlement, verifiable receipts, and costs that traditional processors can't
+            match.
           </p>
           <ul className="space-y-4 text-white/90 mb-8 text-left">
             <li className="flex items-start gap-3">
               <span className="mt-1.5 h-2 w-2 rounded-full bg-white flex-shrink-0" />
               <span>
-                <strong className="text-white">Settles in seconds</strong> —
-                transfers usually confirm almost instantly, not in days.
+                <strong className="text-white">Settles in seconds</strong> — transfers usually
+                confirm almost instantly, not in days.
               </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1.5 h-2 w-2 rounded-full bg-white flex-shrink-0" />
               <span>
-                <strong className="text-white">Fraction-of-a-cent fees</strong>{" "}
-                — send USDC anywhere for pennies, with no card network to slow
-                things down.
+                <strong className="text-white">Fraction-of-a-cent fees</strong> — send USDC anywhere
+                for pennies, with no card network to slow things down.
               </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="mt-1.5 h-2 w-2 rounded-full bg-white flex-shrink-0" />
               <span>
-                <strong className="text-white">Verified by smart contract</strong>{" "}
-                — the exact amount moves to our merchant wallet and a payment
-                event is recorded on the ledger.
+                <strong className="text-white">Verified by smart contract</strong> — the exact
+                amount moves to our merchant wallet and a payment event is recorded on the ledger.
               </span>
             </li>
           </ul>
@@ -72,9 +73,7 @@ const Stellar = () => {
         </div>
 
         <div className="md:w-1/2 w-full bg-white rounded-xl p-8 shadow-2xl">
-          <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">
-            How it works
-          </h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">How it works</h3>
           <ol className="space-y-6">
             {steps.map((step, index) => (
               <li key={index} className="flex gap-4">

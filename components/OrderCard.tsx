@@ -102,9 +102,7 @@ export default function OrderCard({ order }: OrderCardProps) {
           {getStatusBadge(order.status)}
           <div className="text-right">
             <span className="text-xs text-gray-500 block">Total</span>
-            <span className="text-base font-bold text-purple-700">
-              ${order.total.toFixed(2)}
-            </span>
+            <span className="text-base font-bold text-purple-700">${order.total.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -113,7 +111,10 @@ export default function OrderCard({ order }: OrderCardProps) {
       <div className="p-4 sm:p-5 divide-y divide-gray-100">
         {order.items && order.items.length > 0 ? (
           order.items.map((item, idx) => (
-            <div key={idx} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+            <div
+              key={idx}
+              className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
+            >
               <div className="flex items-center gap-3">
                 {item.img ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -150,7 +151,10 @@ export default function OrderCard({ order }: OrderCardProps) {
               <SiStellar size={16} />
               <span>
                 Paid with Stellar ({order.tokenSymbol || "USDC"}
-                {order.tokenAmount ? ` · ~${order.tokenAmount.toFixed(2)} ${order.tokenSymbol}` : ""})
+                {order.tokenAmount
+                  ? ` · ~${order.tokenAmount.toFixed(2)} ${order.tokenSymbol}`
+                  : ""}
+                )
               </span>
             </div>
           ) : (
@@ -181,7 +185,13 @@ export default function OrderCard({ order }: OrderCardProps) {
               disabled={verifying}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium transition-colors disabled:opacity-50"
             >
-              {verifying ? "Verifying…" : onChainResult ? (onChainResult.verified ? "Verified ✓" : "Not Found") : "Verify Contract"}
+              {verifying
+                ? "Verifying…"
+                : onChainResult
+                  ? onChainResult.verified
+                    ? "Verified ✓"
+                    : "Not Found"
+                  : "Verify Contract"}
             </button>
           )}
         </div>

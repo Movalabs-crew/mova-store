@@ -193,7 +193,9 @@ function Navbar() {
                 { href: "#aboutus", label: "About Us", onClick: closeNavOnClick },
                 { href: "/blog", label: "Blog", onClick: closeNavOnClick },
                 { href: "#contact", label: "Contact Us", onClick: closeNavOnClick },
-                ...(user ? [{ href: "/orders", label: "My Orders", onClick: closeNavOnClick }] : []),
+                ...(user
+                  ? [{ href: "/orders", label: "My Orders", onClick: closeNavOnClick }]
+                  : []),
               ].map((item) => (
                 <Link
                   key={item.label}

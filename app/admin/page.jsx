@@ -63,15 +63,10 @@ const ProductsAdminContent = () => {
         </Link>
       </div>
 
-      <h1 className="text-4xl font-extrabold mb-8 text-center text-purple-600">
-        Products Admin
-      </h1>
+      <h1 className="text-4xl font-extrabold mb-8 text-center text-purple-600">Products Admin</h1>
       <AddProductForm onProductAdded={handleProductAdded} />
       {selectedProductId && (
-        <EditProductForm
-          productId={selectedProductId}
-          onProductUpdated={handleProductUpdated}
-        />
+        <EditProductForm productId={selectedProductId} onProductUpdated={handleProductUpdated} />
       )}
       <div className="mt-12">
         <h2 className="text-3xl font-bold mb-6">Product List</h2>
@@ -89,9 +84,7 @@ const ProductsAdminContent = () => {
               {products.map((product) => (
                 <tr key={product.id} className="border-b hover:bg-gray-50">
                   <td className="py-4 px-6 text-gray-800">{product.name}</td>
-                  <td className="py-4 px-6 text-gray-800">
-                    ${Number(product.price).toFixed(2)}
-                  </td>
+                  <td className="py-4 px-6 text-gray-800">${Number(product.price).toFixed(2)}</td>
                   <td className="py-4 px-6">
                     <img
                       src={product.img}

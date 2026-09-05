@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useState, useEffect } from "react";
 import { FaAngleDoubleUp } from "react-icons/fa";
 const ScrollToTop = () => {
@@ -31,7 +31,7 @@ const ScrollToTop = () => {
           onClick={scrollToTop}
           className="p-2 rounded-full bg-purple-600 text-white shadow-md hover:bg-purple-700  transition-all duration-300"
         >
-          <FaAngleDoubleUp  size={24} className="hover:animate-bounce"/>
+          <FaAngleDoubleUp size={24} className="hover:animate-bounce" />
         </button>
       )}
     </div>

@@ -25,10 +25,7 @@ import Link from "next/link";
 
 // Status badge component
 const StatusBadge = ({ status }: { status: OrderStatus }) => {
-  const statusConfig: Record<
-    OrderStatus,
-    { bg: string; text: string; icon: React.ReactNode }
-  > = {
+  const statusConfig: Record<OrderStatus, { bg: string; text: string; icon: React.ReactNode }> = {
     Pending: {
       bg: "bg-yellow-100",
       text: "text-yellow-800",
@@ -103,14 +100,10 @@ const OrderRow = ({
   return (
     <tr className="border-b hover:bg-gray-50">
       <td className="py-4 px-4">
-        <div className="font-mono text-xs text-gray-600">
-          {truncateAddress(order.orderId)}
-        </div>
+        <div className="font-mono text-xs text-gray-600">{truncateAddress(order.orderId)}</div>
       </td>
       <td className="py-4 px-4">
-        <div className="font-mono text-xs text-gray-600">
-          {truncateAddress(order.buyer)}
-        </div>
+        <div className="font-mono text-xs text-gray-600">{truncateAddress(order.buyer)}</div>
       </td>
       <td className="py-4 px-4">
         <div className="font-semibold">
@@ -120,9 +113,7 @@ const OrderRow = ({
       <td className="py-4 px-4">
         <StatusBadge status={order.status} />
       </td>
-      <td className="py-4 px-4 text-sm text-gray-500">
-        {formatDate(order.timestamp)}
-      </td>
+      <td className="py-4 px-4 text-sm text-gray-500">{formatDate(order.timestamp)}</td>
       <td className="py-4 px-4 text-sm">
         <a
           href={`https://stellar.expert/explorer/${NETWORK}/tx/${order.txHash}`}
@@ -155,17 +146,11 @@ const OrderRow = ({
               disabled={isProcessing}
               className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
             >
-              {isProcessing ? (
-                <AiOutlineLoading3Quarters className="animate-spin" />
-              ) : (
-                <MdCancel />
-              )}
+              {isProcessing ? <AiOutlineLoading3Quarters className="animate-spin" /> : <MdCancel />}
               Refund
             </button>
           )}
-          {!canDispatch && !canRefund && (
-            <span className="text-gray-400 text-sm">-</span>
-          )}
+          {!canDispatch && !canRefund && <span className="text-gray-400 text-sm">-</span>}
         </div>
       </td>
     </tr>
@@ -176,9 +161,7 @@ const OrderRow = ({
 const OrdersManagementContent = () => {
   const [orders, setOrders] = useState<Map<string, OrderEvent>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
-  const [processingOrderId, setProcessingOrderId] = useState<string | null>(
-    null
-  );
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [indexerStatus, setIndexerStatus] = useState<{
@@ -244,9 +227,7 @@ const OrdersManagementContent = () => {
       const result = await dispatchOrder(orderId);
 
       if (result.success) {
-        setSuccessMessage(
-          `Order ${truncateAddress(orderId)} dispatched successfully!`
-        );
+        setSuccessMessage(`Order ${truncateAddress(orderId)} dispatched successfully!`);
         // Update local state
         setOrders((prev) => {
           const newMap = new Map(prev);
@@ -276,9 +257,7 @@ const OrdersManagementContent = () => {
       const result = await refundOrder(orderId);
 
       if (result.success) {
-        setSuccessMessage(
-          `Order ${truncateAddress(orderId)} refunded successfully!`
-        );
+        setSuccessMessage(`Order ${truncateAddress(orderId)} refunded successfully!`);
         // Update local state
         setOrders((prev) => {
           const newMap = new Map(prev);
@@ -299,9 +278,7 @@ const OrdersManagementContent = () => {
   }, []);
 
   // Sort orders by timestamp (newest first)
-  const sortedOrders = Array.from(orders.values()).sort(
-    (a, b) => b.timestamp - a.timestamp
-  );
+  const sortedOrders = Array.from(orders.values()).sort((a, b) => b.timestamp - a.timestamp);
 
   // Stats
   const stats = {
@@ -337,9 +314,7 @@ const OrdersManagementContent = () => {
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
         <SiStellar className="text-purple-600 text-xl" />
         <div>
-          <span className="font-medium text-purple-800">
-            Stellar {NETWORK.toUpperCase()}
-          </span>
+          <span className="font-medium text-purple-800">Stellar {NETWORK.toUpperCase()}</span>
           <span className="text-purple-600 ml-2 text-sm">
             Contract: {truncateAddress(CHECKOUT_CONTRACT_ID)}
           </span>
@@ -377,9 +352,7 @@ const OrdersManagementContent = () => {
           <div className="text-yellow-600 text-sm flex items-center gap-1">
             <MdPending /> Pending
           </div>
-          <div className="text-2xl font-bold text-yellow-800">
-            {stats.pending}
-          </div>
+          <div className="text-2xl font-bold text-yellow-800">{stats.pending}</div>
         </div>
         <div className="bg-blue-50 rounded-lg shadow p-4">
           <div className="text-blue-600 text-sm flex items-center gap-1">
@@ -391,17 +364,13 @@ const OrdersManagementContent = () => {
           <div className="text-green-600 text-sm flex items-center gap-1">
             <MdLocalShipping /> Shipped
           </div>
-          <div className="text-2xl font-bold text-green-800">
-            {stats.shipped}
-          </div>
+          <div className="text-2xl font-bold text-green-800">{stats.shipped}</div>
         </div>
         <div className="bg-red-50 rounded-lg shadow p-4">
           <div className="text-purple-600 text-sm flex items-center gap-1">
             <MdCancel /> Refunded
           </div>
-          <div className="text-2xl font-bold text-purple-800">
-            {stats.refunded}
-          </div>
+          <div className="text-2xl font-bold text-purple-800">{stats.refunded}</div>
         </div>
       </div>
 
@@ -481,29 +450,28 @@ const OrdersManagementContent = () => {
           <li className="flex items-start gap-2">
             <MdPayment className="text-blue-500 mt-0.5" />
             <span>
-              <strong>Paid (Escrow):</strong> Customer has paid and funds are
-              held in the smart contract escrow
+              <strong>Paid (Escrow):</strong> Customer has paid and funds are held in the smart
+              contract escrow
             </span>
           </li>
           <li className="flex items-start gap-2">
             <MdLocalShipping className="text-green-500 mt-0.5" />
             <span>
-              <strong>Ship:</strong> Release the escrowed funds to your merchant
-              wallet when you ship the order
+              <strong>Ship:</strong> Release the escrowed funds to your merchant wallet when you
+              ship the order
             </span>
           </li>
           <li className="flex items-start gap-2">
             <MdCancel className="text-purple-500 mt-0.5" />
             <span>
-              <strong>Refund:</strong> Return the escrowed funds to the
-              customer's wallet (e.g., if item is out of stock)
+              <strong>Refund:</strong> Return the escrowed funds to the customer's wallet (e.g., if
+              item is out of stock)
             </span>
           </li>
         </ul>
         <p className="mt-4 text-xs text-gray-500">
-          Note: Only the merchant wallet that deployed the contract can
-          dispatch/refund orders. Make sure you're connected with the correct
-          Freighter wallet.
+          Note: Only the merchant wallet that deployed the contract can dispatch/refund orders. Make
+          sure you're connected with the correct Freighter wallet.
         </p>
       </div>
     </div>

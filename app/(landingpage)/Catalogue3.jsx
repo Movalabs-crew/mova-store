@@ -13,15 +13,14 @@ const Catalogue3 = () => {
           </h2>
           <div className="flex flex-col gap-4 text-gray-600 leading-relaxed">
             <p>
-              Mova Store started because we wanted better — better shoes, and
-              a better way to pay for them. We were tired of slow settlements,
-              hidden fees, and payment systems that hadn't evolved in decades.
+              Mova Store started because we wanted better — better shoes, and a better way to pay
+              for them. We were tired of slow settlements, hidden fees, and payment systems that
+              hadn't evolved in decades.
             </p>
             <p>
-              So we built a store that proves there's a better way: quality
-              footwear you can trust, with Stellar-powered checkout that settles
-              in seconds and costs a fraction of a cent. This is what modern
-              e-commerce should look like.
+              So we built a store that proves there's a better way: quality footwear you can trust,
+              with Stellar-powered checkout that settles in seconds and costs a fraction of a cent.
+              This is what modern e-commerce should look like.
             </p>
           </div>
         </div>

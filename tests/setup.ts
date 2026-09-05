@@ -36,8 +36,9 @@ const originalHasInstance = Uint8Array[Symbol.hasInstance];
 Object.defineProperty(Uint8Array, Symbol.hasInstance, {
   value: (inst: unknown) => {
     return (
-      (originalHasInstance ? originalHasInstance.call(Uint8Array, inst) : inst instanceof Uint8Array) ||
-      Buffer.isBuffer(inst)
+      (originalHasInstance
+        ? originalHasInstance.call(Uint8Array, inst)
+        : inst instanceof Uint8Array) || Buffer.isBuffer(inst)
     );
   },
   configurable: true,

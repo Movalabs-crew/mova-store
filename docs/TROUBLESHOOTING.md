@@ -20,7 +20,9 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Error during dependency installation
 
 **Solutions:**
+
 1. Clear npm cache:
+
    ```bash
    npm cache clean --force
    rm -rf node_modules package-lock.json
@@ -28,6 +30,7 @@ Common issues and solutions for Mova Store development and production.
    ```
 
 2. Check Node.js version (requires 18+):
+
    ```bash
    node --version
    ```
@@ -42,6 +45,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** App shows "Missing configuration" errors
 
 **Solutions:**
+
 1. Ensure `.env.local` exists (copy from `.env.local.example`)
 2. Restart the dev server after changing env vars
 3. Verify variable names start with `NEXT_PUBLIC_` for client-side access
@@ -52,6 +56,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Auth failures, empty shop, or "Invalid API key" in console
 
 **Solutions:**
+
 1. Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
 2. Confirm the Supabase project is active
 3. Run `supabase/schema.sql` in the SQL editor
@@ -67,6 +72,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** "Please install Freighter" message
 
 **Solutions:**
+
 1. Install Freighter from [freighter.app](https://freighter.app)
 2. Enable the extension in browser settings
 3. Refresh the page
@@ -77,6 +83,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** "Please switch to testnet/mainnet"
 
 **Solutions:**
+
 1. Open Freighter → Settings → Network
 2. Select the correct network (Testnet or Mainnet)
 3. Refresh the page
@@ -86,6 +93,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Freighter popup doesn't appear or closes immediately
 
 **Solutions:**
+
 1. Ensure popup blockers are disabled
 2. Check Freighter is unlocked
 3. Verify the account has XLM for fees
@@ -96,6 +104,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Error when trying to pay on testnet
 
 **Solutions:**
+
 1. Testnet: The app auto-funds via Friendbot, wait a moment
 2. If Friendbot fails, manually fund at https://friendbot.stellar.org
 3. Check account status:
@@ -112,6 +121,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Payment fails with TokenNotAllowed
 
 **Solutions:**
+
 1. Verify the token is whitelisted in the contract:
    ```bash
    stellar contract invoke --id <CONTRACT_ID> --network testnet -- \
@@ -128,6 +138,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Payment simulation fails with balance error
 
 **Solutions:**
+
 1. Ensure user has enough tokens for the payment
 2. User needs XLM for transaction fees (~1 XLM recommended)
 3. For USDC, user needs a trustline (app creates automatically)
@@ -137,6 +148,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** "Transaction timed out" after 60 seconds
 
 **Solutions:**
+
 1. Check Stellar network status: https://status.stellar.org
 2. Try a different RPC endpoint
 3. Increase timeout in `lib/stellar/config.ts`
@@ -147,6 +159,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Funds moved but checkout stuck
 
 **Solutions:**
+
 1. Check transaction on Stellar Expert
 2. Refresh the page
 3. Event indexer may be behind - wait a few seconds
@@ -161,6 +174,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Logged in but can't access admin
 
 **Solutions:**
+
 1. Verify your email is in `NEXT_PUBLIC_ADMIN_EMAILS`:
    ```
    NEXT_PUBLIC_ADMIN_EMAILS=your@email.com,other@admin.com
@@ -173,6 +187,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Admin panel shows loading or empty
 
 **Solutions:**
+
 1. Check RLS policies allow read access on `products`
 2. Verify the `products` table exists (run `supabase/schema.sql`)
 3. Check browser console for Supabase errors
@@ -183,6 +198,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Action buttons fail with error
 
 **Solutions:**
+
 1. Connect Freighter with the **merchant wallet** (the one used to initialize contract)
 2. Check order status is "Paid" (can only dispatch/refund paid orders)
 3. Verify you're on the correct network (testnet/mainnet)
@@ -196,6 +212,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** `stellar contract build` or `cargo build` errors
 
 **Solutions:**
+
 1. Install wasm target:
    ```bash
    rustup target add wasm32-unknown-unknown
@@ -216,6 +233,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Deployment fails with account error
 
 **Solutions:**
+
 1. Ensure deployer account is funded:
    ```bash
    stellar keys generate alice --network testnet --fund
@@ -230,6 +248,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** "AlreadyInitialized" or authorization error
 
 **Solutions:**
+
 1. Contract can only be initialized once
 2. The merchant address must sign the initialization
 3. For a fresh start, deploy a new contract instance
@@ -243,6 +262,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** `npm run build` errors
 
 **Solutions:**
+
 1. Check TypeScript errors:
    ```bash
    npm run type-check
@@ -258,6 +278,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Build or deploy errors on Vercel
 
 **Solutions:**
+
 1. Check all environment variables are set in Vercel dashboard
 2. Verify Node.js version in `package.json` engines
 3. Check build logs for specific errors
@@ -268,6 +289,7 @@ Common issues and solutions for Mova Store development and production.
 **Symptoms:** Product images 404 or broken
 
 **Solutions:**
+
 1. Check Supabase Storage public bucket settings for `products`
 2. Verify `NEXT_PUBLIC_SUPABASE_URL` matches your project
 3. Confirm image URLs use `/storage/v1/object/public/products/...`

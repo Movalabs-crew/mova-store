@@ -33,9 +33,7 @@ describe("StellarOrderWatch", () => {
   it("clears the error banner when onStatus receives lastError=undefined while running", async () => {
     let capturedCallbacks: any = null;
 
-    const { unmount } = render(
-      <StellarOrderWatch orderId="test-order-123" enabled={true} />
-    );
+    const { unmount } = render(<StellarOrderWatch orderId="test-order-123" enabled={true} />);
 
     // Wait for async hashOrderId to resolve and indexer.start to be called
     await act(async () => {

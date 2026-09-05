@@ -18,7 +18,7 @@ production-style online store can accept **Stellar (Soroban) payments** — USDC
 or native XLM paid directly from a customer's Freighter wallet into a **Rust
 smart contract** that escrows the funds until the order ships.
 
-It is intentionally built as a *real* store, not a demo: Next.js storefront,
+It is intentionally built as a _real_ store, not a demo: Next.js storefront,
 product catalog, cart, email OTP flow, and a checkout that offers both
 traditional card payment and **on-chain Stellar settlement** with an order
 registry, escrow, and on-chain refunds. Teams and builders can use it as a
@@ -45,7 +45,7 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
 ```
 
 - **Order registry on-chain** — every order records `{ buyer, amount, token,
-  timestamp, status }` and transitions `Pending → Paid → Shipped/Refunded`.
+timestamp, status }` and transitions `Pending → Paid → Shipped/Refunded`.
 - **Multi-token** — any SEP-41 token the merchant whitelists (`add_token`):
   USDC and native XLM out of the box.
 - **Escrow** — funds stay in the contract until the merchant dispatches, or
@@ -144,12 +144,12 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
 
 ### The `pay` function
 
-| Param      | Type         | Meaning                                      |
-| ---------- | ------------ | -------------------------------------------- |
+| Param      | Type         | Meaning                                               |
+| ---------- | ------------ | ----------------------------------------------------- |
 | `token`    | `Address`    | Whitelisted SEP-41 token (USDC SAC or native XLM SAC) |
-| `buyer`    | `Address`    | The paying wallet (must authorize)           |
-| `order_id` | `BytesN<32>` | 32-byte unique order identifier               |
-| `amount`   | `i128`       | Raw token units (USDC = 7 decimals)          |
+| `buyer`    | `Address`    | The paying wallet (must authorize)                    |
+| `order_id` | `BytesN<32>` | 32-byte unique order identifier                       |
+| `amount`   | `i128`       | Raw token units (USDC = 7 decimals)                   |
 
 `pay` escrows `amount` from `buyer` into the contract, marks the order `Paid`,
 and emits a `PaymentReceived` event:
@@ -219,23 +219,23 @@ mova-store/
 
 ## Tech Stack
 
-| Layer       | Technology                                             |
-| ----------- | ------------------------------------------------------ |
-| Frontend    | Next.js 14 (App Router), React, Tailwind CSS, Supabase |
-| Payments    | `@stellar/stellar-sdk` 16, `@stellar/freighter-api` 6  |
-| Smart chain | Rust, Soroban SDK 27, Stellar CLI                      |
+| Layer       | Technology                                                    |
+| ----------- | ------------------------------------------------------------- |
+| Frontend    | Next.js 14 (App Router), React, Tailwind CSS, Supabase        |
+| Payments    | `@stellar/stellar-sdk` 16, `@stellar/freighter-api` 6         |
+| Smart chain | Rust, Soroban SDK 27, Stellar CLI                             |
 | Currency    | USDC + native XLM via the Stellar Asset Contract (7 decimals) |
 
 ## Prerequisites
 
 Install the following before getting started:
 
-| Tool             | Version / Notes                                              | Install                                     |
-| ---------------- | ------------------------------------------------------------ | ------------------------------------------- |
-| **Node.js**      | 18.18+ (bundles `npm`)                                       | https://nodejs.org                          |
-| **Rust**         | stable, with the `wasm32v1-none` target                      | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
-| **Stellar CLI**  | latest (`stellar --version`)                                 | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
-| **Freighter**    | browser wallet extension (Chrome / Firefox)                  | https://freighter.app                       |
+| Tool            | Version / Notes                             | Install                                                                                |
+| --------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Node.js**     | 18.18+ (bundles `npm`)                      | https://nodejs.org                                                                     |
+| **Rust**        | stable, with the `wasm32v1-none` target     | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs                             | sh` |
+| **Stellar CLI** | latest (`stellar --version`)                | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
+| **Freighter**   | browser wallet extension (Chrome / Firefox) | https://freighter.app                                                                  |
 
 > **Rust note:** a C toolchain/LLVM is required to compile the Soroban contract.
 > On macOS install Xcode Command Line Tools (`xcode-select --install`).
@@ -465,18 +465,18 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 
 ## Environment Variables Reference
 
-| Variable                              | Required | Purpose                                   |
-| ------------------------------------- | -------- | ----------------------------------------- |
-| `NEXT_PUBLIC_STELLAR_NETWORK`         | no       | `testnet` (default) or `mainnet`          |
-| `NEXT_PUBLIC_STELLAR_RPC_URL`         | no       | Soroban RPC endpoint (testnet default)    |
-| `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | no    | Network passphrase (testnet default)      |
-| `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`    | yes*     | Deployed checkout contract (C…)           |
-| `NEXT_PUBLIC_USDC_CONTRACT_ID`        | no       | USDC token contract (testnet default)     |
-| `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`| no       | Native XLM SAC (verified testnet default) |
-| `PUBLIC_MERCHANT_ADDRESS`             | no       | Display-only merchant wallet (on-chain value is authoritative) |
-| `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Supabase project URL                      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | yes      | Supabase anon/public key                  |
-| `NEXT_PUBLIC_ADMIN_EMAILS`            | no       | Comma-separated admin emails              |
+| Variable                                 | Required | Purpose                                                        |
+| ---------------------------------------- | -------- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_STELLAR_NETWORK`            | no       | `testnet` (default) or `mainnet`                               |
+| `NEXT_PUBLIC_STELLAR_RPC_URL`            | no       | Soroban RPC endpoint (testnet default)                         |
+| `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | no       | Network passphrase (testnet default)                           |
+| `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`       | yes*     | Deployed checkout contract (C…)                                |
+| `NEXT_PUBLIC_USDC_CONTRACT_ID`           | no       | USDC token contract (testnet default)                          |
+| `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`   | no       | Native XLM SAC (verified testnet default)                      |
+| `PUBLIC_MERCHANT_ADDRESS`                | no       | Display-only merchant wallet (on-chain value is authoritative) |
+| `NEXT_PUBLIC_SUPABASE_URL`               | yes      | Supabase project URL                                           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | yes      | Supabase anon/public key                                       |
+| `NEXT_PUBLIC_ADMIN_EMAILS`               | no       | Comma-separated admin emails                                   |
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
 
