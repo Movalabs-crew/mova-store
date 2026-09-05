@@ -7,10 +7,30 @@ create table if not exists public.products (
   name text not null,
   price numeric(12, 2) not null check (price >= 0),
   img text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
+-- Idempotently ensure updated_at exists on existing tables
+alter table public.products add column if not exists updated_at timestamptz not null default now();
+
 create index if not exists products_created_at_idx on public.products (created_at desc);
+create index if not exists products_updated_at_idx on public.products (updated_at desc);
+
+-- Updated_at maintenance function & trigger
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists set_products_updated_at on public.products;
+create trigger set_products_updated_at
+  before update on public.products
+  for each row
+  execute function public.set_updated_at();
 
 -- Public read; authenticated write (tighten further for production admins)
 alter table public.products enable row level security;
