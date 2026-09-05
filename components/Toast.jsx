@@ -11,7 +11,7 @@ const Toast = ({ message, show, onClose, time = 3000 }) => {
         setVisible(false);
       }, time);
 
-      let exitTimer: ReturnType<typeof setTimeout> | null = null;
+      let exitTimer = null;
       const scheduleExit = () => {
         exitTimer = setTimeout(() => {
           onClose();
