@@ -120,8 +120,10 @@ const ContactUs = () => {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 mb-4">
             <input
+              id="contact-name"
               type="text"
               name="name"
+              aria-label="Your Name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Your Name"
@@ -129,8 +131,10 @@ const ContactUs = () => {
               required
             />
             <input
+              id="contact-email"
               type="email"
               name="email"
+              aria-label="Your Email"
               value={formData.email}
               onChange={handleChange}
               placeholder="Your Email"
@@ -138,7 +142,9 @@ const ContactUs = () => {
               required
             />
             <textarea
+              id="contact-message"
               name="message"
+              aria-label="Your Message"
               value={formData.message}
               onChange={handleChange}
               placeholder="Your Message"

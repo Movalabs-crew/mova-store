@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import ScrollToTop from "../components/ScrollToTop";
 import Whatsapp from "../components/Whatsapp";
 import Footer from "../components/Footer";
+import SkipLink from "../components/SkipLink";
 import { AuthProvider } from "../lib/AuthContext";
 import Head from "next/head";
 import logo from "../public/images/favicon.ico";
@@ -65,9 +66,10 @@ const RootLayout = ({ children }) => {
         <NextTopLoader color="#7c3aed" showSpinner={false} />
 
         <AuthProvider>
+          <SkipLink />
           <div className="flex flex-col min-h-screen">
             <Navbar />
-            <main className="app flex-grow pt-10">{children}</main>
+            <main id="main-content" className="app flex-grow pt-10">{children}</main>
             <Whatsapp />
             <ScrollToTop />
             <Footer />

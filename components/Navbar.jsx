@@ -92,7 +92,7 @@ function Navbar() {
 
   return (
     <>
-      <nav className="fixed z-10 w-full border-b border-purple-100/80 bg-white/85 backdrop-blur-md">
+      <nav aria-label="Main navigation" className="fixed z-10 w-full border-b border-purple-100/80 bg-white/85 backdrop-blur-md">
         <div className="hidden items-center justify-between px-3 py-2 sm:px-6 md:flex">
           <BrandMark />
           <div className="hidden md:flex md:gap-6">
@@ -130,7 +130,7 @@ function Navbar() {
                   {user.photoURL ? (
                     <Image
                       src={user.photoURL}
-                      alt={user.displayName}
+                      alt={user.displayName || "User avatar"}
                       width={32}
                       height={32}
                       className="rounded-full"
@@ -144,7 +144,7 @@ function Navbar() {
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600"
+                  className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                 >
                   Logout
                 </button>
@@ -152,12 +152,12 @@ function Navbar() {
             ) : (
               <>
                 <Link href="/profile/login">
-                  <button className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none">
+                  <button className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">
                     Login
                   </button>
                 </Link>
                 <Link href="/profile/login">
-                  <button className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none">
+                  <button className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">
                     SignUp
                   </button>
                 </Link>
@@ -168,16 +168,29 @@ function Navbar() {
 
         <div className="flex items-center justify-between px-3 sm:px-6 md:hidden">
           <BrandMark />
-          {showNav ? (
-            <AiOutlineClose className="h-9 w-10 pr-2 text-mova-ink" onClick={toggleNav} />
-          ) : (
-            <AiOutlineMenu className="h-9 w-10 pr-2 text-mova-ink" onClick={toggleNav} />
-          )}
+          <button
+            type="button"
+            aria-label={showNav ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={showNav}
+            onClick={toggleNav}
+            className="p-1 text-mova-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded"
+          >
+            {showNav ? (
+              <AiOutlineClose className="h-8 w-8" />
+            ) : (
+              <AiOutlineMenu className="h-8 w-8" />
+            )}
+          </button>
         </div>
         {showNav && (
           <div className="fixed inset-y-0 right-0 z-50 flex h-screen w-1/2 flex-col items-center bg-white py-6 shadow-mova">
-            <button className="mb-4 mr-4 self-end" onClick={toggleNav}>
-              <AiOutlineClose className="h-10 w-8" />
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              className="mb-4 mr-4 self-end p-1 text-mova-ink rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+              onClick={toggleNav}
+            >
+              <AiOutlineClose className="h-8 w-8" />
             </button>
             <div className="w-full divide-y-2 divide-dashed divide-purple-200">
               {[
