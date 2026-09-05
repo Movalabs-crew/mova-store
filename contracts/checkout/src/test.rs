@@ -2,7 +2,10 @@
 
 use soroban_sdk::testutils::{Address as _, Events};
 use soroban_sdk::token::{StellarAssetClient, TokenClient};
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env};
+use soroban_sdk::xdr;
+use soroban_sdk::{
+    contract, contractimpl, contracttype, Address, BytesN, Env, Map, Symbol, TryFromVal,
+};
 
 use crate::errors::Error;
 use crate::order::Status;
@@ -437,17 +440,126 @@ fn test_events_emitted() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
     let id = order_id(&env, 5);
 
     client.create_order(&buyer, &id, &token, &10_000);
-    client.pay(&token, &buyer, &id, &10_000);
-    client.dispatch(&id);
+    // Events::all() covers the LAST contract invocation, so capture after
+    // each step.
+    let created = {
+        let evs = env.events().all().filter_by_contract(&checkout);
+        assert_eq!(
+            evs.events().len(),
+            1,
+            "expected exactly one create_order event"
+        );
+        &evs.events()[0].clone()
+    };
 
-    // At least one contract event should be recorded for the lifecycle.
-    let events = env.events().all().filter_by_contract(&checkout);
-    assert!(
-        !events.events().is_empty(),
-        "expected contract events for create/pay/dispatch"
+    client.pay(&token, &buyer, &id, &10_000);
+    let paid = {
+        let evs = env.events().all().filter_by_contract(&checkout);
+        assert_eq!(evs.events().len(), 1, "expected exactly one pay event");
+        &evs.events()[0].clone()
+    };
+
+    client.dispatch(&id);
+    let shipped = {
+        let evs = env.events().all().filter_by_contract(&checkout);
+        assert_eq!(evs.events().len(), 1, "expected exactly one dispatch event");
+        &evs.events()[0].clone()
+    };
+
+    // create_order: topics = [create_order, token, buyer, order_id]
+    assert_eq!(
+        topic_symbol(&env, created),
+        Symbol::new(&env, "create_order")
     );
+    assert_eq!(event_topics(created).len(), 4);
+    assert_eq!(topic_address(&env, created, 1), token);
+    assert_eq!(topic_address(&env, created, 2), buyer);
+    assert_eq!(topic_bytes32(&env, created, 3), id);
+
+    // pay: topics = [pay, token, buyer, merchant, order_id], data = { amount }
+    assert_eq!(topic_symbol(&env, paid), Symbol::new(&env, "pay"));
+    assert_eq!(event_topics(paid).len(), 5);
+    assert_eq!(topic_address(&env, paid, 1), token);
+    assert_eq!(topic_address(&env, paid, 2), buyer);
+    assert_eq!(topic_address(&env, paid, 3), merchant);
+    assert_eq!(topic_bytes32(&env, paid, 4), id);
+    let data_map = Map::<Symbol, i128>::try_from_val(&env, event_data(paid))
+        .expect("pay data is a symbol-keyed map");
+    assert_eq!(
+        data_map
+            .get(Symbol::new(&env, "amount"))
+            .expect("amount is present in pay data"),
+        10_000
+    );
+
+    // dispatch: topics = [dispatch, order_id, merchant], data = { amount }
+    assert_eq!(topic_symbol(&env, shipped), Symbol::new(&env, "dispatch"));
+    assert_eq!(event_topics(shipped).len(), 3);
+    assert_eq!(topic_bytes32(&env, shipped, 1), id);
+    assert_eq!(topic_address(&env, shipped, 2), merchant);
+}
+
+#[test]
+fn test_refund_event_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 9);
+
+    client.pay(&token, &buyer, &id, &100_000);
+    client.refund(&id);
+
+    // refund: topics = [refund, order_id, buyer], data = { amount }
+    let evs = env.events().all().filter_by_contract(&checkout);
+    assert_eq!(evs.events().len(), 1, "expected exactly one refund event");
+    let refunded = &evs.events()[0].clone();
+    assert_eq!(topic_symbol(&env, refunded), Symbol::new(&env, "refund"));
+    assert_eq!(event_topics(refunded).len(), 3);
+    assert_eq!(topic_bytes32(&env, refunded, 1), id);
+    assert_eq!(topic_address(&env, refunded, 2), buyer);
+    let data_map = Map::<Symbol, i128>::try_from_val(&env, event_data(refunded))
+        .expect("refund data is a symbol-keyed map");
+    assert_eq!(
+        data_map
+            .get(Symbol::new(&env, "amount"))
+            .expect("amount is present in refund data"),
+        100_000
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Event inspection helpers (xdr access differs from the sdk Val-level API)
+// ---------------------------------------------------------------------------
+
+fn event_topics(e: &xdr::ContractEvent) -> &[xdr::ScVal] {
+    match &e.body {
+        xdr::ContractEventBody::V0(v0) => &v0.topics,
+        _ => panic!("unexpected contract event body"),
+    }
+}
+
+fn event_data(e: &xdr::ContractEvent) -> &xdr::ScVal {
+    match &e.body {
+        xdr::ContractEventBody::V0(v0) => &v0.data,
+        _ => panic!("unexpected contract event body"),
+    }
+}
+
+fn topic_symbol(env: &Env, e: &xdr::ContractEvent) -> Symbol {
+    let topics = event_topics(e);
+    let first = topics.first().expect("event has at least one topic");
+    Symbol::try_from_val(env, first).expect("first topic is a Symbol")
+}
+
+fn topic_address(env: &Env, e: &xdr::ContractEvent, i: usize) -> Address {
+    Address::try_from_val(env, &event_topics(e)[i]).expect("topic is an Address")
+}
+
+fn topic_bytes32(env: &Env, e: &xdr::ContractEvent, i: usize) -> BytesN<32> {
+    BytesN::try_from_val(env, &event_topics(e)[i]).expect("topic is a BytesN<32>")
 }
