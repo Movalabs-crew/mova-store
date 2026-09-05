@@ -1,11 +1,6 @@
 import { rpc, StrKey, xdr } from "@stellar/stellar-sdk";
 
-import {
-  CHECKOUT_CONTRACT_ID,
-  RPC_URL,
-  TX_TIMEOUT_SECONDS,
-  TX_POLL_INTERVAL_MS,
-} from "./config";
+import { CHECKOUT_CONTRACT_ID, RPC_URL, TX_TIMEOUT_SECONDS, TX_POLL_INTERVAL_MS } from "./config";
 import { scValToString } from "./scval";
 
 // ---------------------------------------------------------------------------
@@ -65,8 +60,7 @@ export async function waitForTransaction(
 export function decodePaymentEvent(
   tx: rpc.Api.GetSuccessfulTransactionResponse
 ): PaymentReceipt | null {
-  const contractEvents: xdr.ContractEvent[] =
-    tx.events?.contractEventsXdr?.flat() ?? [];
+  const contractEvents: xdr.ContractEvent[] = tx.events?.contractEventsXdr?.flat() ?? [];
   for (const event of contractEvents) {
     let v0: xdr.ContractEventV0;
     try {
@@ -82,10 +76,9 @@ export function decodePaymentEvent(
 
     let eventContractId: string | undefined;
     try {
-      if (event.contractId()) {
-        eventContractId = StrKey.encodeContract(
-          Buffer.from(event.contractId() as unknown as Uint8Array)
-        );
+      const contractId = event.contractId();
+      if (contractId) {
+        eventContractId = StrKey.encodeContract(contractId as any);
       }
     } catch {
       // system events have no contract id

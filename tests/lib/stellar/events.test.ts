@@ -1,5 +1,22 @@
-import { StrKey, xdr, Address, rpc } from "@stellar/stellar-sdk";
+import { StrKey, xdr, Address } from "@stellar/stellar-sdk";
 import { describe, expect, it, vi } from "vitest";
+
+const { CONTRACT_ID, CONTRACT_ID_STR } = vi.hoisted(() => {
+  const bytes = new Uint8Array(32).fill(7);
+  // StrKey encodeContract algorithm
+  return {
+    CONTRACT_ID: bytes,
+    CONTRACT_ID_STR: "CADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP5KR",
+  };
+});
+
+vi.mock("../../../lib/stellar/config", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../../../lib/stellar/config")>();
+  return {
+    ...mod,
+    CHECKOUT_CONTRACT_ID: CONTRACT_ID_STR,
+  };
+});
 
 import { decodePaymentEvent, waitForTransaction } from "../../../lib/stellar/events";
 import { i128ToScVal } from "../../../lib/stellar/scval";
@@ -9,14 +26,10 @@ import { i128ToScVal } from "../../../lib/stellar/scval";
 // decodePaymentEvent is pure over these — no RPC access needed.
 // ---------------------------------------------------------------------------
 
-const CONTRACT_ID = StrKey.decodeContract(
-  "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
-);
 const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const MERCHANT = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-const ORDER_ID_HEX =
-  "a1" + "b2".repeat(31); // 64 hex chars == 32 bytes
+const ORDER_ID_HEX = "a1" + "b2".repeat(31); // 64 hex chars == 32 bytes
 const TX_HASH = "0123456789abcdef".repeat(4);
 const LEDGER = 4242;
 
@@ -31,10 +44,7 @@ function makeEvent(
     ext: ext(),
     contractId,
     type: xdr.ContractEventType.contract(),
-    body: new xdr.ContractEventBody(
-      0,
-      new xdr.ContractEventV0({ topics, data })
-    ),
+    body: new xdr.ContractEventBody(0, new xdr.ContractEventV0({ topics, data })),
   });
 }
 
@@ -69,9 +79,7 @@ const amountMap = (amount: bigint) =>
 describe("decodePaymentEvent", () => {
   it("decodes a full pay event (topics + amount map + contract id)", () => {
     const tx = makeTx([makeEvent(payTopics(), amountMap(123_400_000n))]);
-    const receipt = decodePaymentEvent(
-      tx as never
-    );
+    const receipt = decodePaymentEvent(tx as never);
     expect(receipt).not.toBeNull();
     expect(receipt?.txHash).toBe(TX_HASH);
     expect(receipt?.ledger).toBe(LEDGER);
@@ -116,13 +124,11 @@ describe("decodePaymentEvent", () => {
   it("returns null when no pay event exists in the transaction", () => {
     expect(decodePaymentEvent(makeTx([]) as never)).toBeNull();
     expect(
-      decodePaymentEvent(
-        {
-          txHash: TX_HASH,
-          ledger: LEDGER,
-          events: undefined,
-        } as never
-      )
+      decodePaymentEvent({
+        txHash: TX_HASH,
+        ledger: LEDGER,
+        events: undefined,
+      } as never)
     ).toBeNull();
   });
 
