@@ -8,9 +8,8 @@ describe("CartContext removeFromCart", () => {
     localStorage.clear();
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    React.createElement(CartProvider, null, children)
-  );
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(CartProvider, null, children);
 
   it("adds and removes items correctly", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
@@ -80,5 +79,105 @@ describe("CartContext removeFromCart", () => {
     expect(result.current.itemCount).toBe(0);
     expect(result.current.totalPrice).toBe(0);
     expect(result.current.cartItems).toEqual([]);
+  });
+
+  it("assigns unique cartItemId to duplicate items and removes specific instance (lower row)", () => {
+    const { result } = renderHook(() => useCart(), { wrapper });
+
+    const product = { id: "p1", name: "Shoe 1", price: 50 };
+
+    act(() => {
+      result.current.addToCart(product);
+      result.current.addToCart(product);
+    });
+
+    expect(result.current.itemCount).toBe(2);
+    expect(result.current.totalPrice).toBe(100);
+    expect(result.current.cartItems).toHaveLength(2);
+
+    const [firstInstance, secondInstance] = result.current.cartItems;
+    expect(firstInstance.cartItemId).toBeDefined();
+    expect(secondInstance.cartItemId).toBeDefined();
+    expect(firstInstance.cartItemId).not.toBe(secondInstance.cartItemId);
+
+    // Remove the lower/second instance
+    act(() => {
+      result.current.removeFromCart(secondInstance);
+    });
+
+    expect(result.current.itemCount).toBe(1);
+    expect(result.current.totalPrice).toBe(50);
+    expect(result.current.cartItems).toHaveLength(1);
+    expect(result.current.cartItems[0].cartItemId).toBe(firstInstance.cartItemId);
+  });
+
+  it("removes upper duplicate row and leaves lower row intact", () => {
+    const { result } = renderHook(() => useCart(), { wrapper });
+
+    const product = { id: "p1", name: "Shoe 1", price: 50 };
+
+    act(() => {
+      result.current.addToCart(product);
+      result.current.addToCart(product);
+    });
+
+    const [firstInstance, secondInstance] = result.current.cartItems;
+
+    // Remove the upper/first instance
+    act(() => {
+      result.current.removeFromCart(firstInstance);
+    });
+
+    expect(result.current.itemCount).toBe(1);
+    expect(result.current.totalPrice).toBe(50);
+    expect(result.current.cartItems).toHaveLength(1);
+    expect(result.current.cartItems[0].cartItemId).toBe(secondInstance.cartItemId);
+  });
+
+  it("supports removal by cartItemId string directly", () => {
+    const { result } = renderHook(() => useCart(), { wrapper });
+
+    const product = { id: "p1", name: "Shoe 1", price: 50 };
+
+    act(() => {
+      result.current.addToCart(product);
+      result.current.addToCart(product);
+    });
+
+    const secondInstanceId = result.current.cartItems[1].cartItemId;
+
+    act(() => {
+      result.current.removeFromCart(secondInstanceId);
+    });
+
+    expect(result.current.itemCount).toBe(1);
+    expect(result.current.totalPrice).toBe(50);
+    expect(result.current.cartItems[0].cartItemId).not.toBe(secondInstanceId);
+  });
+
+  it("ensures legacy items loaded from localStorage without cartItemId are assigned unique cartItemIds", () => {
+    const legacyItems = [
+      { id: "legacy1", name: "Legacy A", price: 30 },
+      { id: "legacy1", name: "Legacy A (Duplicate)", price: 30 },
+    ];
+    localStorage.setItem("cartItems", JSON.stringify(legacyItems));
+    localStorage.setItem("itemCount", "2");
+    localStorage.setItem("totalPrice", "60");
+
+    const { result } = renderHook(() => useCart(), { wrapper });
+
+    expect(result.current.cartItems).toHaveLength(2);
+    expect(result.current.cartItems[0].cartItemId).toBeDefined();
+    expect(result.current.cartItems[1].cartItemId).toBeDefined();
+    expect(result.current.cartItems[0].cartItemId).not.toBe(result.current.cartItems[1].cartItemId);
+
+    // Can remove second instance independently
+    act(() => {
+      result.current.removeFromCart(result.current.cartItems[1]);
+    });
+
+    expect(result.current.cartItems).toHaveLength(1);
+    expect(result.current.itemCount).toBe(1);
+    expect(result.current.totalPrice).toBe(30);
   });
 });
