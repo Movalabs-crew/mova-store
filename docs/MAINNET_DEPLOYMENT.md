@@ -149,8 +149,8 @@ Update your `.env.local` (or production environment variables):
 # Switch to mainnet
 NEXT_PUBLIC_STELLAR_NETWORK=mainnet
 
-# Mainnet RPC endpoint (use a reliable provider)
-NEXT_PUBLIC_STELLAR_RPC_URL=https://soroban-rpc.mainnet.stellar.gateway.fm
+# Mainnet RPC endpoint (defaults to https://soroban-rpc.stellar.org)
+NEXT_PUBLIC_STELLAR_RPC_URL=https://soroban-rpc.stellar.org
 
 # Mainnet passphrase
 NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE=Public Global Stellar Network ; September 2015

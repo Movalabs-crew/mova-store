@@ -99,4 +99,19 @@ describe("validateEnv", () => {
     expect(config.emailjs.publicKey).toBe("pubkey_789");
     expect(config.admin.adminEmails).toContain("admin@store.org");
   });
+
+  it("resolves canonical mainnet RPC default when env var is unset", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CA1234567890TESTCONTRACTID");
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", "CB1234567890TESTUSDCID");
+    vi.stubEnv("NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID", "CC1234567890TESTNATIVEID");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key-123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "service_abc");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "template_xyz");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pubkey_789");
+
+    const config = validateEnv();
+    expect(config.stellar.rpcUrl).toBe("https://soroban-rpc.stellar.org");
+  });
 });
