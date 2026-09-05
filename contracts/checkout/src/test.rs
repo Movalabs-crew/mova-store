@@ -503,6 +503,35 @@ fn test_events_emitted() {
     assert_eq!(topic_address(&env, shipped, 2), merchant);
 }
 
+#[test]
+fn test_refund_event_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 9);
+
+    client.pay(&token, &buyer, &id, &100_000);
+    client.refund(&id);
+
+    // refund: topics = [refund, order_id, buyer], data = { amount }
+    let evs = env.events().all().filter_by_contract(&checkout);
+    assert_eq!(evs.events().len(), 1, "expected exactly one refund event");
+    let refunded = &evs.events()[0].clone();
+    assert_eq!(topic_symbol(&env, refunded), Symbol::new(&env, "refund"));
+    assert_eq!(event_topics(refunded).len(), 3);
+    assert_eq!(topic_bytes32(&env, refunded, 1), id);
+    assert_eq!(topic_address(&env, refunded, 2), buyer);
+    let data_map = Map::<Symbol, i128>::try_from_val(&env, event_data(refunded))
+        .expect("refund data is a symbol-keyed map");
+    assert_eq!(
+        data_map
+            .get(Symbol::new(&env, "amount"))
+            .expect("amount is present in refund data"),
+        100_000
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Event inspection helpers (xdr access differs from the sdk Val-level API)
 // ---------------------------------------------------------------------------
