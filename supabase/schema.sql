@@ -7,10 +7,24 @@ create table if not exists public.products (
   name text not null,
   price numeric(12, 2) not null check (price >= 0),
   img text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists products_created_at_idx on public.products (created_at desc);
+
+create or replace function public.handle_updated_at()
+returns trigger as \$\$
+begin
+  new.updated_at = now();
+  return new;
+end;
+\$\$ language plpgsql;
+
+drop trigger if exists products_updated_at_trigger on public.products;
+create trigger products_updated_at_trigger
+  before update on public.products
+  for each row execute procedure public.handle_updated_at();
 
 -- Public read; authenticated write (tighten further for production admins)
 alter table public.products enable row level security;
@@ -66,3 +80,40 @@ create policy "Authenticated can delete product images"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'products');
+
+-- Orders table (tracks buyer purchases and Stellar payments)
+create table if not exists public.orders (
+  id uuid primary key default gen_random_uuid(),
+  order_id text not null unique,
+  user_id uuid references auth.users(id),
+  user_email text,
+  total numeric(12, 2) not null check (total >= 0),
+  status text not null default 'Paid' check (status in ('Pending', 'Paid', 'Shipped', 'Refunded', 'Completed')),
+  payment_method text not null default 'stellar' check (payment_method in ('stellar', 'card')),
+  token_symbol text default 'USDC',
+  token_amount numeric(18, 7),
+  tx_hash text,
+  items jsonb default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists orders_user_id_idx on public.orders (user_id);
+create index if not exists orders_user_email_idx on public.orders (user_email);
+create index if not exists orders_created_at_idx on public.orders (created_at desc);
+
+alter table public.orders enable row level security;
+
+-- Users can view their own orders; admins can view all orders
+drop policy if exists "Users can read own orders" on public.orders;
+create policy "Users can read own orders"
+  on public.orders for select
+  to authenticated
+  using (auth.uid() = user_id or auth.email() = user_email);
+
+-- Authenticated users or guest checkout can create order records
+drop policy if exists "Users can insert orders" on public.orders;
+create policy "Users can insert orders"
+  on public.orders for insert
+  to authenticated, anon
+  with check (true);
+

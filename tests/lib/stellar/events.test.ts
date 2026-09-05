@@ -18,7 +18,7 @@ vi.mock("../../../lib/stellar/config", async (importOriginal) => {
   };
 });
 
-import { decodePaymentEvent } from "../../../lib/stellar/events";
+import { decodePaymentEvent, waitForTransaction } from "../../../lib/stellar/events";
 import { i128ToScVal } from "../../../lib/stellar/scval";
 
 // ---------------------------------------------------------------------------
@@ -144,5 +144,32 @@ describe("decodePaymentEvent", () => {
     const receipt = decodePaymentEvent(makeTx([fromWire]) as never);
     expect(receipt?.orderId).toBe(ORDER_ID_HEX);
     expect(receipt?.amount).toBe("99");
+  });
+});
+
+describe("waitForTransaction", () => {
+  it("resolves immediately when status is SUCCESS", async () => {
+    const mockTx = {
+      status: "SUCCESS",
+      ledger: 100,
+      txHash: TX_HASH,
+    };
+    const spy = vi.spyOn(rpc.Server.prototype, "getTransaction").mockResolvedValue(mockTx as never);
+
+    const res = await waitForTransaction(TX_HASH);
+    expect(res).toBe(mockTx);
+    spy.mockRestore();
+  });
+
+  it("throws error when transaction status is FAILED", async () => {
+    const mockTx = {
+      status: "FAILED",
+      ledger: 101,
+      txHash: TX_HASH,
+    };
+    const spy = vi.spyOn(rpc.Server.prototype, "getTransaction").mockResolvedValue(mockTx as never);
+
+    await expect(waitForTransaction(TX_HASH)).rejects.toThrow("Transaction failed on ledger 101");
+    spy.mockRestore();
   });
 });
