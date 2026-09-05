@@ -21,11 +21,13 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
 /**
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
-export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf =
-    typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
-  if (buf.length !== 32) {
-    throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
+ export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
+-  const buf =
+-    typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
+-  return xdr.ScVal.scvBytes(buf);
++  const raw = typeof bytes === "string" ? hexToBytes(bytes) : bytes;
++  return xdr.ScVal.scvBytes(raw);
+ }
   }
   return xdr.ScVal.scvBytes(buf);
 }
