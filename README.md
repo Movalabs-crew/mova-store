@@ -203,8 +203,12 @@ mova-store/
 │       │   └── test.rs             #   mock-token + native-asset integration tests
 │       ├── Cargo.toml
 │       └── README.md               #   contract interface + manual CLI examples
+├── context/                        # React context (cart, auth)
 ├── docs/
-│   └── ARCHITECTURE.md             # Deep Stellar integration design rationale
+│   ├── ARCHITECTURE.md             # Deep Stellar integration design rationale
+│   ├── MAINNET_DEPLOYMENT.md       # Mainnet deployment guide
+│   └── TROUBLESHOOTING.md          # Common issues and fixes
+├── supabase/                       # Supabase schema and config
 ├── scripts/
 │   └── deploy-testnet.sh           # one-command build + deploy + initialize
 ├── public/                         # Static assets (product images)

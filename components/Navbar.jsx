@@ -26,14 +26,20 @@ function BrandMark() {
 }
 
 function Navbar() {
+  const router = useRouter();
+
   useEffect(() => {
     const handleLinkClick = (event) => {
-      event.preventDefault();
       const href = event.currentTarget.getAttribute("href");
+      if (!href || !href.startsWith("#")) return;
       const targetId = href.substring(1);
       const targetElement = document.getElementById(targetId);
       if (targetElement) {
+        event.preventDefault();
         targetElement.scrollIntoView({ behavior: "smooth" });
+      } else {
+        event.preventDefault();
+        router.push(`/${href}`);
       }
     };
 
@@ -45,9 +51,7 @@ function Navbar() {
         link.removeEventListener("click", handleLinkClick)
       );
     };
-  }, []);
-
-  const router = useRouter();
+  }, [router]);
   const [toast, setToast] = useState({ show: false, message: "" });
   const showToast = (message) => {
     setToast({ show: true, message });
@@ -63,7 +67,9 @@ function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
-      localStorage.clear();
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
       router.push("/");
       showToast("Logged out successfully");
     } catch (error) {
@@ -116,6 +122,11 @@ function Navbar() {
             <Link href="#contact" className={navLinkClass}>
               Contact Us
             </Link>
+            {user && (
+              <Link href="/orders" className={navLinkClass}>
+                Orders
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {user ? (
@@ -189,6 +200,7 @@ function Navbar() {
                 { href: "#aboutus", label: "About Us", onClick: closeNavOnClick },
                 { href: "/blog", label: "Blog", onClick: closeNavOnClick },
                 { href: "#contact", label: "Contact Us", onClick: closeNavOnClick },
+                ...(user ? [{ href: "/orders", label: "My Orders", onClick: closeNavOnClick }] : []),
               ].map((item) => (
                 <Link
                   key={item.label}
