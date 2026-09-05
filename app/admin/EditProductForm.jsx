@@ -1,10 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  getProductById,
-  updateProduct,
-  uploadProductImage,
-} from "../../lib/products";
+import { getProductById, updateProduct, uploadProductImage } from "../../lib/products";
 
 const EditProductForm = ({ productId, onProductUpdated }) => {
   const [productName, setProductName] = useState("");
@@ -16,6 +12,9 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    setSuccessMessage("");
+    setErrorMessage("");
+
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -41,6 +40,8 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
     setLoading(true);
 
     try {
@@ -67,24 +68,22 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
 
   return (
     <div className="max-w-2xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-lg border border-purple-500">
-      <h1 className="text-3xl font-bold mb-6 text-center text-purple-500">
-        Edit Product
-      </h1>
+      <h1 className="text-3xl font-bold mb-6 text-center text-purple-500">Edit Product</h1>
       <form onSubmit={handleSubmit}>
         {successMessage && (
-          <div className="mb-4 p-4 text-white bg-green-500 rounded-md">
-            {successMessage}
-          </div>
+          <div className="mb-4 p-4 text-white bg-green-500 rounded-md">{successMessage}</div>
         )}
         {errorMessage && (
-          <div className="mb-4 p-4 text-white bg-purple-500 rounded-md">
+          <div
+            role="alert"
+            data-testid="error-banner"
+            className="mb-4 p-4 text-white bg-red-500 rounded-md"
+          >
             {errorMessage}
           </div>
         )}
         <div className="mb-6">
-          <label className="block text-gray-700 text-lg font-semibold">
-            Product Name
-          </label>
+          <label className="block text-gray-700 text-lg font-semibold">Product Name</label>
           <input
             type="text"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -94,9 +93,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 text-lg font-semibold">
-            Product Price
-          </label>
+          <label className="block text-gray-700 text-lg font-semibold">Product Price</label>
           <input
             type="number"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -106,9 +103,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 text-lg font-semibold">
-            Product Image
-          </label>
+          <label className="block text-gray-700 text-lg font-semibold">Product Image</label>
           <input
             type="file"
             accept="image/*"
