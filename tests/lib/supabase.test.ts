@@ -115,3 +115,42 @@ describe("lib/supabase", () => {
     );
   });
 });
+
+describe("supabase/schema.sql RLS policies", () => {
+  it("enforces admin-only writes and public reads for products and storage", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const schemaPath = path.resolve(__dirname, "../../supabase/schema.sql");
+    const sql = fs.readFileSync(schemaPath, "utf-8");
+
+    // Table definitions
+    expect(sql).toContain("create table if not exists public.products");
+    expect(sql).toContain("create table if not exists public.admin_users");
+    expect(sql).toContain("alter table public.admin_users enable row level security;");
+    expect(sql).toContain("alter table public.products enable row level security;");
+
+    // Server-side helper function
+    expect(sql).toContain("create or replace function public.is_admin()");
+    expect(sql).toContain("security definer");
+
+    // Products table policies
+    expect(sql).toContain('create policy "Public can read products"');
+    expect(sql).toContain('create policy "Admins can insert products"');
+    expect(sql).toContain('create policy "Admins can update products"');
+    expect(sql).toContain('create policy "Admins can delete products"');
+    expect(sql).toContain("with check (public.is_admin())");
+
+    // Permissive policies are explicitly dropped
+    expect(sql).toContain('drop policy if exists "Authenticated users can insert products"');
+    expect(sql).toContain('drop policy if exists "Authenticated users can update products"');
+    expect(sql).toContain('drop policy if exists "Authenticated users can delete products"');
+
+    // Storage bucket and object policies
+    expect(sql).toContain("insert into storage.buckets");
+    expect(sql).toContain('create policy "Public can view product images"');
+    expect(sql).toContain('create policy "Admins can upload product images"');
+    expect(sql).toContain('create policy "Admins can update product images"');
+    expect(sql).toContain('create policy "Admins can delete product images"');
+    expect(sql).toContain("bucket_id = 'products' and public.is_admin()");
+  });
+});
