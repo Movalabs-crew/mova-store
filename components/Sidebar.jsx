@@ -1,12 +1,6 @@
 "use client";
 import Link from "next/link";
-import {
-  FaHome,
-  FaInfoCircle,
-  FaPhone,
-  FaShoppingCart,
-  FaList,
-} from "react-icons/fa";
+import { FaHome, FaInfoCircle, FaPhone, FaShoppingCart, FaList } from "react-icons/fa";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
 
@@ -95,35 +89,23 @@ export default function Sidebar() {
         <nav className="divide-y divide-gray-200">
           <ul className="py-6 space-y-14 px-2">
             <li>
-              <Link
-                href="/categories"
-                className=" hover:text-white transition-colors duration-200"
-              >
+              <Link href="/categories" className=" hover:text-white transition-colors duration-200">
                 <FaList className="mr-3" size={20} />
               </Link>
             </li>
             <li>
-              <Link
-                href="/shop"
-                className="  hover:text-white transition-colors duration-200"
-              >
+              <Link href="/shop" className="  hover:text-white transition-colors duration-200">
                 <FaShoppingCart className="mr-3" size={20} />
               </Link>
             </li>
             <li>
-              <Link
-                href="/"
-                className=" hover:text-white transition-colors duration-200"
-              >
+              <Link href="/" className=" hover:text-white transition-colors duration-200">
                 <FaHome className="mr-3" size={20} />
               </Link>
             </li>
             <li>
               {isAdmin ? (
-                <Link
-                  href="/admin"
-                  className=" hover:text-white transition-colors duration-200"
-                >
+                <Link href="/admin" className=" hover:text-white transition-colors duration-200">
                   <FaInfoCircle className="mr-3" size={20} />
                   Admin
                 </Link>

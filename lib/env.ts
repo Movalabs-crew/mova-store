@@ -50,8 +50,7 @@ const STELLAR_DEFAULTS = {
     rpcUrl: "https://soroban-testnet.stellar.org",
     networkPassphrase: "Test SDF Network ; September 2015",
     usdcContractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-    nativeAssetContractId:
-      "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+    nativeAssetContractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
   },
   mainnet: {
     rpcUrl: "https://soroban-rpc.mainnet.stellar.gateway.fm",
@@ -73,11 +72,7 @@ type ValidationError = {
 /**
  * Validates that a required environment variable is set.
  */
-function requireEnv(
-  name: string,
-  errors: ValidationError[],
-  context: string
-): string {
+function requireEnv(name: string, errors: ValidationError[], context: string): string {
   const value = process.env[name];
   if (!value || value.trim() === "") {
     errors.push({
@@ -104,11 +99,9 @@ function getEnv(name: string, defaultValue: string = ""): string {
 /**
  * Loads and validates Stellar configuration.
  */
-export function loadStellarConfig(
-  errors: ValidationError[] = []
-): StellarConfig {
-  const network = (getEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet") ||
-    "testnet") as "testnet" | "mainnet";
+export function loadStellarConfig(errors: ValidationError[] = []): StellarConfig {
+  const network = (getEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet") || "testnet") as
+    "testnet" | "mainnet";
   const defaults = STELLAR_DEFAULTS[network];
 
   const checkoutContractId = requireEnv(
@@ -120,15 +113,9 @@ export function loadStellarConfig(
   return {
     network,
     rpcUrl: getEnv("NEXT_PUBLIC_STELLAR_RPC_URL", defaults.rpcUrl),
-    networkPassphrase: getEnv(
-      "NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE",
-      defaults.networkPassphrase
-    ),
+    networkPassphrase: getEnv("NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE", defaults.networkPassphrase),
     checkoutContractId,
-    usdcContractId: getEnv(
-      "NEXT_PUBLIC_USDC_CONTRACT_ID",
-      defaults.usdcContractId
-    ),
+    usdcContractId: getEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", defaults.usdcContractId),
     nativeAssetContractId: getEnv(
       "NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID",
       defaults.nativeAssetContractId
@@ -139,25 +126,11 @@ export function loadStellarConfig(
 /**
  * Loads and validates EmailJS configuration.
  */
-export function loadEmailJSConfig(
-  errors: ValidationError[] = []
-): EmailJSConfig {
+export function loadEmailJSConfig(errors: ValidationError[] = []): EmailJSConfig {
   return {
-    serviceId: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_SERVICE_ID",
-      errors,
-      "email notifications"
-    ),
-    templateId: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID",
-      errors,
-      "email notifications"
-    ),
-    publicKey: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY",
-      errors,
-      "email notifications"
-    ),
+    serviceId: requireEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", errors, "email notifications"),
+    templateId: requireEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", errors, "email notifications"),
+    publicKey: requireEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", errors, "email notifications"),
     defaultRecipientEmail: getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL"),
   };
 }
@@ -165,20 +138,10 @@ export function loadEmailJSConfig(
 /**
  * Loads and validates Supabase configuration.
  */
-export function loadSupabaseConfig(
-  errors: ValidationError[] = []
-): SupabaseConfig {
+export function loadSupabaseConfig(errors: ValidationError[] = []): SupabaseConfig {
   return {
-    url: requireEnv(
-      "NEXT_PUBLIC_SUPABASE_URL",
-      errors,
-      "Supabase"
-    ),
-    anonKey: requireEnv(
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      errors,
-      "Supabase"
-    ),
+    url: requireEnv("NEXT_PUBLIC_SUPABASE_URL", errors, "Supabase"),
+    anonKey: requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", errors, "Supabase"),
   };
 }
 
