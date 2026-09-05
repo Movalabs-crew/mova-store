@@ -18,7 +18,7 @@ export const IS_MAINNET = NETWORK === "mainnet";
 export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
   (IS_MAINNET
-    ? "https://soroban-rpc.stellar.org"
+    ? "https://soroban-rpc.mainnet.stellar.gateway.fm"
     : "https://soroban-testnet.stellar.org");
 
 export const NETWORK_PASSPHRASE =
