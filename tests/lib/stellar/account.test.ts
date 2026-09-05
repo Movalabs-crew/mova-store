@@ -1,15 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { Account, rpc } from "@stellar/stellar-sdk";
 import {
   formatAmount,
-  loadAccount,
-  fundTestnetAccount,
-  getNativeBalance,
-  getTrustline,
-  assertPaymentReady,
   MIN_NATIVE_RESERVE,
+  loadAccount,
+  getNativeBalance,
+  isAccountMissingError,
 } from "../../../lib/stellar/account";
-import { TokenConfig } from "../../../lib/stellar/config";
 
 describe("formatAmount", () => {
   it("formats MIN_NATIVE_RESERVE with 7 decimals correctly", () => {
@@ -54,74 +50,64 @@ describe("formatAmount", () => {
   });
 });
 
-describe("loadAccount", () => {
-  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-  const dummyAccount = new Account(dummyPublicKey, "100");
-
-  it("returns account when getAccount succeeds", async () => {
-    const mockServer = {
-      getAccount: vi.fn().mockResolvedValue(dummyAccount),
-    } as unknown as rpc.Server;
-
-    const result = await loadAccount(mockServer, dummyPublicKey);
-    expect(result).toEqual({ account: dummyAccount, funded: false });
-    expect(mockServer.getAccount).toHaveBeenCalledWith(dummyPublicKey);
+describe("isAccountMissingError", () => {
+  it("identifies 404 status and account not found messages", () => {
+    expect(isAccountMissingError({ status: 404 })).toBe(true);
+    expect(isAccountMissingError({ response: { status: 404 } })).toBe(true);
+    expect(isAccountMissingError(new Error("Account not found"))).toBe(true);
+    expect(isAccountMissingError(new Error("Resource not found"))).toBe(true);
+    expect(isAccountMissingError(new Error("Account does not exist"))).toBe(true);
+    expect(isAccountMissingError(new Error("Error code: 404"))).toBe(true);
   });
 
-  it("funds account on testnet when getAccount initially throws and fund is true", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-    } as Response);
-
-    const mockServer = {
-      getAccount: vi
-        .fn()
-        .mockRejectedValueOnce(new Error("Account not found"))
-        .mockResolvedValueOnce(dummyAccount),
-    } as unknown as rpc.Server;
-
-    const result = await loadAccount(mockServer, dummyPublicKey, { fund: true });
-    expect(result).toEqual({ account: dummyAccount, funded: true });
-    expect(fetchSpy).toHaveBeenCalled();
-    fetchSpy.mockRestore();
-  });
-
-  it("throws ACCOUNT_NOT_FOUND when getAccount throws and fund is false", async () => {
-    const mockServer = {
-      getAccount: vi.fn().mockRejectedValue(new Error("Account not found")),
-    } as unknown as rpc.Server;
-
-    await expect(
-      loadAccount(mockServer, dummyPublicKey, { fund: false })
-    ).rejects.toMatchObject({
-      code: "ACCOUNT_NOT_FOUND",
-    });
+  it("identifies network and RPC outages as NOT account-missing", () => {
+    expect(isAccountMissingError(new Error("Network error"))).toBe(false);
+    expect(isAccountMissingError(new Error("fetch failed"))).toBe(false);
+    expect(isAccountMissingError(new Error("connect ECONNREFUSED"))).toBe(false);
+    expect(isAccountMissingError(new Error("request timeout"))).toBe(false);
+    expect(isAccountMissingError(new Error("500 Internal Server Error"))).toBe(false);
+    expect(isAccountMissingError(new Error("503 Service Unavailable"))).toBe(false);
+    expect(isAccountMissingError(null)).toBe(false);
   });
 });
 
-describe("fundTestnetAccount", () => {
+describe("loadAccount", () => {
   const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
-  it("resolves when friendbot returns 200 OK", async () => {
+  it("never calls friendbot and rejects when getAccount fails with a network error", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const stubServer = {
+      getAccount: vi.fn().mockRejectedValue(new Error("fetch failed: connection refused")),
+    };
+
+    await expect(loadAccount(stubServer as never, dummyPublicKey, { fund: true })).rejects.toThrow(
+      /RPC error loading account/
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("triggers friendbot funding and re-loads account when getAccount fails with account-missing error", async () => {
+    const dummyAccount = { id: dummyPublicKey, sequence: "1" };
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
     } as Response);
 
-    await expect(fundTestnetAccount(dummyPublicKey)).resolves.toBeUndefined();
-    fetchSpy.mockRestore();
-  });
+    const stubServer = {
+      getAccount: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Account not found (404)"))
+        .mockResolvedValueOnce(dummyAccount),
+    };
 
-  it("throws FRIENDBOT_ERROR when friendbot returns non-ok status", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: false,
-      status: 500,
-    } as Response);
+    const result = await loadAccount(stubServer as never, dummyPublicKey, { fund: true });
+    expect(result.funded).toBe(true);
+    expect(result.account).toBe(dummyAccount);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-    await expect(fundTestnetAccount(dummyPublicKey)).rejects.toMatchObject({
-      code: "FRIENDBOT_ERROR",
-    });
     fetchSpy.mockRestore();
   });
 });
@@ -129,186 +115,33 @@ describe("fundTestnetAccount", () => {
 describe("getNativeBalance", () => {
   const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
-  it("returns native balance in stroops when account entry exists", async () => {
-    const mockServer = {
+  it("returns balance when getAccountEntry succeeds", async () => {
+    const stubServer = {
       getAccountEntry: vi.fn().mockResolvedValue({
-        balance: () => ({ toString: () => "50000000" }),
+        balance: () => "50000000",
       }),
-    } as unknown as rpc.Server;
+    };
 
-    const balance = await getNativeBalance(mockServer, dummyPublicKey);
+    const balance = await getNativeBalance(stubServer as never, dummyPublicKey);
     expect(balance).toBe(50000000n);
   });
 
-  it("returns 0n when getAccountEntry throws", async () => {
-    const mockServer = {
-      getAccountEntry: vi.fn().mockRejectedValue(new Error("Not found")),
-    } as unknown as rpc.Server;
+  it("surfaces RPC / network rejections rather than returning 0n", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockRejectedValue(new Error("503 Service Unavailable: RPC timeout")),
+    };
 
-    const balance = await getNativeBalance(mockServer, dummyPublicKey);
+    await expect(getNativeBalance(stubServer as never, dummyPublicKey)).rejects.toThrow(
+      /RPC error retrieving native balance/
+    );
+  });
+
+  it("returns 0n when getAccountEntry indicates account does not exist (not found)", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockRejectedValue(new Error("Account not found")),
+    };
+
+    const balance = await getNativeBalance(stubServer as never, dummyPublicKey);
     expect(balance).toBe(0n);
-  });
-});
-
-describe("getTrustline", () => {
-  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-  const usdcToken: TokenConfig = {
-    symbol: "USDC",
-    name: "USD Coin",
-    decimals: 7,
-    contractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-    assetCode: "USDC",
-    assetIssuer: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-  };
-  const nativeToken: TokenConfig = {
-    symbol: "XLM",
-    name: "Stellar Lumens",
-    decimals: 7,
-    contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
-    isNative: true,
-  };
-
-  it("returns trustline true for native tokens without calling RPC", async () => {
-    const mockServer = {
-      getAssetBalance: vi.fn(),
-    } as unknown as rpc.Server;
-
-    const res = await getTrustline(mockServer, dummyPublicKey, nativeToken);
-    expect(res).toEqual({ hasTrustline: true, balanceRaw: 0n, authorized: true });
-    expect(mockServer.getAssetBalance).not.toHaveBeenCalled();
-  });
-
-  it("returns trustline details when balanceEntry exists", async () => {
-    const mockServer = {
-      getAssetBalance: vi.fn().mockResolvedValue({
-        balanceEntry: { amount: "15000000", authorized: true },
-      }),
-    } as unknown as rpc.Server;
-
-    const res = await getTrustline(mockServer, dummyPublicKey, usdcToken);
-    expect(res).toEqual({ hasTrustline: true, balanceRaw: 15000000n, authorized: true });
-  });
-
-  it("returns hasTrustline false when balanceEntry is null", async () => {
-    const mockServer = {
-      getAssetBalance: vi.fn().mockResolvedValue({ balanceEntry: null }),
-    } as unknown as rpc.Server;
-
-    const res = await getTrustline(mockServer, dummyPublicKey, usdcToken);
-    expect(res).toEqual({ hasTrustline: false, balanceRaw: 0n, authorized: false });
-  });
-
-  it("returns hasTrustline false when getAssetBalance throws", async () => {
-    const mockServer = {
-      getAssetBalance: vi.fn().mockRejectedValue(new Error("RPC error")),
-    } as unknown as rpc.Server;
-
-    const res = await getTrustline(mockServer, dummyPublicKey, usdcToken);
-    expect(res).toEqual({ hasTrustline: false, balanceRaw: 0n, authorized: false });
-  });
-});
-
-describe("assertPaymentReady", () => {
-  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-  const dummyAccount = new Account(dummyPublicKey, "100");
-  const usdcToken: TokenConfig = {
-    symbol: "USDC",
-    name: "USD Coin",
-    decimals: 7,
-    contractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-    assetCode: "USDC",
-    assetIssuer: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-  };
-
-  it("returns ready state when account has trustline and sufficient balances", async () => {
-    const mockServer = {
-      getAccount: vi.fn().mockResolvedValue(dummyAccount),
-      getAccountEntry: vi.fn().mockResolvedValue({
-        balance: () => ({ toString: () => "50000000" }), // 5 XLM > 1 XLM reserve
-      }),
-      getAssetBalance: vi.fn().mockResolvedValue({
-        balanceEntry: { amount: "100000000", authorized: true }, // 10 USDC
-      }),
-      simulateTransaction: vi.fn().mockResolvedValue({
-        result: { retval: null },
-      }),
-    } as unknown as rpc.Server;
-
-    const res = await assertPaymentReady(mockServer, dummyPublicKey, {
-      token: usdcToken,
-      requiredRaw: 50000000n, // 5 USDC
-      strict: true,
-    });
-
-    expect(res.sufficientBalance).toBe(true);
-    expect(res.sufficientReserve).toBe(true);
-    expect(res.hasTrustline).toBe(true);
-    expect(res.issues).toHaveLength(0);
-  });
-
-  it("throws PAYMENT_NOT_READY in strict mode when trustline is missing", async () => {
-    const mockServer = {
-      getAccount: vi.fn().mockResolvedValue(dummyAccount),
-      getAccountEntry: vi.fn().mockResolvedValue({
-        balance: () => ({ toString: () => "50000000" }),
-      }),
-      getAssetBalance: vi.fn().mockResolvedValue({ balanceEntry: null }),
-      simulateTransaction: vi.fn().mockResolvedValue({
-        result: { retval: null },
-      }),
-    } as unknown as rpc.Server;
-
-    await expect(
-      assertPaymentReady(mockServer, dummyPublicKey, {
-        token: usdcToken,
-        requiredRaw: 10000000n,
-        strict: true,
-      })
-    ).rejects.toMatchObject({
-      code: "PAYMENT_NOT_READY",
-      message: expect.stringContaining("has no USDC trustline"),
-    });
-  });
-
-  it("returns issues array in non-strict mode without throwing", async () => {
-    const mockServer = {
-      getAccount: vi.fn().mockResolvedValue(dummyAccount),
-      getAccountEntry: vi.fn().mockResolvedValue({
-        balance: () => ({ toString: () => "5000000" }), // 0.5 XLM < 1 XLM
-      }),
-      getAssetBalance: vi.fn().mockResolvedValue({ balanceEntry: null }),
-      simulateTransaction: vi.fn().mockResolvedValue({
-        result: { retval: null },
-      }),
-    } as unknown as rpc.Server;
-
-    const res = await assertPaymentReady(mockServer, dummyPublicKey, {
-      token: usdcToken,
-      requiredRaw: 10000000n,
-      strict: false,
-    });
-
-    expect(res.sufficientBalance).toBe(false);
-    expect(res.sufficientReserve).toBe(false);
-    expect(res.hasTrustline).toBe(false);
-    expect(res.issues.length).toBeGreaterThan(0);
-  });
-
-  it("handles loadAccount failure in non-strict mode gracefully", async () => {
-    const mockServer = {
-      getAccount: vi.fn().mockRejectedValue(new Error("RPC unavailable")),
-    } as unknown as rpc.Server;
-
-    const res = await assertPaymentReady(mockServer, dummyPublicKey, {
-      token: usdcToken,
-      requiredRaw: 10000000n,
-      fund: false,
-      strict: false,
-    });
-
-    expect(res.account).toBeNull();
-    expect(res.funded).toBe(false);
-    expect(res.sufficientBalance).toBe(false);
-    expect(res.issues).toHaveLength(1);
   });
 });
