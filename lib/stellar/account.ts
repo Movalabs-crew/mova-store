@@ -43,6 +43,44 @@ export interface PaymentReadiness {
 }
 
 /**
+ * Detect if an error from the RPC indicates that the account does not exist
+ * on the ledger (e.g. 404 / not found), as opposed to an RPC or network outage.
+ */
+export function isAccountMissingError(err: unknown): boolean {
+  if (!err) return false;
+  const status =
+    (err as { status?: number })?.status ??
+    (err as { response?: { status?: number } })?.response?.status ??
+    (err as { code?: number })?.code;
+
+  if (status === 404) return true;
+
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes("network") ||
+    lower.includes("fetch failed") ||
+    lower.includes("econnrefused") ||
+    lower.includes("etimedout") ||
+    lower.includes("timeout") ||
+    lower.includes("500") ||
+    lower.includes("502") ||
+    lower.includes("503") ||
+    lower.includes("504")
+  ) {
+    return false;
+  }
+
+  return (
+    lower.includes("account not found") ||
+    lower.includes("not found") ||
+    lower.includes("does not exist") ||
+    lower.includes("404")
+  );
+}
+
+/**
  * Load a buyer account, funding it on testnet when it does not exist yet.
  * On mainnet a missing account is a hard error.
  */
@@ -55,7 +93,17 @@ export async function loadAccount(
   try {
     const account = await server.getAccount(publicKey);
     return { account, funded: false };
-  } catch {
+  } catch (err) {
+    if (!isAccountMissingError(err)) {
+      if (err instanceof WalletError) {
+        throw err;
+      }
+      throw new WalletError(
+        `RPC error loading account: ${err instanceof Error ? err.message : String(err)}`,
+        "RPC_ERROR"
+      );
+    }
+
     if (!IS_MAINNET && fund) {
       await fundTestnetAccount(publicKey);
       const account = await server.getAccount(publicKey);
@@ -80,15 +128,21 @@ export async function fundTestnetAccount(publicKey: string): Promise<void> {
 }
 
 /** Native XLM balance of an account (0 when the account does not exist). */
-export async function getNativeBalance(
-  server: rpc.Server,
-  publicKey: string
-): Promise<bigint> {
+export async function getNativeBalance(server: rpc.Server, publicKey: string): Promise<bigint> {
   try {
     const entry = await server.getAccountEntry(publicKey);
     return BigInt(entry.balance().toString());
-  } catch {
-    return BigInt(0);
+  } catch (err) {
+    if (isAccountMissingError(err)) {
+      return BigInt(0);
+    }
+    if (err instanceof WalletError) {
+      throw err;
+    }
+    throw new WalletError(
+      `RPC error retrieving native balance: ${err instanceof Error ? err.message : String(err)}`,
+      "RPC_ERROR"
+    );
   }
 }
 
