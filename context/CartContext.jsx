@@ -1,9 +1,27 @@
-"use client"
+"use client";
 import { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
+
+// Unique per-cart-line identifier helper. Adding the same product twice creates
+// independent rows (each removable on its own with unique React keys).
+let lineItemCounter = 0;
+export const generateCartItemId = (productId) => {
+  lineItemCounter += 1;
+  const rand = Math.random().toString(36).slice(2, 9);
+  return `${productId ?? "item"}-${Date.now().toString(36)}-${lineItemCounter}-${rand}`;
+};
+
+export const ensureCartItemId = (item) => {
+  if (!item || typeof item !== "object") return item;
+  if (item.cartItemId || item.lineId) return item;
+  return {
+    ...item,
+    cartItemId: generateCartItemId(item.id),
+  };
+};
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -20,7 +38,7 @@ export const CartProvider = ({ children }) => {
       if (rawItems) {
         const parsed = JSON.parse(rawItems);
         if (Array.isArray(parsed)) {
-          storedCartItems = parsed;
+          storedCartItems = parsed.map(ensureCartItemId);
         }
       }
     } catch {
@@ -57,8 +75,13 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   const addToCart = (product) => {
+    const lineItem = {
+      ...product,
+      cartItemId: generateCartItemId(product?.id),
+    };
+
     setCartItems((prevCartItems) => {
-      const updatedCartItems = [...prevCartItems, product];
+      const updatedCartItems = [...prevCartItems, lineItem];
       localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
       return updatedCartItems;
     });
@@ -68,7 +91,7 @@ export const CartProvider = ({ children }) => {
       return newItemCount;
     });
     setTotalPrice((prevTotalPrice) => {
-      const newTotalPrice = prevTotalPrice + product.price;
+      const newTotalPrice = prevTotalPrice + (product?.price || 0);
       localStorage.setItem("totalPrice", newTotalPrice.toString());
       return newTotalPrice;
     });
@@ -76,7 +99,29 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = (product) => {
     setCartItems((prevCartItems) => {
-      const index = prevCartItems.findIndex((item) => item.id === product.id);
+      // Find by unique instance id if present (cartItemId or lineId),
+      // otherwise fall back to product id for legacy callers.
+      const targetInstanceId =
+        product?.cartItemId ||
+        product?.lineId ||
+        (typeof product === "string" &&
+        prevCartItems.some((i) => i.cartItemId === product || i.lineId === product)
+          ? product
+          : null);
+
+      let index = -1;
+      if (targetInstanceId) {
+        index = prevCartItems.findIndex(
+          (item) => item.cartItemId === targetInstanceId || item.lineId === targetInstanceId
+        );
+      }
+
+      if (index === -1) {
+        const targetProductId =
+          product && typeof product === "object" && product.id !== undefined ? product.id : product;
+        index = prevCartItems.findIndex((item) => item.id === targetProductId);
+      }
+
       if (index === -1) return prevCartItems;
 
       const removedItem = prevCartItems[index];
