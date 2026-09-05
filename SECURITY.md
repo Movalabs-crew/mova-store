@@ -109,9 +109,9 @@ The card payment form fields are UI-only placeholders. In production:
 
 Apply `supabase/schema.sql` so that:
 
-- Anyone can read products
-- Only authenticated users can write products / upload images
-- Tighten policies further for production (admin-only writes)
+- Anyone (including unauthenticated visitors) can read products and view product images
+- Only authorized administrators (`public.is_admin()`) can insert, update, or delete products and upload to storage
+- Authenticated non-admin users cannot mutate products or tamper with bucket objects
 
 Never expose the Supabase **service role** key in the browser.
 
