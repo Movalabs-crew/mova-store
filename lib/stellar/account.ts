@@ -1,8 +1,10 @@
-import { Account, Asset, rpc } from "@stellar/stellar-sdk";
+// SPDX-License-Identifier: Apache-2.0
 
-import { FRIENDBOT_URL, IS_MAINNET, TokenConfig } from "./config";
-import { WalletError } from "./freighter";
-import { readTokenBalance, readTokenDecimals } from "./simulate";
+import { rpc, Account, Asset } from "@stellar/stellar-sdk";
+import { IS_MAINNET, FRIENDBOT_URL } from "./config";
+import { WalletError } from "./errors";
+import { TokenConfig } from "./tokens";
+import { readTokenBalance, readTokenDecimals } from "./soroban";
 
 // ---------------------------------------------------------------------------
 // Account readiness helpers.
@@ -42,6 +44,18 @@ export interface PaymentReadiness {
   issues: string[];
 }
 
+function isAccountNotFoundError(err: any): boolean {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  return (
+    err.status === 404 ||
+    err.code === 404 ||
+    msg.includes("not found") ||
+    msg.includes("no sequence number") ||
+    msg.includes("resource missing")
+  );
+}
+
 /**
  * Load a buyer account, funding it on testnet when it does not exist yet.
  * On mainnet a missing account is a hard error.
@@ -55,16 +69,22 @@ export async function loadAccount(
   try {
     const account = await server.getAccount(publicKey);
     return { account, funded: false };
-  } catch {
-    if (!IS_MAINNET && fund) {
-      await fundTestnetAccount(publicKey);
-      const account = await server.getAccount(publicKey);
-      return { account, funded: true };
+  } catch (err: any) {
+    if (isAccountNotFoundError(err)) {
+      if (!IS_MAINNET && fund) {
+        await fundTestnetAccount(publicKey);
+        const account = await server.getAccount(publicKey);
+        return { account, funded: true };
+      }
+      throw new WalletError(
+        "Your Stellar account has no sequence number on this network. " +
+          "Fund it with XLM before paying.",
+        "ACCOUNT_NOT_FOUND"
+      );
     }
     throw new WalletError(
-      "Your Stellar account has no sequence number on this network. " +
-        "Fund it with XLM before paying.",
-      "ACCOUNT_NOT_FOUND"
+      `RPC failure loading account: ${err?.message || err}`,
+      "RPC_ERROR"
     );
   }
 }
@@ -87,8 +107,14 @@ export async function getNativeBalance(
   try {
     const entry = await server.getAccountEntry(publicKey);
     return BigInt(entry.balance().toString());
-  } catch {
-    return BigInt(0);
+  } catch (err: any) {
+    if (isAccountNotFoundError(err)) {
+      return BigInt(0);
+    }
+    throw new WalletError(
+      `RPC failure fetching native balance: ${err?.message || err}`,
+      "RPC_ERROR"
+    );
   }
 }
 
