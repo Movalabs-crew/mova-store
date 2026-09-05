@@ -1,143 +1,163 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
-// Unique per-cart-line identifier helper. Adding the same product twice creates
-// independent rows (each removable on its own with unique React keys).
-let lineItemCounter = 0;
-export const generateCartItemId = (productId) => {
-  lineItemCounter += 1;
-  const rand = Math.random().toString(36).slice(2, 9);
-  return `${productId ?? "item"}-${Date.now().toString(36)}-${lineItemCounter}-${rand}`;
-};
+export const readStoredCart = () => {
+  let storedCartItems = [];
+  let storedItemCount = 0;
+  let storedTotalPrice = 0;
 
-export const ensureCartItemId = (item) => {
-  if (!item || typeof item !== "object") return item;
-  if (item.cartItemId || item.lineId) return item;
-  return {
-    ...item,
-    cartItemId: generateCartItemId(item.id),
-  };
+  try {
+    const rawItems = localStorage.getItem("cartItems");
+    if (rawItems) {
+      const parsed = JSON.parse(rawItems);
+      if (Array.isArray(parsed)) {
+        storedCartItems = parsed;
+      }
+    }
+  } catch {
+    storedCartItems = [];
+  }
+
+  try {
+    const rawCount = localStorage.getItem("itemCount");
+    if (rawCount) {
+      const parsedCount = parseInt(rawCount, 10);
+      if (Number.isFinite(parsedCount) && parsedCount >= 0) {
+        storedItemCount = parsedCount;
+      }
+    }
+  } catch {
+    storedItemCount = 0;
+  }
+
+  try {
+    const rawPrice = localStorage.getItem("totalPrice");
+    if (rawPrice) {
+      const parsedPrice = parseFloat(rawPrice);
+      if (Number.isFinite(parsedPrice) && parsedPrice >= 0) {
+        storedTotalPrice = parsedPrice;
+      }
+    }
+  } catch {
+    storedTotalPrice = 0;
+  }
+
+  return { storedCartItems, storedItemCount, storedTotalPrice };
 };
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [itemCount, setItemCount] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
+  const isHydratedRef = useRef(false);
 
   useEffect(() => {
-    let storedCartItems = [];
-    let storedItemCount = 0;
-    let storedTotalPrice = 0;
-
-    try {
-      const rawItems = localStorage.getItem("cartItems");
-      if (rawItems) {
-        const parsed = JSON.parse(rawItems);
-        if (Array.isArray(parsed)) {
-          storedCartItems = parsed.map(ensureCartItemId);
-        }
-      }
-    } catch {
-      storedCartItems = [];
-    }
-
-    try {
-      const rawCount = localStorage.getItem("itemCount");
-      if (rawCount) {
-        const parsedCount = parseInt(rawCount, 10);
-        if (Number.isFinite(parsedCount) && parsedCount >= 0) {
-          storedItemCount = parsedCount;
-        }
-      }
-    } catch {
-      storedItemCount = 0;
-    }
-
-    try {
-      const rawPrice = localStorage.getItem("totalPrice");
-      if (rawPrice) {
-        const parsedPrice = parseFloat(rawPrice);
-        if (Number.isFinite(parsedPrice) && parsedPrice >= 0) {
-          storedTotalPrice = parsedPrice;
-        }
-      }
-    } catch {
-      storedTotalPrice = 0;
-    }
+    isHydratedRef.current = true;
+    const { storedCartItems, storedItemCount, storedTotalPrice } = readStoredCart();
 
     setCartItems(storedCartItems);
     setItemCount(storedItemCount);
     setTotalPrice(storedTotalPrice);
+    setHydrated(true);
   }, []);
 
   const addToCart = (product) => {
-    const lineItem = {
-      ...product,
-      cartItemId: generateCartItemId(product?.id),
-    };
+    if (!isHydratedRef.current) {
+      const stored = readStoredCart();
+      const updatedCartItems = [...stored.storedCartItems, product];
+      const newItemCount = stored.storedItemCount + 1;
+      const newTotalPrice = stored.storedTotalPrice + (product?.price || 0);
+
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+        localStorage.setItem("itemCount", newItemCount.toString());
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+      } catch {}
+
+      setCartItems(updatedCartItems);
+      setItemCount(newItemCount);
+      setTotalPrice(newTotalPrice);
+      return;
+    }
 
     setCartItems((prevCartItems) => {
-      const updatedCartItems = [...prevCartItems, lineItem];
-      localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      const updatedCartItems = [...prevCartItems, product];
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      } catch {}
       return updatedCartItems;
     });
+
     setItemCount((prevItemCount) => {
       const newItemCount = prevItemCount + 1;
-      localStorage.setItem("itemCount", newItemCount.toString());
+      try {
+        localStorage.setItem("itemCount", newItemCount.toString());
+      } catch {}
       return newItemCount;
     });
+
     setTotalPrice((prevTotalPrice) => {
       const newTotalPrice = prevTotalPrice + (product?.price || 0);
-      localStorage.setItem("totalPrice", newTotalPrice.toString());
+      try {
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+      } catch {}
       return newTotalPrice;
     });
   };
 
   const removeFromCart = (product) => {
+    if (!isHydratedRef.current) {
+      const stored = readStoredCart();
+      const index = stored.storedCartItems.findIndex((item) => item.id === product?.id);
+      if (index === -1) return;
+
+      const removedItem = stored.storedCartItems[index];
+      const updatedCartItems = [...stored.storedCartItems];
+      updatedCartItems.splice(index, 1);
+      const newItemCount = Math.max(0, stored.storedItemCount - 1);
+      const newTotalPrice = Math.max(0, stored.storedTotalPrice - (removedItem.price || 0));
+
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+        localStorage.setItem("itemCount", newItemCount.toString());
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+      } catch {}
+
+      setCartItems(updatedCartItems);
+      setItemCount(newItemCount);
+      setTotalPrice(newTotalPrice);
+      return;
+    }
+
     setCartItems((prevCartItems) => {
-      // Find by unique instance id if present (cartItemId or lineId),
-      // otherwise fall back to product id for legacy callers.
-      const targetInstanceId =
-        product?.cartItemId ||
-        product?.lineId ||
-        (typeof product === "string" &&
-        prevCartItems.some((i) => i.cartItemId === product || i.lineId === product)
-          ? product
-          : null);
-
-      let index = -1;
-      if (targetInstanceId) {
-        index = prevCartItems.findIndex(
-          (item) => item.cartItemId === targetInstanceId || item.lineId === targetInstanceId
-        );
-      }
-
-      if (index === -1) {
-        const targetProductId =
-          product && typeof product === "object" && product.id !== undefined ? product.id : product;
-        index = prevCartItems.findIndex((item) => item.id === targetProductId);
-      }
-
+      const index = prevCartItems.findIndex((item) => item.id === product?.id);
       if (index === -1) return prevCartItems;
 
       const removedItem = prevCartItems[index];
       const updatedCartItems = [...prevCartItems];
       updatedCartItems.splice(index, 1);
-      localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+      } catch {}
 
       setItemCount((prevItemCount) => {
         const newItemCount = Math.max(0, prevItemCount - 1);
-        localStorage.setItem("itemCount", newItemCount.toString());
+        try {
+          localStorage.setItem("itemCount", newItemCount.toString());
+        } catch {}
         return newItemCount;
       });
 
       setTotalPrice((prevTotalPrice) => {
         const newTotalPrice = Math.max(0, prevTotalPrice - (removedItem.price || 0));
-        localStorage.setItem("totalPrice", newTotalPrice.toString());
+        try {
+          localStorage.setItem("totalPrice", newTotalPrice.toString());
+        } catch {}
         return newTotalPrice;
       });
 
@@ -149,9 +169,11 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
     setItemCount(0);
     setTotalPrice(0);
-    localStorage.removeItem("cartItems");
-    localStorage.removeItem("itemCount");
-    localStorage.removeItem("totalPrice");
+    try {
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
+    } catch {}
   };
 
   return (
@@ -160,6 +182,8 @@ export const CartProvider = ({ children }) => {
         cartItems,
         itemCount,
         totalPrice,
+        hydrated,
+        isHydrated: hydrated,
         addToCart,
         removeFromCart,
         clearCart,
