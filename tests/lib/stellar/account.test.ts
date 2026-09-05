@@ -4,6 +4,7 @@ import {
   MIN_NATIVE_RESERVE,
   loadAccount,
   getNativeBalance,
+  isAccountMissingError,
 } from "../../../lib/stellar/account";
 
 describe("formatAmount", () => {
@@ -107,5 +108,26 @@ describe("loadAccount / getNativeBalance RPC error distinction", () => {
   it("returns BigInt(0) only for a genuine account-missing error", async () => {
     const server = makeServer(undefined, undefined, new Error("account not found"));
     await expect(getNativeBalance(server, publicKey)).resolves.toBe(BigInt(0));
+  });
+});
+
+describe("isAccountMissingError status detection", () => {
+  it("detects a numeric 404 status from err.status or err.response.status", () => {
+    expect(isAccountMissingError({ status: 404 })).toBe(true);
+    expect(isAccountMissingError({ response: { status: 404 } })).toBe(true);
+  });
+
+  it("treats other statuses as NOT account-missing", () => {
+    expect(isAccountMissingError({ status: 500 })).toBe(false);
+    expect(isAccountMissingError({ status: 503 })).toBe(false);
+    expect(isAccountMissingError({ response: { status: 403 } })).toBe(false);
+    expect(isAccountMissingError(null)).toBe(false);
+  });
+
+  it("keeps account-context requirement for text matches", () => {
+    // "not found" alone (e.g. a wrong endpoint path) must not read as a
+    // missing account; only account-specific phrasing does.
+    expect(isAccountMissingError(new Error("Resource not found"))).toBe(false);
+    expect(isAccountMissingError(new Error("account not found"))).toBe(true);
   });
 });

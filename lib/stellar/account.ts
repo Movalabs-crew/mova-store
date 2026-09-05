@@ -51,11 +51,23 @@ export function isAccountMissingError(err: unknown): boolean {
   if (err instanceof WalletError && err.code === "ACCOUNT_NOT_FOUND") {
     return true;
   }
+  // Numeric HTTP status: soroban-rpc reports a missing account as a 404.
+  // Check the structured fields first so a bare status code is enough even
+  // when the SDK strips the original message.
+  const status =
+    (err as { status?: unknown } | null)?.status ??
+    (err as { response?: { status?: unknown } } | null)?.response?.status;
+  if (status === 404) {
+    return true;
+  }
   const parts: string[] = [];
   if (err instanceof Error) {
     parts.push(err.message);
   }
   const code = (err as { code?: unknown } | null)?.code;
+  if (code === 404) {
+    return true;
+  }
   if (typeof code === "string") {
     parts.push(code);
   }
