@@ -59,7 +59,7 @@ jobs:
 
   # Soroban contract checks
   contracts:
-    name: Soroban Contracts (Build, Test)
+    name: Soroban Contracts (Fmt, Clippy, Build, Test)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -72,6 +72,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: wasm32v1-none
+          components: rustfmt, clippy
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -86,6 +87,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-${{ env.RUST_VERSION }}-
             ${{ runner.os }}-cargo-
+
+      - name: Check Rust formatting
+        working-directory: contracts/checkout
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        working-directory: contracts/checkout
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Build contracts
         working-directory: contracts/checkout
