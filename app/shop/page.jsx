@@ -10,8 +10,7 @@ import Toast from "../../components/Toast";
 import { listProducts } from "../../lib/products";
 
 export default function Products() {
-  const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } =
-    useCart();
+  const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "" });
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -102,7 +101,7 @@ export default function Products() {
           <div>
             {cartItems.map((item) => (
               <div
-                key={item.id}
+                key={item.cartItemId || item.lineId || item.id}
                 className="flex justify-between items-center mb-2"
               >
                 <div className="w-16 h-16 flex-shrink-0">
@@ -129,11 +128,7 @@ export default function Products() {
         <div className="flex justify-between items-center mt-4 mx-5 sm:mx-10">
           <div>
             {cartItems.length > 0 && <strong>Total:</strong>}
-            {totalPrice ? (
-              <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span>
-            ) : (
-              ""
-            )}
+            {totalPrice ? <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span> : ""}
           </div>
           {cartItems.length > 0 && (
             <button

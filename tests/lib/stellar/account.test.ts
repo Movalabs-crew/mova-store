@@ -41,7 +41,7 @@ describe("formatAmount", () => {
   });
 
   it("handles integers exceeding Number.MAX_SAFE_INTEGER without precision loss", () => {
-    const huge = 1n << 80n; // 1208925819614629174706176n
+    const huge = 1n << 80n;
     const formatted = formatAmount(huge, 7);
     const expectedInt = (huge / 10000000n).toString();
     const expectedFrac = (huge % 10000000n).toString().padStart(7, "0").replace(/0+$/, "");

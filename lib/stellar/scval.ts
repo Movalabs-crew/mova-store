@@ -22,8 +22,7 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf =
-    typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
+  const buf = typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
   if (buf.length !== 32) {
     throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
   }
@@ -107,7 +106,13 @@ export function hexToBytes(hex: string): Uint8Array {
   }
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    const chunk = clean.slice(i * 2, i * 2 + 2);
+    if (!/^[0-9a-fA-F]{2}$/.test(chunk)) {
+      const match = chunk.match(/[^0-9a-fA-F]/);
+      const offending = match ? match[0] : chunk;
+      throw new Error(`invalid hex character: "${offending}" in "${chunk}"`);
+    }
+    out[i] = parseInt(chunk, 16);
   }
   return out;
 }
