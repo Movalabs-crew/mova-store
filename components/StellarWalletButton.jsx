@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 
-import { currentAddress, freighterAvailable, WalletError } from "../lib/stellar/freighter";
-import { shortAddress } from "../lib/stellar/freighter";
+import {
+  connectWallet,
+  currentAddress,
+  freighterAvailable,
+  shortAddress,
+  WalletError,
+} from "../lib/stellar/freighter";
 
 /**
  * Connect / disconnect a Freighter wallet and show the connected address.
@@ -28,7 +33,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onConnect]);
 
   const handleConnect = async () => {
     setError("");
