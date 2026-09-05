@@ -76,8 +76,7 @@ export class PaymentEventIndexer {
     this.server = new rpc.Server(opts.rpcUrl ?? RPC_URL);
     this.contractId = opts.contractId ?? CHECKOUT_CONTRACT_ID;
     this.pollMs = opts.pollMs ?? EVENT_POLL_INTERVAL_MS;
-    this.watchedSymbols =
-      opts.watchedSymbols ?? ["pay", "create_order", "dispatch", "refund"];
+    this.watchedSymbols = opts.watchedSymbols ?? ["pay", "create_order", "dispatch", "refund"];
   }
 
   get status(): IndexerStatus {
@@ -111,10 +110,7 @@ export class PaymentEventIndexer {
     try {
       const latest = await this.server.getLatestLedger();
       this.latestLedger = latest.sequence;
-      this.startLedger = Math.max(
-        1,
-        this.latestLedger - EVENT_START_LEDGER_BACKFILL
-      );
+      this.startLedger = Math.max(1, this.latestLedger - EVENT_START_LEDGER_BACKFILL);
       callbacks.onStatus?.(this.status);
     } catch (err) {
       this.lastError = String(err instanceof Error ? err.message : err);
@@ -166,9 +162,7 @@ export class PaymentEventIndexer {
   }
 
   private async fetchEvents(): Promise<rpc.Api.GetEventsResponse> {
-    const filters: rpc.Api.EventFilter[] = [
-      { type: "contract", contractIds: [this.contractId] },
-    ];
+    const filters: rpc.Api.EventFilter[] = [{ type: "contract", contractIds: [this.contractId] }];
     if (this.startLedger !== undefined) {
       return this.server.getEvents({ filters, startLedger: this.startLedger });
     }
@@ -191,7 +185,7 @@ export class PaymentEventIndexer {
     }
   }
 
-  private decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
+  decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
     const first = raw.topic[0];
     if (!first || first.switch() !== xdr.ScValType.scvSymbol()) return null;
     const symbol = first.sym().toString();
