@@ -5,6 +5,8 @@
  * for the Mova Store application.
  */
 
+import { WalletError } from "./stellar/freighter";
+
 // =============================================================================
 // Error Types
 // =============================================================================
@@ -21,73 +23,12 @@ export interface AppError {
 }
 
 // =============================================================================
-// Stellar/Soroban Error Messages
+// Stellar/Soroban & Wallet Error Messages
 // =============================================================================
 
-const STELLAR_ERRORS: Record<string, AppError> = {
-  // Contract errors
-  NotInitialized: {
-    code: "STELLAR_NOT_INITIALIZED",
-    message: "Contract not initialized",
-    userMessage: "The payment system is not configured. Please contact support.",
-    severity: "error",
-    recoverable: false,
-  },
-  AlreadyInitialized: {
-    code: "STELLAR_ALREADY_INITIALIZED",
-    message: "Contract already initialized",
-    userMessage: "The payment system is already set up.",
-    severity: "warning",
-    recoverable: false,
-  },
-  InvalidAmount: {
-    code: "STELLAR_INVALID_AMOUNT",
-    message: "Invalid payment amount",
-    userMessage: "The payment amount is invalid. Please check your cart and try again.",
-    severity: "error",
-    recoverable: true,
-    action: "Check cart total",
-  },
-  OrderAlreadyPaid: {
-    code: "STELLAR_ORDER_ALREADY_PAID",
-    message: "Order already paid",
-    userMessage: "This order has already been paid. If you believe this is an error, please contact support.",
-    severity: "warning",
-    recoverable: false,
-  },
-  OrderNotFound: {
-    code: "STELLAR_ORDER_NOT_FOUND",
-    message: "Order not found",
-    userMessage: "We couldn't find this order. It may have expired or been processed.",
-    severity: "error",
-    recoverable: false,
-  },
-  TokenNotAllowed: {
-    code: "STELLAR_TOKEN_NOT_ALLOWED",
-    message: "Token not allowed",
-    userMessage: "This payment token is not accepted. Please try a different payment method.",
-    severity: "error",
-    recoverable: true,
-    action: "Try different token",
-  },
-  InvalidOrderStatus: {
-    code: "STELLAR_INVALID_ORDER_STATUS",
-    message: "Invalid order status",
-    userMessage: "This order cannot be processed in its current state.",
-    severity: "error",
-    recoverable: false,
-  },
-
-  // Wallet errors
-  WalletNotConnected: {
-    code: "WALLET_NOT_CONNECTED",
-    message: "Wallet not connected",
-    userMessage: "Please connect your Freighter wallet to continue.",
-    severity: "warning",
-    recoverable: true,
-    action: "Connect wallet",
-  },
-  WalletNotInstalled: {
+export const STELLAR_ERRORS: Record<string, AppError> = {
+  // Wallet & Freighter errors
+  FREIGHTER_NOT_FOUND: {
     code: "WALLET_NOT_INSTALLED",
     message: "Freighter not installed",
     userMessage: "Please install the Freighter wallet extension to pay with Stellar.",
@@ -95,7 +36,23 @@ const STELLAR_ERRORS: Record<string, AppError> = {
     recoverable: true,
     action: "Install Freighter",
   },
-  WrongNetwork: {
+  FREIGHTER_REQUEST_DENIED: {
+    code: "WALLET_REQUEST_DENIED",
+    message: "Wallet connection request denied",
+    userMessage: "Freighter access was denied. Please allow access to continue.",
+    severity: "warning",
+    recoverable: true,
+    action: "Connect wallet",
+  },
+  FREIGHTER_NETWORK_ERROR: {
+    code: "WALLET_NETWORK_ERROR",
+    message: "Network error in Freighter",
+    userMessage: "Could not retrieve network settings from Freighter. Please check the extension.",
+    severity: "error",
+    recoverable: true,
+    action: "Retry",
+  },
+  WRONG_NETWORK: {
     code: "WALLET_WRONG_NETWORK",
     message: "Wrong network",
     userMessage: "Please switch your Freighter wallet to the correct network.",
@@ -103,7 +60,15 @@ const STELLAR_ERRORS: Record<string, AppError> = {
     recoverable: true,
     action: "Switch network",
   },
-  UserRejected: {
+  FREIGHTER_SIGN_ERROR: {
+    code: "WALLET_SIGN_ERROR",
+    message: "Transaction signing failed",
+    userMessage: "Could not complete transaction signature in Freighter. Please try again.",
+    severity: "error",
+    recoverable: true,
+    action: "Retry",
+  },
+  USER_REJECTED: {
     code: "WALLET_USER_REJECTED",
     message: "Transaction rejected by user",
     userMessage: "You cancelled the transaction. Click 'Pay' again when you're ready.",
@@ -111,8 +76,8 @@ const STELLAR_ERRORS: Record<string, AppError> = {
     recoverable: true,
   },
 
-  // Account errors
-  AccountNotFunded: {
+  // Account readiness errors
+  ACCOUNT_NOT_FOUND: {
     code: "ACCOUNT_NOT_FUNDED",
     message: "Account not funded",
     userMessage: "Your Stellar account needs to be funded before making payments.",
@@ -120,24 +85,64 @@ const STELLAR_ERRORS: Record<string, AppError> = {
     recoverable: true,
     action: "Fund account",
   },
-  InsufficientBalance: {
+  FRIENDBOT_ERROR: {
+    code: "FRIENDBOT_FUNDING_FAILED",
+    message: "Friendbot funding failed",
+    userMessage: "Unable to fund testnet account automatically via Friendbot.",
+    severity: "error",
+    recoverable: true,
+    action: "Retry",
+  },
+  PAYMENT_NOT_READY: {
+    code: "ACCOUNT_PAYMENT_NOT_READY",
+    message: "Account payment not ready",
+    userMessage: "Your account is not ready for payment. Please check balance and trustlines.",
+    severity: "warning",
+    recoverable: true,
+    action: "Check balance",
+  },
+  INSUFFICIENT_BALANCE: {
     code: "ACCOUNT_INSUFFICIENT_BALANCE",
     message: "Insufficient balance",
-    userMessage: "You don't have enough funds to complete this payment. Please add more to your wallet.",
+    userMessage:
+      "You don't have enough funds to complete this payment. Please add more to your wallet.",
     severity: "error",
     recoverable: true,
     action: "Add funds",
   },
-  NoTrustline: {
+  NO_TRUSTLINE: {
     code: "ACCOUNT_NO_TRUSTLINE",
     message: "No trustline for token",
-    userMessage: "Your wallet needs to trust USDC before receiving payments. We'll set this up for you.",
+    userMessage:
+      "Your wallet needs to trust USDC before receiving payments. We'll set this up for you.",
     severity: "info",
     recoverable: true,
   },
 
-  // Transaction errors
-  TransactionFailed: {
+  // Checkout & transaction errors
+  CONTRACT_NOT_CONFIGURED: {
+    code: "STELLAR_CONTRACT_NOT_CONFIGURED",
+    message: "Checkout contract not configured",
+    userMessage: "The payment system is not configured. Please contact support.",
+    severity: "error",
+    recoverable: false,
+  },
+  INVALID_AMOUNT: {
+    code: "STELLAR_INVALID_AMOUNT",
+    message: "Invalid payment amount",
+    userMessage: "The payment amount is invalid. Please check your cart and try again.",
+    severity: "error",
+    recoverable: true,
+    action: "Check cart total",
+  },
+  TX_SIMULATION_ERROR: {
+    code: "TX_SIMULATION_FAILED",
+    message: "Transaction simulation failed",
+    userMessage: "We couldn't verify this transaction. Please check your balance and try again.",
+    severity: "error",
+    recoverable: true,
+  },
+  TX_SEND_ERROR: {
     code: "TX_FAILED",
     message: "Transaction failed",
     userMessage: "The payment couldn't be processed. Please try again.",
@@ -145,38 +150,21 @@ const STELLAR_ERRORS: Record<string, AppError> = {
     recoverable: true,
     action: "Try again",
   },
-  TransactionTimeout: {
+  TX_TIMEOUT: {
     code: "TX_TIMEOUT",
     message: "Transaction timed out",
-    userMessage: "The transaction is taking longer than expected. Please check your wallet for the status.",
+    userMessage:
+      "The transaction is taking longer than expected. Please check your wallet for the status.",
     severity: "warning",
     recoverable: true,
     action: "Check wallet",
   },
-  SimulationFailed: {
-    code: "TX_SIMULATION_FAILED",
-    message: "Transaction simulation failed",
-    userMessage: "We couldn't verify this transaction. Please check your balance and try again.",
+  ORDER_ALREADY_PAID: {
+    code: "STELLAR_ORDER_ALREADY_PAID",
+    message: "Order already paid",
+    userMessage: "This order has already been paid for.",
     severity: "error",
-    recoverable: true,
-  },
-
-  // Network errors
-  NetworkError: {
-    code: "NETWORK_ERROR",
-    message: "Network error",
-    userMessage: "We're having trouble connecting to the Stellar network. Please check your internet connection.",
-    severity: "error",
-    recoverable: true,
-    action: "Retry",
-  },
-  RpcError: {
-    code: "RPC_ERROR",
-    message: "RPC server error",
-    userMessage: "The payment server is temporarily unavailable. Please try again in a moment.",
-    severity: "error",
-    recoverable: true,
-    action: "Retry",
+    recoverable: false,
   },
 };
 
@@ -184,7 +172,16 @@ const STELLAR_ERRORS: Record<string, AppError> = {
 // Auth Error Messages (Supabase)
 // =============================================================================
 
-const AUTH_ERRORS: Record<string, AppError> = {
+const SUPABASE_AUTH_CODE_MAP: Record<string, string> = {
+  user_already_exists: "User already registered",
+  email_exists: "User already registered",
+  invalid_credentials: "Invalid login credentials",
+  email_not_confirmed: "Email not confirmed",
+  weak_password: "Password should be at least 6 characters",
+  validation_failed: "Unable to validate email address: invalid format",
+};
+
+export const AUTH_ERRORS: Record<string, AppError> = {
   "User already registered": {
     code: "AUTH_EMAIL_EXISTS",
     message: "Email already in use",
@@ -227,7 +224,7 @@ const AUTH_ERRORS: Record<string, AppError> = {
 // General Error Messages
 // =============================================================================
 
-const GENERAL_ERRORS: Record<string, AppError> = {
+export const GENERAL_ERRORS: Record<string, AppError> = {
   ValidationError: {
     code: "VALIDATION_ERROR",
     message: "Validation error",
@@ -293,20 +290,40 @@ export function parseError(error: unknown): AppError {
     return parseErrorMessage(error);
   }
 
+  // Handle WalletError or Error with code property
+  if (error instanceof WalletError || (error instanceof Error && "code" in error)) {
+    const code = (error as { code?: string }).code;
+    if (code && STELLAR_ERRORS[code]) {
+      return STELLAR_ERRORS[code];
+    }
+  }
+
   // Handle Error objects
   if (error instanceof Error) {
     // Check for auth errors
     const authCode = (error as { code?: string }).code;
-    if (authCode && AUTH_ERRORS[authCode]) {
-      return AUTH_ERRORS[authCode];
+    if (authCode) {
+      if (AUTH_ERRORS[authCode]) {
+        return AUTH_ERRORS[authCode];
+      }
+      const mapped = SUPABASE_AUTH_CODE_MAP[authCode];
+      if (mapped && AUTH_ERRORS[mapped]) {
+        return AUTH_ERRORS[mapped];
+      }
     }
 
     return parseErrorMessage(error.message);
   }
 
-  // Handle objects with message property
-  if (typeof error === "object" && "message" in error) {
-    return parseErrorMessage(String((error as { message: unknown }).message));
+  // Handle objects with message or code property
+  if (typeof error === "object") {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === "string" && STELLAR_ERRORS[code]) {
+      return STELLAR_ERRORS[code];
+    }
+    if ("message" in error) {
+      return parseErrorMessage(String((error as { message: unknown }).message));
+    }
   }
 
   return GENERAL_ERRORS.Unknown;
@@ -318,36 +335,46 @@ export function parseError(error: unknown): AppError {
 function parseErrorMessage(message: string): AppError {
   const lowerMessage = message.toLowerCase();
 
-  // Check Stellar errors
+  // Check Stellar errors by key, code, message or normalized key
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
+    const normalizedKey = key.toLowerCase().replace(/_/g, "");
+    const normalizedMsg = lowerMessage.replace(/[\s_]/g, "");
     if (
       lowerMessage.includes(key.toLowerCase()) ||
-      lowerMessage.includes(appError.code.toLowerCase())
+      lowerMessage.includes(appError.code.toLowerCase()) ||
+      lowerMessage.includes(appError.message.toLowerCase()) ||
+      normalizedMsg.includes(normalizedKey)
     ) {
       return appError;
     }
   }
 
   // Check for common error patterns
+  if (lowerMessage.includes("order already paid") || lowerMessage.includes("orderalreadypaid")) {
+    return STELLAR_ERRORS.ORDER_ALREADY_PAID;
+  }
   if (lowerMessage.includes("insufficient") || lowerMessage.includes("balance")) {
-    return STELLAR_ERRORS.InsufficientBalance;
+    return STELLAR_ERRORS.INSUFFICIENT_BALANCE;
   }
   if (lowerMessage.includes("rejected") || lowerMessage.includes("cancelled")) {
-    return STELLAR_ERRORS.UserRejected;
+    return STELLAR_ERRORS.USER_REJECTED;
   }
   if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
-    return STELLAR_ERRORS.TransactionTimeout;
+    return STELLAR_ERRORS.TX_TIMEOUT;
   }
-  if (lowerMessage.includes("network") || lowerMessage.includes("connection")) {
-    return STELLAR_ERRORS.NetworkError;
-  }
-  if (lowerMessage.includes("freighter") && lowerMessage.includes("install")) {
-    return STELLAR_ERRORS.WalletNotInstalled;
+  if (
+    lowerMessage.includes("freighter") &&
+    (lowerMessage.includes("install") || lowerMessage.includes("not installed"))
+  ) {
+    return STELLAR_ERRORS.FREIGHTER_NOT_FOUND;
   }
 
   // Check auth errors by message
   for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
-    if (lowerMessage.includes(key.toLowerCase()) || lowerMessage.includes(appError.code.toLowerCase())) {
+    if (
+      lowerMessage.includes(key.toLowerCase()) ||
+      lowerMessage.includes(appError.code.toLowerCase())
+    ) {
       return appError;
     }
   }
