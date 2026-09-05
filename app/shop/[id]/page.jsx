@@ -6,16 +6,17 @@ import { useCart } from "../../../context/CartContext";
 import Modal from "../../../components/Modal";
 import Toast from "../../../components/Toast";
 import Cart from "../../../components/Cart";
+import useToast from "../../../hooks/useToast";
 import { getProductById } from "../../../lib/products";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const ProductPage = ({ params }) => {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
+  const { toast, showToast, hideToast } = useToast(3000);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "" });
   const { id } = params;
 
   useEffect(() => {
@@ -38,11 +39,6 @@ const ProductPage = ({ params }) => {
       fetchProduct();
     }
   }, [id]);
-
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
@@ -86,11 +82,7 @@ const ProductPage = ({ params }) => {
         )}
       </div>
 
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
-      />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
       <Modal show={showModal} onClose={closeModal}>
         <h2 className="text-2xl mb-4">Cart Items</h2>
         {cartItems.length === 0 ? (
@@ -98,10 +90,7 @@ const ProductPage = ({ params }) => {
         ) : (
           <div>
             {cartItems.map((item) => (
-              <div
-                key={item.cartItemId || item.lineId || item.id}
-                className="flex justify-between items-center mb-2"
-              >
+              <div key={item.id} className="flex justify-between items-center mb-2">
                 <div className="w-16 h-16 flex-shrink-0">
                   <Image
                     src={item.img}

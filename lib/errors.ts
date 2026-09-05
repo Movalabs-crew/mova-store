@@ -335,7 +335,17 @@ export function parseError(error: unknown): AppError {
 function parseErrorMessage(message: string): AppError {
   const lowerMessage = message.toLowerCase();
 
-  // Check Stellar errors by key, code, message or normalized key
+  // Check auth errors by message key or code first
+  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
+    if (
+      lowerMessage.includes(key.toLowerCase()) ||
+      lowerMessage.includes(appError.code.toLowerCase())
+    ) {
+      return appError;
+    }
+  }
+
+  // Check Stellar errors by key or code
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
     const normalizedKey = key.toLowerCase().replace(/_/g, "");
     const normalizedMsg = lowerMessage.replace(/[\s_]/g, "");
@@ -367,16 +377,6 @@ function parseErrorMessage(message: string): AppError {
     (lowerMessage.includes("install") || lowerMessage.includes("not installed"))
   ) {
     return STELLAR_ERRORS.FREIGHTER_NOT_FOUND;
-  }
-
-  // Check auth errors by message
-  for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
-    if (
-      lowerMessage.includes(key.toLowerCase()) ||
-      lowerMessage.includes(appError.code.toLowerCase())
-    ) {
-      return appError;
-    }
   }
 
   // Return generic error with original message
