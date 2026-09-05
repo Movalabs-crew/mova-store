@@ -7,12 +7,13 @@ import { FaShoppingCart } from "react-icons/fa";
 import Cart from "../../components/Cart";
 import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
+import useToast from "../../hooks/useToast";
 import { listProducts } from "../../lib/products";
 
 export default function Products() {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
+  const { toast, showToast, hideToast } = useToast(3000);
   const [showModal, setShowModal] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "" });
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
@@ -29,11 +30,6 @@ export default function Products() {
 
     fetchProducts();
   }, []);
-
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
 
   const handleCheckout = (e) => {
     setIsCheckingOut(true);
@@ -88,11 +84,7 @@ export default function Products() {
         </section>
       </div>
 
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
-      />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
       <Modal show={showModal} onClose={closeModal}>
         <h2 className="text-2xl mb-4">Cart Items</h2>
         {cartItems.length === 0 ? (
@@ -100,10 +92,7 @@ export default function Products() {
         ) : (
           <div>
             {cartItems.map((item) => (
-              <div
-                key={item.cartItemId || item.lineId || item.id}
-                className="flex justify-between items-center mb-2"
-              >
+              <div key={item.id} className="flex justify-between items-center mb-2">
                 <div className="w-16 h-16 flex-shrink-0">
                   <Image
                     src={item.img} // Ensure this URL is correct
