@@ -434,20 +434,167 @@ fn test_set_merchant_changes_escrow_destination() {
 
 #[test]
 fn test_events_emitted() {
+    extern crate std;
+    use crate::events::{OrderCreated, OrderShipped, PaymentReceived};
+    use soroban_sdk::Event;
+    use soroban_sdk::FromVal;
+
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 5);
+
+    // 1. Order creation step
+    client.create_order(&buyer, &id, &token, &10_000);
+    let create_events = env.events().all().filter_by_contract(&checkout);
+    let expected_create = OrderCreated {
+        token: token.clone(),
+        buyer: buyer.clone(),
+        order_id: id.clone(),
+        amount: 10_000,
+        timestamp: env.ledger().timestamp(),
+    };
+    assert_eq!(
+        create_events,
+        std::vec![expected_create.to_xdr(&env, &checkout)]
+    );
+    let raw_create = create_events.events();
+    assert_eq!(raw_create.len(), 1);
+    match &raw_create[0].body {
+        soroban_sdk::xdr::ContractEventBody::V0(v0) => {
+            assert_eq!(
+                v0.topics[0],
+                soroban_sdk::xdr::ScVal::Symbol(soroban_sdk::xdr::ScSymbol(
+                    "create_order".try_into().unwrap()
+                ))
+            );
+            assert_eq!(v0.topics.len(), 4);
+        }
+    }
+
+    // 2. Pay step
+    client.pay(&token, &buyer, &id, &10_000);
+    let pay_events = env.events().all().filter_by_contract(&checkout);
+    let expected_pay = PaymentReceived {
+        token: token.clone(),
+        buyer: buyer.clone(),
+        merchant: merchant.clone(),
+        order_id: id.clone(),
+        amount: 10_000,
+    };
+    assert_eq!(pay_events, std::vec![expected_pay.to_xdr(&env, &checkout)]);
+    let raw_pay = pay_events.events();
+    assert_eq!(raw_pay.len(), 1);
+    match &raw_pay[0].body {
+        soroban_sdk::xdr::ContractEventBody::V0(v0) => {
+            assert_eq!(
+                v0.topics[0],
+                soroban_sdk::xdr::ScVal::Symbol(soroban_sdk::xdr::ScSymbol(
+                    "pay".try_into().unwrap()
+                ))
+            );
+            assert_eq!(v0.topics.len(), 5);
+            assert_eq!(
+                v0.topics[1],
+                soroban_sdk::xdr::ScVal::from_val(&env, &token.to_val())
+            );
+            assert_eq!(
+                v0.topics[2],
+                soroban_sdk::xdr::ScVal::from_val(&env, &buyer.to_val())
+            );
+            assert_eq!(
+                v0.topics[3],
+                soroban_sdk::xdr::ScVal::from_val(&env, &merchant.to_val())
+            );
+            assert_eq!(
+                v0.topics[4],
+                soroban_sdk::xdr::ScVal::from_val(&env, &id.to_val())
+            );
+        }
+    }
+
+    // 3. Dispatch step
+    client.dispatch(&id);
+    let dispatch_events = env.events().all().filter_by_contract(&checkout);
+    let expected_dispatch = OrderShipped {
+        order_id: id.clone(),
+        merchant: merchant.clone(),
+        amount: 10_000,
+    };
+    assert_eq!(
+        dispatch_events,
+        std::vec![expected_dispatch.to_xdr(&env, &checkout)]
+    );
+    let raw_dispatch = dispatch_events.events();
+    assert_eq!(raw_dispatch.len(), 1);
+    match &raw_dispatch[0].body {
+        soroban_sdk::xdr::ContractEventBody::V0(v0) => {
+            assert_eq!(
+                v0.topics[0],
+                soroban_sdk::xdr::ScVal::Symbol(soroban_sdk::xdr::ScSymbol(
+                    "dispatch".try_into().unwrap()
+                ))
+            );
+            assert_eq!(v0.topics.len(), 3);
+            assert_eq!(
+                v0.topics[1],
+                soroban_sdk::xdr::ScVal::from_val(&env, &id.to_val())
+            );
+            assert_eq!(
+                v0.topics[2],
+                soroban_sdk::xdr::ScVal::from_val(&env, &merchant.to_val())
+            );
+        }
+    }
+}
+
+#[test]
+fn test_refund_event_emitted() {
+    extern crate std;
+    use crate::events::OrderRefunded;
+    use soroban_sdk::{Event, FromVal};
+
     let env = Env::default();
     env.mock_all_auths();
 
     let (client, token, _, buyer, checkout) = setup_usdc(&env);
-    let id = order_id(&env, 5);
+    let id = order_id(&env, 9);
 
     client.create_order(&buyer, &id, &token, &10_000);
     client.pay(&token, &buyer, &id, &10_000);
-    client.dispatch(&id);
 
-    // At least one contract event should be recorded for the lifecycle.
-    let events = env.events().all().filter_by_contract(&checkout);
-    assert!(
-        !events.events().is_empty(),
-        "expected contract events for create/pay/dispatch"
+    // Lifecycle step: refund
+    client.refund(&id);
+    let refund_events = env.events().all().filter_by_contract(&checkout);
+    let expected_refund = OrderRefunded {
+        order_id: id.clone(),
+        buyer: buyer.clone(),
+        amount: 10_000,
+    };
+    assert_eq!(
+        refund_events,
+        std::vec![expected_refund.to_xdr(&env, &checkout)]
     );
+    let raw_refund = refund_events.events();
+    assert_eq!(raw_refund.len(), 1);
+    match &raw_refund[0].body {
+        soroban_sdk::xdr::ContractEventBody::V0(v0) => {
+            assert_eq!(
+                v0.topics[0],
+                soroban_sdk::xdr::ScVal::Symbol(soroban_sdk::xdr::ScSymbol(
+                    "refund".try_into().unwrap()
+                ))
+            );
+            assert_eq!(v0.topics.len(), 3);
+            assert_eq!(
+                v0.topics[1],
+                soroban_sdk::xdr::ScVal::from_val(&env, &id.to_val())
+            );
+            assert_eq!(
+                v0.topics[2],
+                soroban_sdk::xdr::ScVal::from_val(&env, &buyer.to_val())
+            );
+        }
+    }
 }
