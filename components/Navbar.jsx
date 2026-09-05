@@ -122,6 +122,11 @@ function Navbar() {
             <Link href="#contact" className={navLinkClass}>
               Contact Us
             </Link>
+            {user && (
+              <Link href="/orders" className={navLinkClass}>
+                Orders
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {user ? (
@@ -195,6 +200,7 @@ function Navbar() {
                 { href: "#aboutus", label: "About Us", onClick: closeNavOnClick },
                 { href: "/blog", label: "Blog", onClick: closeNavOnClick },
                 { href: "#contact", label: "Contact Us", onClick: closeNavOnClick },
+                ...(user ? [{ href: "/orders", label: "My Orders", onClick: closeNavOnClick }] : []),
               ].map((item) => (
                 <Link
                   key={item.label}
