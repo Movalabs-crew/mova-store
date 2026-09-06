@@ -144,12 +144,12 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
 
 ### The `pay` function
 
-| Param      | Type         | Meaning                                      |
-| ---------- | ------------ | -------------------------------------------- |
+| Param      | Type         | Meaning                                               |
+| ---------- | ------------ | ----------------------------------------------------- |
 | `token`    | `Address`    | Whitelisted SEP-41 token (USDC SAC or native XLM SAC) |
-| `buyer`    | `Address`    | The paying wallet (must authorize)           |
-| `order_id` | `BytesN<32>` | 32-byte unique order identifier               |
-| `amount`   | `i128`       | Raw token units (USDC = 7 decimals)          |
+| `buyer`    | `Address`    | The paying wallet (must authorize)                    |
+| `order_id` | `BytesN<32>` | 32-byte unique order identifier                       |
+| `amount`   | `i128`       | Raw token units (USDC = 7 decimals)                   |
 
 `pay` escrows `amount` from `buyer` into the contract, marks the order `Paid`,
 and emits a `PaymentReceived` event:
@@ -219,23 +219,23 @@ mova-store/
 
 ## Tech Stack
 
-| Layer       | Technology                                             |
-| ----------- | ------------------------------------------------------ |
-| Frontend    | Next.js 14 (App Router), React, Tailwind CSS, Supabase |
-| Payments    | `@stellar/stellar-sdk` 16, `@stellar/freighter-api` 6  |
-| Smart chain | Rust, Soroban SDK 27, Stellar CLI                      |
+| Layer       | Technology                                                    |
+| ----------- | ------------------------------------------------------------- |
+| Frontend    | Next.js 14 (App Router), React, Tailwind CSS, Supabase        |
+| Payments    | `@stellar/stellar-sdk` 16, `@stellar/freighter-api` 6         |
+| Smart chain | Rust, Soroban SDK 27, Stellar CLI                             |
 | Currency    | USDC + native XLM via the Stellar Asset Contract (7 decimals) |
 
 ## Prerequisites
 
 Install the following before getting started:
 
-| Tool             | Version / Notes                                              | Install                                     |
-| ---------------- | ------------------------------------------------------------ | ------------------------------------------- |
-| **Node.js**      | 18.18+ (bundles `npm`)                                       | https://nodejs.org                          |
-| **Rust**         | stable, with the `wasm32v1-none` target                      | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
-| **Stellar CLI**  | latest (`stellar --version`)                                 | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
-| **Freighter**    | browser wallet extension (Chrome / Firefox)                  | https://freighter.app                       |
+| Tool            | Version / Notes                             | Install                                                                                |
+| --------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Node.js**     | 18.18+ (bundles `npm`)                      | https://nodejs.org                                                                     |
+| **Rust**        | stable, with the `wasm32v1-none` target     | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh`                      |
+| **Stellar CLI** | latest (`stellar --version`)                | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
+| **Freighter**   | browser wallet extension (Chrome / Firefox) | https://freighter.app                                                                  |
 
 > **Rust note:** a C toolchain/LLVM is required to compile the Soroban contract.
 > On macOS install Xcode Command Line Tools (`xcode-select --install`).
