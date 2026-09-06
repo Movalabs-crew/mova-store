@@ -100,3 +100,47 @@ describe("validateEnv", () => {
     expect(config.admin.adminEmails).toContain("admin@store.org");
   });
 });
+
+describe("mainnet RPC default", () => {
+  const RPC_KEY = "NEXT_PUBLIC_STELLAR_RPC_URL";
+  let savedRpc: string | undefined;
+
+  beforeEach(() => {
+    savedRpc = process.env[RPC_KEY];
+    // `??` in lib/stellar/config only falls back on undefined, so the variable
+    // has to be absent rather than empty for this to exercise the defaults.
+    delete process.env[RPC_KEY];
+  });
+
+  afterEach(() => {
+    if (savedRpc === undefined) {
+      delete process.env[RPC_KEY];
+    } else {
+      process.env[RPC_KEY] = savedRpc;
+    }
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("resolves the same endpoint from lib/env and lib/stellar/config", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.resetModules();
+
+    const { loadStellarConfig } = await import("../../lib/env");
+    const { RPC_URL } = await import("../../lib/stellar/config");
+
+    // Both read NEXT_PUBLIC_STELLAR_RPC_URL, so an operator who leaves it unset
+    // must not get a different endpoint depending on which module resolved it.
+    expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
+  });
+
+  it("keeps testnet in step too", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    vi.resetModules();
+
+    const { loadStellarConfig } = await import("../../lib/env");
+    const { RPC_URL } = await import("../../lib/stellar/config");
+
+    expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
+  });
+});

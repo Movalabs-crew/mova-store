@@ -15,10 +15,13 @@ import { Networks } from "@stellar/stellar-sdk";
 export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet";
 export const IS_MAINNET = NETWORK === "mainnet";
 
+// Mainnet default matches lib/env.ts STELLAR_DEFAULTS.mainnet and the endpoint
+// docs/MAINNET_DEPLOYMENT.md tells operators to configure. Keep the three in
+// step: this value is what an operator gets when the env var is unset.
 export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
   (IS_MAINNET
-    ? "https://soroban-rpc.stellar.org"
+    ? "https://soroban-rpc.mainnet.stellar.gateway.fm"
     : "https://soroban-testnet.stellar.org");
 
 export const NETWORK_PASSPHRASE =
