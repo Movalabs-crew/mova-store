@@ -27,6 +27,13 @@ import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
 import { SiStellar } from "react-icons/si";
 import {
+  SUPPORTED_TOKENS,
+  defaultToken,
+  TokenConfig,
+  NETWORK,
+} from "../../lib/stellar/config";
+import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
+import {
   validateEmail,
   validateName,
   validateAddress,
@@ -43,6 +50,7 @@ const Checkout = () => {
     String(Math.floor(Math.random() * 1000000)).padStart(6, "0")
   );
   const [totalPrice, setTotalPrice] = useState(0);
+  const [selectedToken, setSelectedToken] = useState<TokenConfig>(defaultToken());
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast, showToast, hideToast } = useToast(5000);
@@ -377,14 +385,58 @@ const Checkout = () => {
                   <span className="h-px flex-1 bg-gray-300" />
                   <span className="text-xs uppercase tracking-wider text-gray-500 flex items-center gap-2">
                     <SiStellar size={16} className="text-purple-600" />
-                    or pay with Stellar (USDC)
+                    or pay with Stellar ({selectedToken.symbol})
                   </span>
                   <span className="h-px flex-1 bg-gray-300" />
                 </div>
+
+                {/* Token Selector */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-700">Select Payment Token:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SUPPORTED_TOKENS.map((tok) => {
+                      const isSelected = selectedToken.symbol === tok.symbol;
+                      return (
+                        <button
+                          key={tok.symbol}
+                          type="button"
+                          onClick={() => setSelectedToken(tok)}
+                          className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                            isSelected
+                              ? "border-purple-600 bg-purple-50 text-purple-700 font-semibold shadow-sm"
+                              : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {tok.isNative ? (
+                            <SiStellar size={15} className="text-purple-600" />
+                          ) : (
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                              $
+                            </span>
+                          )}
+                          <span>{tok.symbol}</span>
+                          {tok.isNative && (
+                            <span className="text-[10px] text-purple-600 font-normal">
+                              (Native)
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedToken.isNative && totalPrice > 0 && (
+                    <div className="mt-1 flex items-center justify-between text-xs bg-purple-50 border border-purple-100 rounded px-2.5 py-1.5 text-purple-800">
+                      <span>Rate: 1 XLM ≈ ${DEFAULT_XLM_USD_PRICE} USD</span>
+                      <span className="font-semibold">≈ {convertUsdToXlm(totalPrice)} XLM</span>
+                    </div>
+                  )}
+                </div>
+
                 <StellarWalletButton />
                 <StellarCheckoutButton
                   amountUsd={totalPrice}
                   orderId={orderId}
+                  token={selectedToken}
                   disabled={isSubmitting || totalPrice <= 0}
                   onSuccess={handleStellarSuccess}
                 />
