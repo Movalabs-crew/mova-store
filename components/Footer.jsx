@@ -8,25 +8,25 @@ export default function Footer() {
       <section className="container mx-auto flex h-28 flex-col items-center justify-between divide-black text-center font-normal sm:flex-row sm:divide-x-2 sm:divide-white/30">
         <span className="my-10 hidden gap-2 text-sm sm:my-0 sm:flex">
           <Link
-            href="/"
+            href="/terms"
             className="transition hover:underline hover:underline-offset-1"
           >
-            Term of use
+            Terms of Use
           </Link>
           <Link
-            href="/"
+            href="/privacy"
             className="transition hover:underline hover:underline-offset-1"
           >
             Privacy Policy
           </Link>
           <Link
-            href="/"
+            href="/#aboutus"
             className="transition hover:underline hover:underline-offset-1"
           >
             About us
           </Link>
           <Link
-            href="/"
+            href="/#contact"
             className="transition hover:underline hover:underline-offset-1"
           >
             24/7 Customer Service
