@@ -500,3 +500,12 @@ export function eventToOrder(
     txHash,
   };
 }
+export function mergeOrderEvent(existing: OrderEvent, incoming: OrderEvent): OrderEvent {
+  return {
+    ...existing,
+    status: incoming.status,
+    ledger: Math.max(existing.ledger, incoming.ledger),
+    txHash: incoming.txHash || existing.txHash,
+    timestamp: Math.max(existing.timestamp, incoming.timestamp),
+  };
+}
