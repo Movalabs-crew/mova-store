@@ -115,13 +115,21 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             onChange={(e) => setProductImage(e.target.files[0])}
           />
-          {existingImageUrl && (
-            <img
-              src={existingImageUrl}
-              alt="Existing product"
-              className="mt-4 max-w-full h-auto rounded-md"
-            />
-          )}
+          
+{existingImageUrl && (
+  <img
+    src={existingImageUrl}
+    alt={
+      productName
+        ? `Current preview image for ${productName}`
+        : "Existing product configuration image"
+    }
+    className="mt-4 max-w-full h-auto rounded-md"
+  />
+)}
+
+
+
         </div>
         <button
           type="submit"
