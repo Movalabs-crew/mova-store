@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 
 import Toast from "../../components/Toast";
+import useToast from "../../hooks/useToast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { MdArrowBack } from "react-icons/md";
 import Link from "next/link";
@@ -42,7 +43,6 @@ import {
 } from "../../lib/validation";
 
 const Checkout = () => {
-
   // OTP is stored as a zero-padded 6-digit string so it always matches the format
   // shown in the email (e.g. "000042") and can be compared with exact string
   // equality instead of a loose numeric parse.
@@ -53,7 +53,7 @@ const Checkout = () => {
   const [selectedToken, setSelectedToken] = useState<TokenConfig>(defaultToken());
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(5000);
   const [stage, setStage] = useState(1);
   const [isOtpSending, setIsOtpSending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,19 +69,10 @@ const Checkout = () => {
     subject: "YOUR ORDER CONFIRMATION",
   });
 
-  const showToast = (message: string) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
-
-  const [orderId] = useState(() =>
-    `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
-  );
+  const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
   const handleStellarSuccess = (result: { amountUsd: number | string }) => {
-    showToast(
-      `USDC payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
-    );
+    showToast(`USDC payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`);
     setStage(3);
     localStorage.removeItem("cartItems");
     localStorage.removeItem("itemCount");
@@ -111,9 +102,7 @@ const Checkout = () => {
       });
 
       setStage(2);
-      showToast(
-        "Form submitted successfully. OTP has been sent to your email."
-      );
+      showToast("Form submitted successfully. OTP has been sent to your email.");
     } catch (error) {
       setIsSubmitting(false);
       showToast("Failed to send OTP. Please try again.");
@@ -146,7 +135,7 @@ const Checkout = () => {
   const handleGoBack = () => {
     if (stage > 1) {
       setStage(stage - 1);
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   };
 
@@ -182,7 +171,8 @@ const Checkout = () => {
       <div className="container mx-auto px-4 py-16 my-10 max-w-lg text-center bg-white rounded-lg shadow-md border-2 border-purple-300">
         <h2 className="text-2xl font-bold text-gray-800 mb-3">Your cart is empty</h2>
         <p className="text-gray-600 mb-6">
-          Looks like you have not added any items to your cart yet. Please add items to proceed with checkout.
+          Looks like you have not added any items to your cart yet. Please add items to proceed with
+          checkout.
         </p>
         <Link
           href="/shop"
@@ -204,11 +194,7 @@ const Checkout = () => {
         >
           1
         </span>
-        <span
-          className={`w-20 h-1 sm:w-96 ${
-            stage >= 2 ? "bg-purple-700" : "bg-gray-200"
-          }`}
-        ></span>
+        <span className={`w-20 h-1 sm:w-96 ${stage >= 2 ? "bg-purple-700" : "bg-gray-200"}`}></span>
         <span
           className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-purple-700 rounded-full ${
             stage >= 2 ? "bg-purple-700 text-white" : "bg-white"
@@ -216,11 +202,7 @@ const Checkout = () => {
         >
           2
         </span>
-        <span
-          className={`w-20 h-1 sm:w-96 ${
-            stage >= 3 ? "bg-purple-700" : "bg-gray-200"
-          }`}
-        ></span>
+        <span className={`w-20 h-1 sm:w-96 ${stage >= 3 ? "bg-purple-700" : "bg-gray-200"}`}></span>
         <span
           className={`flex justify-center items-center w-8 h-8 sm:w-10 sm:h-10 border border-purple-700 rounded-full ${
             stage >= 3 ? "bg-purple-700 text-white" : "bg-white"
@@ -247,10 +229,7 @@ const Checkout = () => {
           </div>
           <div className="w-full md:w-1/2 px-4 p-4 rounded-md">
             {stage === 1 && (
-              <form
-                onSubmit={handleSubmit}
-                className="bg-white p-4 rounded shadow-md"
-              >
+              <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow-md">
                 <h2 className="text-2xl mb-4 text-center">Checkout</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="mb-4">
@@ -333,7 +312,11 @@ const Checkout = () => {
                         onChange={(e) => {
                           let { value } = e.target;
                           value = value.replace(/[^0-9/]/g, "");
-                          if (value.length === 2 && !value.includes("/") && formData.expiryDate.length === 1) {
+                          if (
+                            value.length === 2 &&
+                            !value.includes("/") &&
+                            formData.expiryDate.length === 1
+                          ) {
                             value = value + "/";
                           }
                           if (value.length > 5) {
@@ -459,9 +442,9 @@ const Checkout = () => {
                 />
                 <StellarOrderWatch orderId={orderId} enabled={stage === 1} />
                 <p className="text-[11px] text-gray-400 text-center">
-                  Order #{orderId} · {selectedToken.symbol} ({NETWORK}) is escrowed by a Soroban smart
-                  contract until we ship, then released to our merchant wallet. Refunds
-                  go straight back on-chain. No card needed.
+                  Order #{orderId} · USDC (testnet) is escrowed by a Soroban smart contract until we
+                  ship, then released to our merchant wallet. Refunds go straight back on-chain. No
+                  card needed.
                 </p>
               </div>
             )}
@@ -473,9 +456,7 @@ const Checkout = () => {
                 <h2 className="text-2xl mb-4 text-center">Confirm OTP</h2>
                 <span className="text-md">An OTP was sent to your email</span>
                 <div className="mb-4">
-                  <label className="block text-gray-700">
-                    Please confirm OTP
-                  </label>
+                  <label className="block text-gray-700">Please confirm OTP</label>
                   <input
                     type="text"
                     name="otpConfirmation"
@@ -516,12 +497,8 @@ const Checkout = () => {
             {stage === 3 && (
               <div className="bg-white p-4 rounded shadow-md h-full flex flex-col justify-center items-center">
                 <h2 className="text-6xl mb-4 text-center">Order Completed.</h2>
-                <p className="text-center">
-                  Your order has been placed successfully.
-                </p>
-                <span className="text-center">
-                  Thanks for Shopping with us 🥰🥰🥰
-                </span>
+                <p className="text-center">Your order has been placed successfully.</p>
+                <span className="text-center">Thanks for Shopping with us 🥰🥰🥰</span>
                 <Link
                   href="/shop"
                   className="text-center mt-8 py-2 bg-purple-700 hover:bg-purple-500 rounded-md px-2"
@@ -533,12 +510,7 @@ const Checkout = () => {
           </div>
         </div>
       </div>
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
-        time={4000}
-      />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} time={4000} />
     </>
   );
 };
