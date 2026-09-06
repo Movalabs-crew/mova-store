@@ -465,18 +465,22 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 
 ## Environment Variables Reference
 
-| Variable                              | Required | Purpose                                   |
-| ------------------------------------- | -------- | ----------------------------------------- |
-| `NEXT_PUBLIC_STELLAR_NETWORK`         | no       | `testnet` (default) or `mainnet`          |
-| `NEXT_PUBLIC_STELLAR_RPC_URL`         | no       | Soroban RPC endpoint (testnet default)    |
-| `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | no    | Network passphrase (testnet default)      |
-| `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`    | yes*     | Deployed checkout contract (C…)           |
-| `NEXT_PUBLIC_USDC_CONTRACT_ID`        | no       | USDC token contract (testnet default)     |
-| `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`| no       | Native XLM SAC (verified testnet default) |
-| `PUBLIC_MERCHANT_ADDRESS`             | no       | Display-only merchant wallet (on-chain value is authoritative) |
-| `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Supabase project URL                      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | yes      | Supabase anon/public key                  |
-| `NEXT_PUBLIC_ADMIN_EMAILS`            | no       | Comma-separated admin emails              |
+| Variable                                 | Required | Purpose                                                        |
+| ---------------------------------------- | -------- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_STELLAR_NETWORK`            | no       | `testnet` (default) or `mainnet`                               |
+| `NEXT_PUBLIC_STELLAR_RPC_URL`            | no       | Soroban RPC endpoint (testnet default)                         |
+| `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | no       | Network passphrase (testnet default)                           |
+| `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`       | yes*     | Deployed checkout contract (C…)                                |
+| `NEXT_PUBLIC_USDC_CONTRACT_ID`           | no       | USDC token contract (testnet default)                          |
+| `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`   | no       | Native XLM SAC (verified testnet default)                      |
+| `PUBLIC_MERCHANT_ADDRESS`                | no       | Display-only merchant wallet (on-chain value is authoritative) |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`         | yes      | EmailJS service ID (OTP + notification emails)                 |
+| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`        | yes      | EmailJS template ID                                            |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`         | yes      | EmailJS public key                                             |
+| `NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL`    | no       | Default recipient for contact-form emails                      |
+| `NEXT_PUBLIC_SUPABASE_URL`               | yes      | Supabase project URL                                           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | yes      | Supabase anon/public key                                       |
+| `NEXT_PUBLIC_ADMIN_EMAILS`               | no       | Comma-separated admin emails                                   |
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
 
