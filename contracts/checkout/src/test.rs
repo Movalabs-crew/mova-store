@@ -2,7 +2,9 @@
 
 use soroban_sdk::testutils::{Address as _, Events};
 use soroban_sdk::token::{StellarAssetClient, TokenClient};
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, map, vec, Address, BytesN, Env, IntoVal, Symbol,
+};
 
 use crate::errors::Error;
 use crate::order::Status;
@@ -437,17 +439,58 @@ fn test_events_emitted() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
     let id = order_id(&env, 5);
 
     client.create_order(&buyer, &id, &token, &10_000);
     client.pay(&token, &buyer, &id, &10_000);
     client.dispatch(&id);
 
-    // At least one contract event should be recorded for the lifecycle.
-    let events = env.events().all().filter_by_contract(&checkout);
-    assert!(
-        !events.events().is_empty(),
-        "expected contract events for create/pay/dispatch"
+    let timestamp = env.ledger().timestamp();
+
+    // The topic layout is a published interface, not an implementation detail:
+    // lib/stellar/events.ts skips any event whose first topic is not `pay`, and
+    // then reads topics[1..] positionally as [token, buyer, merchant,
+    // order_id]. Asserting the whole lifecycle exactly means a change to either
+    // the event name or the topic order fails here, rather than silently
+    // stopping the indexer from ever seeing a payment.
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (
+                    Symbol::new(&env, "create_order"),
+                    token.clone(),
+                    buyer.clone(),
+                    id.clone(),
+                )
+                    .into_val(&env),
+                map![
+                    &env,
+                    (Symbol::new(&env, "amount"), 10_000i128.into_val(&env)),
+                    (Symbol::new(&env, "timestamp"), timestamp.into_val(&env)),
+                ]
+                .into_val(&env),
+            ),
+            (
+                checkout.clone(),
+                (
+                    Symbol::new(&env, "pay"),
+                    token.clone(),
+                    buyer.clone(),
+                    merchant.clone(),
+                    id.clone(),
+                )
+                    .into_val(&env),
+                map![&env, (Symbol::new(&env, "amount"), 10_000i128.into_val(&env))].into_val(&env),
+            ),
+            (
+                checkout.clone(),
+                (Symbol::new(&env, "dispatch"), id.clone(), merchant.clone()).into_val(&env),
+                map![&env, (Symbol::new(&env, "amount"), 10_000i128.into_val(&env))].into_val(&env),
+            ),
+        ]
     );
 }
