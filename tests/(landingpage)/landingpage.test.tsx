@@ -4,6 +4,7 @@ import React from "react";
 import FAQ from "../../app/(landingpage)/FAQ";
 import Newsletter from "../../app/(landingpage)/newsletter";
 import ContactUs from "../../app/(landingpage)/ContactUs";
+import Slider from "../../app/(landingpage)/Slider";
 import * as sendMailModule from "../../lib/sendmail";
 
 describe("Landing Page Components", () => {
@@ -34,6 +35,34 @@ describe("Landing Page Components", () => {
       // Click the second FAQ item again - should collapse
       fireEvent.click(buttons[1]);
       expect(buttons[1].getAttribute("aria-expanded")).toBe("false");
+    });
+  });
+
+  describe("Slider Component", () => {
+    it("renders each image once instead of a duplicated strip", () => {
+      render(<Slider />);
+
+      const imgs = screen.getAllByRole("img");
+      expect(imgs).toHaveLength(5);
+
+      const sources = imgs.map((img) => img.getAttribute("src"));
+      expect(new Set(sources).size).toBe(sources.length);
+    });
+
+    it("keys the strip without colliding, so keying by src stays safe", () => {
+      // Guards the plausible half-fix: switching key={index} to key={src} while
+      // still rendering [...images, ...images] turns unique index keys into
+      // genuinely duplicated ones.
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      render(<Slider />);
+
+      const duplicateKeyWarnings = consoleError.mock.calls
+        .map((call) => String(call[0]))
+        .filter((message) => message.includes("two children with the same key"));
+      expect(duplicateKeyWarnings).toHaveLength(0);
+
+      consoleError.mockRestore();
     });
   });
 
