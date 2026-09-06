@@ -22,6 +22,7 @@ import { BsBank, BsCalendarDate } from "react-icons/bs";
 import { SiKlarna } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
 import { validateOTP } from "../../lib/validation";
+import { useCart } from "../../context/CartContext";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
@@ -39,10 +40,12 @@ const Checkout = () => {
   // OTP is stored as a zero-padded 6-digit string so it always matches the format
   // shown in the email (e.g. "000042") and can be compared with exact string
   // equality instead of a loose numeric parse.
+  const cartContext = useCart();
+  const initialTotalPrice = Number(cartContext?.totalPrice) || 0;
   const [otp, setOtp] = useState<string>(() =>
     String(Math.floor(Math.random() * 1000000)).padStart(6, "0")
   );
-  const [totalPrice, setTotalPrice] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(initialTotalPrice);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast, showToast, hideToast } = useToast(5000);
@@ -106,10 +109,7 @@ const Checkout = () => {
     if (isOtpSending) return;
     setIsOtpSending(true);
     // Validate the raw trimmed input as a 6-digit code, then compare it against the
-    // zero-padded OTP with exact string equality. We deliberately compare the raw
-    // input rather than validateOTP's sanitized value, because the validator strips
-    // non-digits ("000042abc" -> "000042") and would otherwise let digits-followed-
-    // by-junk through.
+    // zero-padded OTP with exact string equality.
     const entered = enteredOtp.trim();
     const { isValid } = validateOTP(entered);
     if (isValid && entered === otp) {
@@ -148,7 +148,7 @@ const Checkout = () => {
     }
   }, []);
 
-  const isEmptyCart = isLoaded && (cartItems.length === 0 || totalPrice <= 0);
+  const isEmptyCart = isLoaded && totalPrice <= 0;
 
   useEffect(() => {
     if (stage === 3) {

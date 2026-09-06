@@ -2,6 +2,35 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const CartContext = createContext();
+let cartItemSequence = 0;
+
+const createCartItemId = () => {
+  cartItemSequence += 1;
+  return `cart-${Date.now()}-${cartItemSequence}`;
+};
+
+const ensureCartItemIds = (items) => {
+  const seenIds = new Set();
+
+  return items.map((item) => {
+    const existingId = item?.cartItemId;
+    const cartItemId = existingId && !seenIds.has(existingId) ? existingId : createCartItemId();
+    seenIds.add(cartItemId);
+
+    return item?.cartItemId === cartItemId ? item : { ...item, cartItemId };
+  });
+};
+
+const createCartItem = (product) => ({
+  ...product,
+  cartItemId: createCartItemId(),
+});
+
+const matchesCartItem = (item, target) => {
+  if (typeof target === "string") return item?.cartItemId === target;
+  if (target?.cartItemId) return item?.cartItemId === target.cartItemId;
+  return item?.id === target?.id;
+};
 
 export const useCart = () => useContext(CartContext);
 
@@ -59,17 +88,21 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     isHydratedRef.current = true;
     const { storedCartItems, storedItemCount, storedTotalPrice } = readStoredCart();
+    const normalizedCartItems = ensureCartItemIds(storedCartItems);
 
-    setCartItems(storedCartItems);
+    setCartItems(normalizedCartItems);
     setItemCount(storedItemCount);
     setTotalPrice(storedTotalPrice);
+    try {
+      localStorage.setItem("cartItems", JSON.stringify(normalizedCartItems));
+    } catch {}
     setHydrated(true);
   }, []);
 
   const addToCart = (product) => {
     if (!isHydratedRef.current) {
       const stored = readStoredCart();
-      const updatedCartItems = [...stored.storedCartItems, product];
+      const updatedCartItems = [...ensureCartItemIds(stored.storedCartItems), createCartItem(product)];
       const newItemCount = stored.storedItemCount + 1;
       const newTotalPrice = stored.storedTotalPrice + (product?.price || 0);
 
@@ -86,7 +119,7 @@ export const CartProvider = ({ children }) => {
     }
 
     setCartItems((prevCartItems) => {
-      const updatedCartItems = [...prevCartItems, product];
+      const updatedCartItems = [...prevCartItems, createCartItem(product)];
       try {
         localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
       } catch {}
@@ -113,11 +146,12 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = (product) => {
     if (!isHydratedRef.current) {
       const stored = readStoredCart();
-      const index = stored.storedCartItems.findIndex((item) => item.id === product?.id);
+      const normalizedCartItems = ensureCartItemIds(stored.storedCartItems);
+      const index = normalizedCartItems.findIndex((item) => matchesCartItem(item, product));
       if (index === -1) return;
 
-      const removedItem = stored.storedCartItems[index];
-      const updatedCartItems = [...stored.storedCartItems];
+      const removedItem = normalizedCartItems[index];
+      const updatedCartItems = [...normalizedCartItems];
       updatedCartItems.splice(index, 1);
       const newItemCount = Math.max(0, stored.storedItemCount - 1);
       const newTotalPrice = Math.max(0, stored.storedTotalPrice - (removedItem.price || 0));
@@ -135,7 +169,7 @@ export const CartProvider = ({ children }) => {
     }
 
     setCartItems((prevCartItems) => {
-      const index = prevCartItems.findIndex((item) => item.id === product?.id);
+      const index = prevCartItems.findIndex((item) => matchesCartItem(item, product));
       if (index === -1) return prevCartItems;
 
       const removedItem = prevCartItems[index];

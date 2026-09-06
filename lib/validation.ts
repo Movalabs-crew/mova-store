@@ -265,13 +265,13 @@ export function validatePrice(price: string | number): ValidationResult {
  * Validates a 6-digit OTP code.
  */
 export function validateOTP(otp: string): ValidationResult {
-  const sanitized = sanitizeText(otp).replace(/\D/g, "");
+  const sanitized = sanitizeText(otp);
 
   if (!sanitized) {
     return { isValid: false, error: "OTP code is required" };
   }
 
-  if (sanitized.length !== 6) {
+  if (!/^\d{6}$/.test(sanitized)) {
     return { isValid: false, error: "OTP must be 6 digits" };
   }
 
