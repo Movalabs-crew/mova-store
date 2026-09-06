@@ -19,14 +19,27 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
 }
 
 /**
+ * The SDK's generated typings still ask for Node's byte type on
+ * `xdr.ScVal.scvBytes` and `StrKey.encodeContract`. Both accept any
+ * `Uint8Array` at runtime, and these modules are bundled for the browser where
+ * that global is not guaranteed, so widen at the call boundary instead of
+ * constructing a Node value.
+ */
+type SdkBytes = Parameters<typeof xdr.ScVal.scvBytes>[0];
+
+export function toSdkBytes(bytes: Uint8Array): SdkBytes {
+  return bytes as unknown as SdkBytes;
+}
+
+/**
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf = typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
-  if (buf.length !== 32) {
-    throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
+  const raw = typeof bytes === "string" ? hexToBytes(bytes) : bytes;
+  if (raw.length !== 32) {
+    throw new Error(`order_id must be exactly 32 bytes (got ${raw.length})`);
   }
-  return xdr.ScVal.scvBytes(buf);
+  return xdr.ScVal.scvBytes(toSdkBytes(raw));
 }
 
 /**

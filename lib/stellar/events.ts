@@ -6,7 +6,7 @@ import {
   TX_TIMEOUT_SECONDS,
   TX_POLL_INTERVAL_MS,
 } from "./config";
-import { scValToString } from "./scval";
+import { scValToString, toSdkBytes } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Payment event decoding.
@@ -84,7 +84,7 @@ export function decodePaymentEvent(
     try {
       if (event.contractId()) {
         eventContractId = StrKey.encodeContract(
-          Buffer.from(event.contractId() as unknown as Uint8Array)
+          toSdkBytes(event.contractId() as unknown as Uint8Array)
         );
       }
     } catch {
