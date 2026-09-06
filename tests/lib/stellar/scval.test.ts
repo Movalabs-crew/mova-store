@@ -58,6 +58,14 @@ describe("ScVal helpers", () => {
       expect(scVal.bytes().length).toBe(32);
     });
 
+    it("produces byte-identical XDR for equivalent hex and Uint8Array inputs", () => {
+      const hex = "00112233445566778899aabbccddeeff".repeat(2);
+      const fromHex = bytes32ToScVal(hex);
+      const fromBytes = bytes32ToScVal(hexToBytes(hex));
+
+      expect(fromBytes.toXDR("base64")).toBe(fromHex.toXDR("base64"));
+    });
+
     it("throws on inputs not equal to 32 bytes", () => {
       expect(() => bytes32ToScVal(new Uint8Array(31))).toThrow(
         "order_id must be exactly 32 bytes (got 31)"

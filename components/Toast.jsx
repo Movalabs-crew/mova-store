@@ -1,34 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const Toast = ({ message, show, onClose, time = 3000 }) => {
   const [visible, setVisible] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (show) {
       setVisible(true);
+      const closeForThisToast = onCloseRef.current;
 
+      let exitTimer = null;
       const timer = setTimeout(() => {
         setVisible(false);
-      }, time);
-
-      let exitTimer: ReturnType<typeof setTimeout> | null = null;
-      const scheduleExit = () => {
         exitTimer = setTimeout(() => {
-          onClose();
+          closeForThisToast();
         }, 300);
-      };
-
-      const exitScheduler = setTimeout(scheduleExit, 0);
+      }, time);
 
       return () => {
         clearTimeout(timer);
-        clearTimeout(exitScheduler);
         if (exitTimer !== null) clearTimeout(exitTimer);
       };
     } else {
       setVisible(false);
     }
-  }, [show, onClose, time]);
+  }, [show, time]);
 
   return (
     <div
