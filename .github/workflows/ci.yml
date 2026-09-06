@@ -139,7 +139,9 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
 
       - name: Run cargo audit
         working-directory: contracts/checkout
