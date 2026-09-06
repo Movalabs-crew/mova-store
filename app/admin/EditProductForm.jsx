@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   getProductById,
   updateProduct,
@@ -17,6 +18,8 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
 
   useEffect(() => {
     const fetchProduct = async () => {
+      setSuccessMessage("");
+      setErrorMessage("");
       setLoading(true);
       try {
         const product = await getProductById(productId);
@@ -41,6 +44,8 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
     setLoading(true);
 
     try {
@@ -77,7 +82,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </div>
         )}
         {errorMessage && (
-          <div className="mb-4 p-4 text-white bg-purple-500 rounded-md">
+          <div className="mb-4 p-4 text-white bg-red-500 rounded-md">
             {errorMessage}
           </div>
         )}
@@ -116,11 +121,15 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
             onChange={(e) => setProductImage(e.target.files[0])}
           />
           {existingImageUrl && (
-            <img
-              src={existingImageUrl}
-              alt="Existing product"
-              className="mt-4 max-w-full h-auto rounded-md"
-            />
+            <div className="relative mt-4 w-full h-48">
+              <Image
+                src={existingImageUrl}
+                alt="Existing product"
+                fill
+                style={{ objectFit: "contain" }}
+                className="rounded-md"
+              />
+            </div>
           )}
         </div>
         <button
