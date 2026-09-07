@@ -33,13 +33,11 @@ describe("loadEmailJSConfig", () => {
 
     loadEmailJSConfig(errors);
 
-    expect(errors.map((e) => e.field)).toEqual([
-      "NEXT_PUBLIC_EMAILJS_SERVICE_ID",
-      "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID",
-      "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY",
-    ]);
-    expect(errors[0].message).toBe(
-      "NEXT_PUBLIC_EMAILJS_SERVICE_ID is required for email notifications"
+    expect(errors).toEqual(
+      EMAILJS_KEYS.slice(0, 3).map((field) => ({
+        field,
+        message: `${field} is required for email notifications`,
+      }))
     );
   });
 
@@ -69,14 +67,18 @@ describe("loadEmailJSConfig", () => {
     expect(errors).toEqual([]);
   });
 
-  it("returns an empty default recipient when the variable is unset", () => {
-    // getEnv's default is "", so an unset optional field arrives as an empty
-    // string rather than undefined, even though the interface marks it
-    // optional. Pinned as-is so a change to that default is a visible decision.
-    clear(EMAILJS_KEYS);
+  it.each([undefined, "", "   ", "\t\n"])(
+    "returns undefined for an absent default recipient (%j)",
+    (value) => {
+      clear(EMAILJS_KEYS);
+      vi.stubEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL", value ?? "");
+      if (value === undefined) {
+        delete process.env.NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL;
+      }
 
-    expect(loadEmailJSConfig([]).defaultRecipientEmail).toBe("");
-  });
+      expect(loadEmailJSConfig([]).defaultRecipientEmail).toBeUndefined();
+    }
+  );
 
   it("passes a set default recipient through, trimmed", () => {
     clear(EMAILJS_KEYS);
@@ -103,11 +105,12 @@ describe("loadSupabaseConfig", () => {
 
     loadSupabaseConfig(errors);
 
-    expect(errors.map((e) => e.field)).toEqual([
-      "NEXT_PUBLIC_SUPABASE_URL",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    ]);
-    expect(errors[0].message).toBe("NEXT_PUBLIC_SUPABASE_URL is required for Supabase");
+    expect(errors).toEqual(
+      SUPABASE_KEYS.map((field) => ({
+        field,
+        message: `${field} is required for Supabase`,
+      }))
+    );
   });
 
   it("counts a whitespace-only value as missing", () => {
@@ -147,6 +150,7 @@ describe("loadAdminConfig", () => {
 
   it("returns an empty list when the variable is unset", () => {
     vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "");
+    delete process.env.NEXT_PUBLIC_ADMIN_EMAILS;
 
     expect(loadAdminConfig().adminEmails).toEqual([]);
   });
