@@ -87,8 +87,7 @@ describe("ScVal helpers", () => {
     it("works without Node.js Buffer global", () => {
       const originalBuffer = globalThis.Buffer;
       try {
-        // @ts-expect-error simulate browser without Buffer global
-        delete globalThis.Buffer;
+        delete (globalThis as { Buffer?: unknown }).Buffer;
         const hex = "4a5e1e5509952278b9b9b30b5b173b9d0d319ff42d3096c48e26fbc952796e37";
         const bytes = hexToBytes(hex);
         const scVal = bytes32ToScVal(bytes);

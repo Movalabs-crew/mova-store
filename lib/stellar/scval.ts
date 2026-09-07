@@ -1,4 +1,4 @@
-import { xdr, Address, scValToNative } from "@stellar/stellar-sdk";
+import { xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
 
 // ---------------------------------------------------------------------------
 // ScVal construction + decoding helpers for the checkout contract.
@@ -26,7 +26,7 @@ export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
   if (b.length !== 32) {
     throw new Error(`order_id must be exactly 32 bytes (got ${b.length})`);
   }
-  return xdr.ScVal.scvBytes(b as any);
+  return nativeToScVal(b);
 }
 
 /**

@@ -25,7 +25,7 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex, hexToBytes } from "./scval";
+import { hashOrderId, bytesToHex, hexToBytes, bytes32ToScVal } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,7 +107,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       .addOperation(
         contract.call(
           "order",
-          xdr.ScVal.scvBytes(hexToBytes(orderIdHash) as any)
+          bytes32ToScVal(orderIdHash)
         )
       )
       .setTimeout(30)
@@ -230,7 +230,7 @@ export async function dispatchOrder(
       .addOperation(
         contract.call(
           "dispatch",
-          xdr.ScVal.scvBytes(orderIdHashBytes as any)
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
@@ -311,7 +311,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       .addOperation(
         contract.call(
           "refund",
-          xdr.ScVal.scvBytes(orderIdHashBytes as any)
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
