@@ -163,7 +163,9 @@ describe("lib/products data layer", () => {
         error: null,
       });
       mockStorageFrom.getPublicUrl.mockReturnValue({
-        data: { publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png" },
+        data: {
+          publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png",
+        },
       });
 
       const url = await uploadProductImage(mockFile);
@@ -232,7 +234,13 @@ describe("lib/products data layer", () => {
   describe("updateProduct", () => {
     it("updates product fields by id and returns mapped product", async () => {
       const updates = { name: "Updated Shoe", price: 130 };
-      const returnedRow = { id: "p-1", img: "/shoe.png", ...updates, price: "130", updated_at: "2026-09-01T00:00:00Z" };
+      const returnedRow = {
+        id: "p-1",
+        img: "/shoe.png",
+        ...updates,
+        price: "130",
+        updated_at: "2026-09-01T00:00:00Z",
+      };
 
       const mockSingle = vi.fn().mockResolvedValue({ data: returnedRow, error: null });
       const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
@@ -284,9 +292,7 @@ describe("lib/products data layer", () => {
     });
 
     it("decodes a percent-encoded name", () => {
-      expect(storageObjectPathFromPublicUrl(publicUrl("my%20shoe.jpg"))).toBe(
-        "my shoe.jpg"
-      );
+      expect(storageObjectPathFromPublicUrl(publicUrl("my%20shoe.jpg"))).toBe("my shoe.jpg");
     });
 
     it("returns null for a URL outside this bucket", () => {
@@ -350,12 +356,10 @@ describe("lib/products data layer", () => {
         error: new Error("Foreign key constraint violation"),
       });
 
-      await expect(deleteProduct("p-del")).rejects.toThrow(
-        "Foreign key constraint violation"
-      );
+      await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
     });
 
-    it("removes the stored image before deleting the row", async () => {
+    it("removes the stored image after deleting the row", async () => {
       const { mockDelete } = stubFrom(
         "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
       );
