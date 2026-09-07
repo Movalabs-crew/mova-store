@@ -18,7 +18,7 @@ production-style online store can accept **Stellar (Soroban) payments** — USDC
 or native XLM paid directly from a customer's Freighter wallet into a **Rust
 smart contract** that escrows the funds until the order ships.
 
-It is intentionally built as a *real* store, not a demo: Next.js storefront,
+It is intentionally built as a _real_ store, not a demo: Next.js storefront,
 product catalog, cart, email OTP flow, and a checkout that offers both
 traditional card payment and **on-chain Stellar settlement** with an order
 registry, escrow, and on-chain refunds. Teams and builders can use it as a
@@ -45,7 +45,7 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
 ```
 
 - **Order registry on-chain** — every order records `{ buyer, amount, token,
-  timestamp, status }` and transitions `Pending → Paid → Shipped/Refunded`.
+timestamp, status }` and transitions `Pending → Paid → Shipped/Refunded`.
 - **Multi-token** — any SEP-41 token the merchant whitelists (`add_token`):
   USDC and native XLM out of the box.
 - **Escrow** — funds stay in the contract until the merchant dispatches, or
