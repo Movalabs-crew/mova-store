@@ -64,6 +64,8 @@ export default function Sidebar() {
             <li>
               <Link
                 href="/shop"
+                aria-label="Shop"
+                title="Shop"
                 className="  hover:text-white transition-colors duration-200"
               >
                 <FaShoppingCart className="mr-3" size={20} />
@@ -72,6 +74,8 @@ export default function Sidebar() {
             <li>
               <Link
                 href="/"
+                aria-label="Home"
+                title="Home"
                 className=" hover:text-white transition-colors duration-200"
               >
                 <FaHome className="mr-3" size={20} />
@@ -81,6 +85,8 @@ export default function Sidebar() {
               {isAdmin ? (
                 <Link
                   href="/admin"
+                  aria-label="Admin"
+                  title="Admin"
                   className=" hover:text-white transition-colors duration-200"
                 >
                   <FaInfoCircle className="mr-3" size={20} />
@@ -93,6 +99,8 @@ export default function Sidebar() {
             <li>
               <Link
                 href="/collections"
+                aria-label="Collections"
+                title="Collections"
                 className="hover:text-purple-500 transition-colors duration-200"
               >
                 <FcSportsMode className="mr-3" size={20} />

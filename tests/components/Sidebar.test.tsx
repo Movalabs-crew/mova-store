@@ -75,12 +75,17 @@ describe("Sidebar component", () => {
 
     render(<Sidebar />);
 
-    expect(screen.getByRole("link", { name: /home/i })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /shop/i })).toHaveAttribute("href", "/shop");
-    expect(screen.getByRole("link", { name: /collections/i })).toHaveAttribute(
-      "href",
-      "/collections"
-    );
+    const destinations = [
+      { name: /home/i, href: "/" },
+      { name: /shop/i, href: "/shop" },
+      { name: /collections/i, href: "/collections" },
+    ];
+
+    for (const { name, href } of destinations) {
+      const links = screen.getAllByRole("link", { name });
+      expect(links).toHaveLength(2);
+      links.forEach((link) => expect(link).toHaveAttribute("href", href));
+    }
   });
 
   it("does not render Admin links when isAdmin is false even with legacy UID", () => {
