@@ -9,6 +9,7 @@ import Modal from "../../components/Modal";
 import Toast from "../../components/Toast";
 import useToast from "../../hooks/useToast";
 import { listProducts } from "../../lib/products";
+import { ProductGridSkeleton } from "../../components/Skeleton";
 
 export default function Products() {
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
@@ -17,18 +18,31 @@ export default function Products() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchProducts = async () => {
       try {
         const data = await listProducts();
-        setProducts(data);
+        if (isMounted) {
+          setProducts(data);
+        }
       } catch (err) {
-        setError(err.message);
+        if (isMounted) {
+          setError(err.message);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProducts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleCheckout = (e) => {
@@ -55,32 +69,50 @@ export default function Products() {
 
           {error && <p className="text-red-500 text-center">{error}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {products.map((prod) => (
-              <div key={prod.id} className="p-4 border rounded-lg shadow">
-                <Link href={`/shop/${prod.id}`}>
-                  <Image
-                    src={prod.img} // Ensure this URL is correct
-                    alt={prod.name}
-                    width={200}
-                    height={200}
-                    className="mb-2"
-                  />
-                  <h1 className="text-xl font-bold">{prod.name}</h1>
-                  <h2 className="text-lg">${prod.price}</h2>
-                </Link>
-                <button
-                  className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
-                  onClick={() => {
-                    addToCart(prod);
-                    showToast("Item added to cart");
-                  }}
-                >
-                  <FaShoppingCart />
-                </button>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div data-testid="products-loading" className="py-6">
+              <ProductGridSkeleton />
+            </div>
+          ) : products.length === 0 && !error ? (
+            <div
+              data-testid="products-empty"
+              className="py-16 text-center text-gray-500"
+            >
+              <p className="text-2xl font-semibold text-mova-ink">
+                No products yet
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                Check back soon — new products are on their way!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {products.map((prod) => (
+                <div key={prod.id} className="p-4 border rounded-lg shadow">
+                  <Link href={`/shop/${prod.id}`}>
+                    <Image
+                      src={prod.img} // Ensure this URL is correct
+                      alt={prod.name}
+                      width={200}
+                      height={200}
+                      className="mb-2"
+                    />
+                    <h1 className="text-xl font-bold">{prod.name}</h1>
+                    <h2 className="text-lg">${prod.price}</h2>
+                  </Link>
+                  <button
+                    className="border-purple-800 rounded-full px-2 py-2 mt-2 border-2 hover:border-purple-600"
+                    onClick={() => {
+                      addToCart(prod);
+                      showToast("Item added to cart");
+                    }}
+                  >
+                    <FaShoppingCart />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
