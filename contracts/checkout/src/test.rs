@@ -3,7 +3,7 @@
 use soroban_sdk::testutils::{Address as _, Events};
 use soroban_sdk::token::{StellarAssetClient, TokenClient};
 use soroban_sdk::{
-    contract, contractimpl, contracttype, map, vec, Address, BytesN, Env, IntoVal, Symbol,
+    contract, contractimpl, contracttype, map, vec, Address, BytesN, Env, IntoVal, Symbol, Val,
 };
 
 use crate::errors::Error;
@@ -442,18 +442,17 @@ fn test_events_emitted() {
     let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
     let id = order_id(&env, 5);
 
-    client.create_order(&buyer, &id, &token, &10_000);
-    client.pay(&token, &buyer, &id, &10_000);
-    client.dispatch(&id);
-
-    let timestamp = env.ledger().timestamp();
+    let timestamp: Val = env.ledger().timestamp().into_val(&env);
+    let amount: Val = 10_000i128.into_val(&env);
 
     // The topic layout is a published interface, not an implementation detail:
     // lib/stellar/events.ts skips any event whose first topic is not `pay`, and
     // then reads topics[1..] positionally as [token, buyer, merchant,
     // order_id]. Asserting the whole lifecycle exactly means a change to either
     // the event name or the topic order fails here, rather than silently
-    // stopping the indexer from ever seeing a payment.
+    // stopping the indexer from ever seeing a payment. SDK 27 exposes events
+    // from the latest invocation, so check each operation before the next call.
+    client.create_order(&buyer, &id, &token, &10_000);
     assert_eq!(
         env.events().all().filter_by_contract(&checkout),
         vec![
@@ -469,11 +468,19 @@ fn test_events_emitted() {
                     .into_val(&env),
                 map![
                     &env,
-                    (Symbol::new(&env, "amount"), 10_000i128.into_val(&env)),
-                    (Symbol::new(&env, "timestamp"), timestamp.into_val(&env)),
+                    (Symbol::new(&env, "amount"), amount),
+                    (Symbol::new(&env, "timestamp"), timestamp),
                 ]
                 .into_val(&env),
             ),
+        ]
+    );
+
+    client.pay(&token, &buyer, &id, &10_000);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
             (
                 checkout.clone(),
                 (
@@ -484,12 +491,20 @@ fn test_events_emitted() {
                     id.clone(),
                 )
                     .into_val(&env),
-                map![&env, (Symbol::new(&env, "amount"), 10_000i128.into_val(&env))].into_val(&env),
+                map![&env, (Symbol::new(&env, "amount"), amount)].into_val(&env),
             ),
+        ]
+    );
+
+    client.dispatch(&id);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
             (
                 checkout.clone(),
                 (Symbol::new(&env, "dispatch"), id.clone(), merchant.clone()).into_val(&env),
-                map![&env, (Symbol::new(&env, "amount"), 10_000i128.into_val(&env))].into_val(&env),
+                map![&env, (Symbol::new(&env, "amount"), amount)].into_val(&env),
             ),
         ]
     );
