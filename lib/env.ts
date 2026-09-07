@@ -158,7 +158,8 @@ export function loadEmailJSConfig(
       errors,
       "email notifications"
     ),
-    defaultRecipientEmail: getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL"),
+    defaultRecipientEmail:
+      getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
   };
 }
 

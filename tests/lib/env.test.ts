@@ -150,7 +150,7 @@ describe("loadEmailJSConfig", () => {
     ]);
   });
 
-  it("handles unset optional defaultRecipientEmail", () => {
+  it("leaves the default recipient undefined when unset or whitespace", () => {
     vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "srv_123");
     vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_456");
     vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pk_789");
@@ -160,7 +160,12 @@ describe("loadEmailJSConfig", () => {
     const config = loadEmailJSConfig(errors);
 
     expect(errors).toHaveLength(0);
-    expect(config.defaultRecipientEmail).toBe("");
+    expect(config.defaultRecipientEmail).toBeUndefined();
+
+    // Also assert when whitespace-only
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL", "   ");
+    const whitespaceConfig = loadEmailJSConfig([]);
+    expect(whitespaceConfig.defaultRecipientEmail).toBeUndefined();
   });
 });
 
