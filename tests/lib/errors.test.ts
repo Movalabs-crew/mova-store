@@ -180,3 +180,70 @@ describe("Error Classification & Handling Tests (lib/errors.ts)", () => {
     });
   });
 });
+
+describe("parseError fallbacks and delegation (#33)", () => {
+  it("returns the generic Unknown error for null/undefined", () => {
+    for (const input of [null, undefined]) {
+      const parsed = parseError(input);
+      expect(parsed.code).toBe("UNKNOWN_ERROR");
+      expect(parsed.userMessage).toBe(
+        "Something unexpected happened. Please try again."
+      );
+    }
+  });
+
+  it("classifies balance-related messages via the pattern fallback", () => {
+    const parsed = parseError("Insufficient USDC balance");
+    expect(parsed.code).toBe("ACCOUNT_INSUFFICIENT_BALANCE");
+    expect(parsed.recoverable).toBe(true);
+  });
+
+  it("matches timeout and user-rejection patterns by message", () => {
+    expect(parseError(new Error("request timeout")).code).toBe(
+      STELLAR_ERRORS.TX_TIMEOUT.code
+    );
+    expect(parseError("user cancelled the transaction").code).toBe(
+      STELLAR_ERRORS.USER_REJECTED.code
+    );
+  });
+
+  it("falls back to the generic error for unlisted contract errors", () => {
+    // NOTE: the issue text references a STELLAR_ORDER_ALREADY_PAID entry, but
+    // no ORDER_ALREADY_PAID key exists in STELLAR_ERRORS and the substring
+    // matcher cannot bridge the "OrderAlreadyPaid" / "order_already_paid"
+    // spelling gap, so both spellings land in the generic fallback. These
+    // assertions pin that behaviour.
+    for (const input of [new Error("OrderAlreadyPaid"), "order already paid"]) {
+      const parsed = parseError(input);
+      const raw = typeof input === "string" ? input : input.message;
+      expect(parsed.code).toBe("UNKNOWN_ERROR");
+      expect(parsed.message).toBe(raw);
+      expect(parsed.userMessage).toBe(raw);
+    }
+  });
+
+  it("collapses userMessage for messages over 100 characters", () => {
+    const long = "x".repeat(150);
+    const parsed = parseError(long);
+    expect(parsed.code).toBe("UNKNOWN_ERROR");
+    expect(parsed.message).toBe(long);
+    expect(parsed.userMessage).toBe("An error occurred. Please try again.");
+  });
+
+  it("getUserMessage delegates to parseError.userMessage", () => {
+    expect(getUserMessage(new Error("timeout"))).toBe(
+      STELLAR_ERRORS.TX_TIMEOUT.userMessage
+    );
+    expect(getUserMessage("some raw message")).toBe("some raw message");
+    expect(getUserMessage(new WalletError("gone", "FREIGHTER_NOT_FOUND"))).toBe(
+      STELLAR_ERRORS.FREIGHTER_NOT_FOUND.userMessage
+    );
+  });
+
+  it("isRecoverable reflects the resolved AppError flag", () => {
+    // Every table entry reachable through the current matchers is recoverable.
+    expect(isRecoverable(new WalletError("x", "FREIGHTER_NOT_FOUND"))).toBe(true);
+    expect(isRecoverable(new Error("timeout"))).toBe(true);
+    expect(isRecoverable("anything at all")).toBe(true);
+  });
+});
