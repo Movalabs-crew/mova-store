@@ -500,3 +500,40 @@ export function eventToOrder(
     txHash,
   };
 }
+
+/**
+ * Merges a newer order event over an existing order row.
+ * Preserves core order metadata (buyer, token, tokenSymbol, amount) when lifecycle
+ * events (such as dispatch or refund) arrive with different/empty topic payloads,
+ * carrying forward status, ledger, txHash, and timestamp.
+ */
+export function mergeOrderEvent(
+  existing: OrderEvent,
+  incoming: OrderEvent
+): OrderEvent {
+  // Only update if incoming event is newer or has same/higher ledger
+  if (incoming.ledger < (existing.ledger || 0)) {
+    return existing;
+  }
+
+  // If incoming event is a lifecycle transition (Shipped/Refunded) or lacks full buyer/token metadata,
+  // preserve existing buyer, token, tokenSymbol, amount, and amountRaw.
+  const isLifecycleEvent = incoming.status === "Shipped" || incoming.status === "Refunded";
+  const preserveBuyer = isLifecycleEvent || (!incoming.buyer && Boolean(existing.buyer));
+  const preserveToken = isLifecycleEvent || (!incoming.token && Boolean(existing.token));
+  const preserveAmount = isLifecycleEvent || (incoming.amountRaw === BigInt(0) && existing.amountRaw > BigInt(0));
+
+  return {
+    ...existing,
+    ...incoming,
+    buyer: preserveBuyer ? existing.buyer : (incoming.buyer || existing.buyer),
+    token: preserveToken ? existing.token : (incoming.token || existing.token),
+    tokenSymbol: preserveToken ? existing.tokenSymbol : (incoming.tokenSymbol || existing.tokenSymbol),
+    amount: preserveAmount ? existing.amount : incoming.amount,
+    amountRaw: preserveAmount ? existing.amountRaw : incoming.amountRaw,
+    status: incoming.status !== "Unknown" ? incoming.status : existing.status,
+    ledger: incoming.ledger || existing.ledger,
+    txHash: incoming.txHash || existing.txHash,
+    timestamp: incoming.timestamp || existing.timestamp,
+  };
+}
