@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { lookup, deleteQuery, remove } = vi.hoisted(() => ({
   lookup: vi.fn(),
@@ -23,9 +23,14 @@ const imageUrl = "https://proj.supabase.co/storage/v1/object/public/products/170
 describe("deleteProduct image cleanup ordering", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://proj.supabase.co");
     lookup.mockResolvedValue({ data: { img: imageUrl }, error: null });
     deleteQuery.mockResolvedValue({ data: null, error: null });
     remove.mockResolvedValue({ data: [], error: null });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("preserves the image when the database returns an error", async () => {
