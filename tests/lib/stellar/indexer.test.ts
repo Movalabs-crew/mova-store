@@ -175,7 +175,7 @@ describe("PaymentEventIndexer.decodeEvent", () => {
         xdr.ScVal.scvString("second"),
         xdr.ScVal.scvString("third"),
       ],
-      xdr.ScVal.scvString("data"),
+      xdr.ScVal.scvString("data")
     );
 
     const decoded = decoderFor()(raw);
@@ -200,7 +200,7 @@ describe("PaymentEventIndexer.decodeEvent", () => {
         xdr.ScVal.scvString("merchant"),
         xdr.ScVal.scvBytes(ORDER_ID_BYTES),
       ],
-      xdr.ScVal.scvString("data"),
+      xdr.ScVal.scvString("data")
     );
 
     const decoded = decoderFor()(raw);
@@ -221,7 +221,7 @@ describe("PaymentEventIndexer.decodeEvent", () => {
           key: xdr.ScVal.scvSymbol("timestamp"),
           val: xdr.ScVal.scvString("1700000000"),
         }),
-      ]),
+      ])
     );
 
     const decoded = decoderFor()(raw);
@@ -238,7 +238,7 @@ describe("PaymentEventIndexer.decodeEvent", () => {
         xdr.ScVal.scvString("one"),
         xdr.ScVal.scvString("two"),
         xdr.ScVal.scvString("three"),
-      ]),
+      ])
     );
 
     expect(decoderFor()(raw)?.fields.value).toBe("one,two,three");
@@ -247,7 +247,7 @@ describe("PaymentEventIndexer.decodeEvent", () => {
   it("puts scalar data in the value field", () => {
     const raw = eventFixture(
       [xdr.ScVal.scvSymbol("create_order")],
-      xdr.ScVal.scvBytes(ORDER_ID_BYTES),
+      xdr.ScVal.scvBytes(ORDER_ID_BYTES)
     );
 
     expect(decoderFor()(raw)?.fields.value).toBe(ORDER_ID_HEX);
@@ -270,7 +270,7 @@ describe("PaymentEventIndexer.decodeEvent", () => {
 
     expect(decode(eventFixture([xdr.ScVal.scvSymbol("pay")], xdr.ScVal.scvString("d")))).toBeNull();
     expect(
-      decode(eventFixture([xdr.ScVal.scvSymbol("only_this")], xdr.ScVal.scvString("d")))?.symbol,
+      decode(eventFixture([xdr.ScVal.scvSymbol("only_this")], xdr.ScVal.scvString("d")))?.symbol
     ).toBe("only_this");
   });
 
