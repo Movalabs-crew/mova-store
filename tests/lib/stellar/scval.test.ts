@@ -72,6 +72,32 @@ describe("ScVal helpers", () => {
       const nonHex64 = "g".repeat(64);
       expect(() => bytes32ToScVal(nonHex64)).toThrow(/invalid hex character/);
     });
+
+    it("produces byte-identical XDR when passed a hex string vs a Uint8Array of the same bytes", () => {
+      const hex = "4a5e1e5509952278b9b9b30b5b173b9d0d319ff42d3096c48e26fbc952796e37";
+      const bytes = hexToBytes(hex);
+      const scValFromHex = bytes32ToScVal(hex);
+      const scValFromBytes = bytes32ToScVal(bytes);
+
+      expect(scValFromHex.toXDR("base64")).toBe(scValFromBytes.toXDR("base64"));
+      expect(scValFromHex.toXDR("hex")).toBe(scValFromBytes.toXDR("hex"));
+      expect(scValFromHex.toXDR()).toEqual(scValFromBytes.toXDR());
+    });
+
+    it("works without Node.js Buffer global", () => {
+      const originalBuffer = globalThis.Buffer;
+      try {
+        // @ts-expect-error simulate browser without Buffer global
+        delete globalThis.Buffer;
+        const hex = "4a5e1e5509952278b9b9b30b5b173b9d0d319ff42d3096c48e26fbc952796e37";
+        const bytes = hexToBytes(hex);
+        const scVal = bytes32ToScVal(bytes);
+        expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
+        expect(scVal.bytes().length).toBe(32);
+      } finally {
+        globalThis.Buffer = originalBuffer;
+      }
+    });
   });
 
   describe("hexToBytes and bytesToHex", () => {
