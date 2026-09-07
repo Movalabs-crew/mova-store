@@ -100,3 +100,49 @@ describe("validateEnv", () => {
     expect(config.admin.adminEmails).toContain("admin@store.org");
   });
 });
+
+describe("mainnet RPC defaults", () => {
+  const GATEWAY_FM = "https://soroban-rpc.mainnet.stellar.gateway.fm";
+
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function stubMainnetUnset() {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CA1234567890TESTCONTRACTID");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key-123");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "service_abc");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "template_xyz");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pubkey_789");
+    // config.ts uses `??` (empty string is NOT nullish), so the var must be
+    // truly absent to exercise the compiled-in default.
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+  }
+
+  it("validateEnv defaults to canonical gateway.fm mainnet RPC when unset", () => {
+    stubMainnetUnset();
+
+    expect(validateEnv().stellar.rpcUrl).toBe(GATEWAY_FM);
+  });
+
+  it("config.ts RPC_URL and env.ts resolve the same mainnet default (single source of truth)", async () => {
+    stubMainnetUnset();
+    const config = await import("../../lib/stellar/config");
+
+    expect(config.RPC_URL).toBe(GATEWAY_FM);
+    expect(validateEnv().stellar.rpcUrl).toBe(config.RPC_URL);
+  });
+
+  it("explicit NEXT_PUBLIC_STELLAR_RPC_URL override is respected", () => {
+    stubMainnetUnset();
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_RPC_URL", "https://my-own-rpc.example/rpc");
+
+    expect(validateEnv().stellar.rpcUrl).toBe("https://my-own-rpc.example/rpc");
+  });
+});
