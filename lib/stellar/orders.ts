@@ -25,7 +25,25 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex } from "./scval";
+import { hashOrderId, bytesToHex, hexToBytes } from "./scval";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves an order id to its 32-byte hash.
+ * If the input is already a 64-character hex string (e.g. from indexer events),
+ * it converts it directly to bytes without re-hashing.
+ * Otherwise, it computes the SHA-256 digest of the pre-image string.
+ */
+export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
+  const clean = orderId.trim().replace(/^0x/i, "");
+  if (/^[0-9a-fA-F]{64}$/.test(clean)) {
+    return hexToBytes(clean);
+  }
+  return await hashOrderId(orderId);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,7 +103,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
   const server = new rpc.Server(RPC_URL);
   const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-  const orderIdHashBytes = await hashOrderId(orderId);
+  const orderIdHashBytes = await resolveOrderIdHash(orderId);
   const orderIdHash = bytesToHex(orderIdHashBytes);
 
   const account = await server.getAccount(
@@ -107,7 +125,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       .addOperation(
         contract.call(
           "order",
-          xdr.ScVal.scvBytes(Buffer.from(orderIdHash, "hex"))
+          xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))
         )
       )
       .setTimeout(30)
@@ -209,6 +227,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
 
 /**
  * Dispatches an order, releasing the escrowed funds to the merchant.
+ * Accepts either a raw pre-image string or an already-hashed 64-hex order id.
  * Requires the connected wallet to be the merchant.
  */
 export async function dispatchOrder(
@@ -219,7 +238,7 @@ export async function dispatchOrder(
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
@@ -292,6 +311,7 @@ export async function dispatchOrder(
 
 /**
  * Refunds an order, returning the escrowed funds to the buyer.
+ * Accepts either a raw pre-image string or an already-hashed 64-hex order id.
  * Requires the connected wallet to be the merchant.
  */
 export async function refundOrder(orderId: string): Promise<OrderActionResult> {
@@ -300,7 +320,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
