@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction, validateEnv } from "../../lib/env";
+import { isAdminEmail, isDevelopment, isProduction, validateEnv, loadStellarConfig } from "../../lib/env";
 
 describe("isAdminEmail", () => {
   beforeEach(() => {
@@ -98,5 +98,51 @@ describe("validateEnv", () => {
     expect(config.emailjs.templateId).toBe("template_xyz");
     expect(config.emailjs.publicKey).toBe("pubkey_789");
     expect(config.admin.adminEmails).toContain("admin@store.org");
+  });
+});
+
+describe("mainnet RPC configuration alignment (#108)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("resolves canonical mainnet RPC default (https://soroban-rpc.stellar.org) when NEXT_PUBLIC_STELLAR_RPC_URL is unset", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA");
+
+    const stellarConfig = loadStellarConfig();
+    expect(stellarConfig.rpcUrl).toBe("https://soroban-rpc.stellar.org");
+    expect(stellarConfig.network).toBe("mainnet");
+  });
+
+  it("config.ts and env.ts resolve the exact same mainnet RPC when the env var is unset", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA");
+
+    vi.resetModules();
+    const { RPC_URL } = await import("../../lib/stellar/config");
+    const { loadStellarConfig: reloadedLoadStellarConfig } = await import("../../lib/env");
+
+    const envRpcUrl = reloadedLoadStellarConfig().rpcUrl;
+    expect(envRpcUrl).toBe("https://soroban-rpc.stellar.org");
+    expect(RPC_URL).toBe("https://soroban-rpc.stellar.org");
+    expect(envRpcUrl).toBe(RPC_URL);
+  });
+
+  it("respects custom NEXT_PUBLIC_STELLAR_RPC_URL override when provided", async () => {
+    const customEndpoint = "https://custom-mainnet-rpc.example.com";
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_RPC_URL", customEndpoint);
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA");
+
+    vi.resetModules();
+    const { RPC_URL } = await import("../../lib/stellar/config");
+    const { loadStellarConfig: reloadedLoadStellarConfig } = await import("../../lib/env");
+
+    expect(reloadedLoadStellarConfig().rpcUrl).toBe(customEndpoint);
+    expect(RPC_URL).toBe(customEndpoint);
   });
 });
