@@ -26,6 +26,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  storageObjectPathFromPublicUrl,
 } from "../../lib/products";
 
 describe("lib/products data layer", () => {
@@ -267,11 +268,74 @@ describe("lib/products data layer", () => {
     });
   });
 
+  describe("storageObjectPathFromPublicUrl", () => {
+    const publicUrl = (path: string) =>
+      `https://proj.supabase.co/storage/v1/object/public/products/${path}`;
+
+    it("recovers the object path from a bucket public URL", () => {
+      expect(storageObjectPathFromPublicUrl(publicUrl("1700000000-abc.jpg"))).toBe(
+        "1700000000-abc.jpg"
+      );
+    });
+
+    it("strips a cache-busting query or fragment", () => {
+      expect(storageObjectPathFromPublicUrl(publicUrl("a.jpg?t=123"))).toBe("a.jpg");
+      expect(storageObjectPathFromPublicUrl(publicUrl("a.jpg#x"))).toBe("a.jpg");
+    });
+
+    it("decodes a percent-encoded name", () => {
+      expect(storageObjectPathFromPublicUrl(publicUrl("my%20shoe.jpg"))).toBe(
+        "my shoe.jpg"
+      );
+    });
+
+    it("returns null for a URL outside this bucket", () => {
+      // An externally hosted image is not ours to delete.
+      expect(
+        storageObjectPathFromPublicUrl("https://images.unsplash.com/photo-123.jpg")
+      ).toBeNull();
+      expect(
+        storageObjectPathFromPublicUrl(
+          "https://proj.supabase.co/storage/v1/object/public/avatars/a.jpg"
+        )
+      ).toBeNull();
+    });
+
+    it("returns null for missing, empty or non-string values", () => {
+      expect(storageObjectPathFromPublicUrl(null)).toBeNull();
+      expect(storageObjectPathFromPublicUrl(undefined)).toBeNull();
+      expect(storageObjectPathFromPublicUrl("")).toBeNull();
+      expect(storageObjectPathFromPublicUrl(42)).toBeNull();
+    });
+
+    it("returns null when the path after the bucket is empty", () => {
+      expect(
+        storageObjectPathFromPublicUrl(
+          "https://proj.supabase.co/storage/v1/object/public/products/"
+        )
+      ).toBeNull();
+    });
+  });
+
   describe("deleteProduct", () => {
-    it("deletes a product by id", async () => {
-      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    // deleteProduct now reads the row's image before deleting, so each case
+    // stubs the lookup as well as the delete. The original assertions on the
+    // delete call and the error path are unchanged.
+    const stubFrom = (img: string | null, deleteResult = { data: null, error: null }) => {
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: img === null ? null : { img },
+        error: null,
+      });
+      const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+      const mockEq = vi.fn().mockResolvedValue(deleteResult);
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+      mockFrom.mockReturnValue({ select: mockSelect, delete: mockDelete });
+      return { mockSelect, mockDelete, mockEq };
+    };
+
+    it("deletes a product by id", async () => {
+      const { mockDelete, mockEq } = stubFrom(null);
 
       await deleteProduct("p-del");
 
@@ -281,16 +345,56 @@ describe("lib/products data layer", () => {
     });
 
     it("throws error when delete fails", async () => {
-      const mockEq = vi.fn().mockResolvedValue({
+      stubFrom(null, {
         data: null,
         error: new Error("Foreign key constraint violation"),
       });
-      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
 
       await expect(deleteProduct("p-del")).rejects.toThrow(
         "Foreign key constraint violation"
       );
+    });
+
+    it("removes the stored image before deleting the row", async () => {
+      const { mockDelete } = stubFrom(
+        "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
+      );
+      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["1700-a.jpg"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("still deletes the row when the image is already gone", async () => {
+      const { mockDelete, mockEq } = stubFrom(
+        "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
+      );
+      mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledTimes(1);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+    });
+
+    it("does not call storage remove when the row has no image", async () => {
+      stubFrom(null);
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
+    });
+
+    it("does not remove an externally hosted image", async () => {
+      const { mockDelete } = stubFrom("https://images.unsplash.com/photo-123.jpg");
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledTimes(1);
     });
   });
 });
