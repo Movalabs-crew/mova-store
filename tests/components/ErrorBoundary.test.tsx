@@ -29,7 +29,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <p>the page</p>
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText("the page")).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <Boom />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary fallback={<p>custom fallback</p>}>
         <Boom />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText("custom fallback")).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary onError={onError}>
         <Boom />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(onError).toHaveBeenCalledTimes(1);
@@ -127,7 +127,7 @@ describe("SkipLink", () => {
 
     expect(screen.getByRole("link", { name: /skip to checkout/i })).toHaveAttribute(
       "href",
-      "#checkout",
+      "#checkout"
     );
   });
 });
