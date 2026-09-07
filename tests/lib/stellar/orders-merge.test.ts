@@ -117,6 +117,30 @@ describe("mergeOrderEvent", () => {
     expect(incoming.status).toBe("Shipped");
   });
 
+  it("does not regress terminal status if an older or out-of-order Pending event arrives", () => {
+    const existing = createMockOrder({
+      status: "Shipped",
+      ledger: 3000,
+    });
+
+    const pendingIncoming: OrderEvent = {
+      orderId: existing.orderId,
+      buyer: existing.buyer,
+      amount: "45.00",
+      amountRaw: BigInt(450000000),
+      token: existing.token,
+      tokenSymbol: existing.tokenSymbol,
+      status: "Pending",
+      timestamp: 1699999000000,
+      ledger: 2950,
+      txHash: "tx_pending_old",
+    };
+
+    const merged = mergeOrderEvent(existing, pendingIncoming);
+    expect(merged.status).toBe("Shipped");
+    expect(merged.ledger).toBe(3000);
+  });
+
   it("exports mergeOrderEvents alias that functions identically", () => {
     expect(mergeOrderEvents).toBe(mergeOrderEvent);
   });
