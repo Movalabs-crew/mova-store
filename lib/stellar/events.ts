@@ -83,7 +83,13 @@ export function decodePaymentEvent(
     let eventContractId: string | undefined;
     try {
       if (event.contractId()) {
-        eventContractId = StrKey.encodeContract(event.contractId());
+        // The generated XDR type for contractId is Opaque[] (`Hash`, marked
+        // "workaround, cause unknown" in the SDK), not the byte array
+        // encodeContract declares. Cast to whatever it accepts rather than
+        // naming a Node-only type here.
+        eventContractId = StrKey.encodeContract(
+          event.contractId() as unknown as Parameters<typeof StrKey.encodeContract>[0]
+        );
       }
     } catch {
       // system events have no contract id

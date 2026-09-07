@@ -170,7 +170,13 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
             break;
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.token = StrKey.encodeContract(val.address().contractId());
+              // See events.ts: the generated XDR contractId type is Opaque[],
+              // not the byte array encodeContract declares.
+              order.token = StrKey.encodeContract(
+                val.address().contractId() as unknown as Parameters<
+                  typeof StrKey.encodeContract
+                >[0]
+              );
             }
             break;
           case "timestamp":
