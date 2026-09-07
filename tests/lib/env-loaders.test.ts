@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  loadAdminConfig,
-  loadEmailJSConfig,
-  loadSupabaseConfig,
-} from "../../lib/env";
+import { loadAdminConfig, loadEmailJSConfig, loadSupabaseConfig } from "../../lib/env";
 
 // The loaders read process.env through two private helpers: requireEnv, which
 // pushes a ValidationError for a missing value and returns "", and getEnv,
@@ -140,10 +136,7 @@ describe("loadAdminConfig", () => {
   it("trims and lowercases each entry", () => {
     vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", " Admin@Test.com , SECOND@Test.COM ");
 
-    expect(loadAdminConfig().adminEmails).toEqual([
-      "admin@test.com",
-      "second@test.com",
-    ]);
+    expect(loadAdminConfig().adminEmails).toEqual(["admin@test.com", "second@test.com"]);
   });
 
   it("drops empty entries left by stray separators", () => {
