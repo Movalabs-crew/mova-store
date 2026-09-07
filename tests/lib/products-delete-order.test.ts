@@ -62,7 +62,8 @@ describe("deleteProduct image cleanup ordering", () => {
     await deletion;
 
     expect(cleanupCallsBeforeSuccess).toBe(0);
-    expect(remove).toHaveBeenCalledExactlyOnceWith(["1700-a.jpg"]);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledWith(["1700-a.jpg"]);
   });
 
   it("tolerates a storage error result after the row was deleted", async () => {
