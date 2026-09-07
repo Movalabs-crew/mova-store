@@ -474,6 +474,10 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 | `NEXT_PUBLIC_USDC_CONTRACT_ID`        | no       | USDC token contract (testnet default)     |
 | `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`| no       | Native XLM SAC (verified testnet default) |
 | `PUBLIC_MERCHANT_ADDRESS`             | no       | Display-only merchant wallet (on-chain value is authoritative) |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`      | yes      | EmailJS service ID (for OTP and notifications) |
+| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`     | yes      | EmailJS template ID                       |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`      | yes      | EmailJS public key                        |
+| `NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL` | no       | Default recipient email for EMAILJS contact forms |
 | `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Supabase project URL                      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | yes      | Supabase anon/public key                  |
 | `NEXT_PUBLIC_ADMIN_EMAILS`            | no       | Comma-separated admin emails              |
