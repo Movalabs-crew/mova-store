@@ -18,6 +18,17 @@ describe("bytes32ToScVal", () => {
     expect(bytesToHex(new Uint8Array(scVal.bytes()))).toBe(HEX);
   });
 
+  it("preserves the constructed value when the caller later changes its input", () => {
+    const bytes = hexToBytes(HEX);
+    const scVal = bytes32ToScVal(bytes);
+    const originalXdr = scVal.toXDR("base64");
+
+    bytes.fill(0);
+
+    expect(bytesToHex(new Uint8Array(scVal.bytes()))).toBe(HEX);
+    expect(scVal.toXDR("base64")).toBe(originalXdr);
+  });
+
   it("accepts an 0x-prefixed hex string", () => {
     expect(bytes32ToScVal("0x" + HEX).toXDR("base64")).toBe(bytes32ToScVal(BYTES).toXDR("base64"));
   });
