@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import Sidebar from "../../components/Sidebar";
 
 // Mock AuthContext
@@ -85,6 +85,32 @@ describe("Sidebar component", () => {
       const links = screen.getAllByRole("link", { name });
       expect(links).toHaveLength(2);
       links.forEach((link) => expect(link).toHaveAttribute("href", href));
+    }
+  });
+
+  it.each([false, true])("keeps mobile labels and tooltips aligned when isAdmin=%s", (isAdmin) => {
+    mockUseAuth.mockReturnValue({
+      user: isAdmin ? { uid: "admin-user", email: "admin@test.com" } : null,
+      isAdmin,
+      loading: false,
+    });
+
+    render(<Sidebar />);
+
+    const mobileNavigation = within(screen.getAllByRole("navigation")[1]);
+    const destinations = [
+      { name: "Home", href: "/" },
+      { name: "Shop", href: "/shop" },
+      { name: "Collections", href: "/collections" },
+      ...(isAdmin ? [{ name: "Admin", href: "/admin" }] : []),
+    ];
+
+    expect(mobileNavigation.getAllByRole("link")).toHaveLength(destinations.length);
+    for (const { name, href } of destinations) {
+      const link = mobileNavigation.getByRole("link", { name });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveAttribute("aria-label", name);
+      expect(link).toHaveAttribute("title", name);
     }
   });
 
