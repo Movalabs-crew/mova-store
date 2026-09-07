@@ -11,19 +11,17 @@ import SkipLink from "@/components/SkipLink";
  * something does — otherwise a single throwing child blanks the whole app.
  */
 
-function Boom(): never {
+function Boom(): React.JSX.Element {
   throw new Error("child exploded");
 }
 
 // React logs the caught error itself, which is noise rather than a failure.
-let consoleError: ReturnType<typeof vi.spyOn>;
-
 beforeEach(() => {
-  consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
-  consoleError.mockRestore();
+  vi.restoreAllMocks();
 });
 
 describe("ErrorBoundary", () => {
@@ -60,7 +58,10 @@ describe("ErrorBoundary", () => {
   });
 
   it("hands the error to an onError callback", () => {
-    const onError = vi.fn();
+    let captured: Error | undefined;
+    const onError = vi.fn((error: Error) => {
+      captured = error;
+    });
 
     render(
       <ErrorBoundary onError={onError}>
@@ -69,8 +70,8 @@ describe("ErrorBoundary", () => {
     );
 
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
-    expect((onError.mock.calls[0][0] as Error).message).toBe("child exploded");
+    expect(captured).toBeInstanceOf(Error);
+    expect(captured?.message).toBe("child exploded");
   });
 
   it("recovers to the children again once the boundary is reset", () => {
