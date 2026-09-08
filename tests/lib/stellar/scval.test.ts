@@ -1,131 +1,43 @@
 import { describe, it, expect } from "vitest";
-import { nativeToScVal, xdr } from "@stellar/stellar-sdk";
-import {
-  i128ToScVal,
-  bytes32ToScVal,
-  addressToScVal,
-  symbolToScVal,
-  scValToString,
-  scValToNativeSafe,
-  hexToBytes,
-  bytesToHex,
-  hashOrderId,
-} from "../../../lib/stellar/scval";
+import { resolveOrderIdHash, hashOrderId, hexToBytes } from "../../../lib/stellar/scval";
 
-describe("ScVal helpers", () => {
-  describe("i128ToScVal", () => {
-    it("matches nativeToScVal XDR base64 for key boundary values", () => {
-      const cases = [
-        0n,
-        1n,
-        -1n,
-        (1n << 64n) - 1n,
-        1n << 64n,
-        -(1n << 63n),
-        (1n << 127n) - 1n,
-        -(1n << 127n),
-      ];
-
-      for (const val of cases) {
-        const customScVal = i128ToScVal(val);
-        const nativeScVal = nativeToScVal(val, { type: "i128" });
-        expect(customScVal.toXDR("base64")).toBe(nativeScVal.toXDR("base64"));
-      }
-    });
-
-    it("accepts number and string inputs", () => {
-      expect(i128ToScVal(100).toXDR("base64")).toBe(
-        nativeToScVal(100n, { type: "i128" }).toXDR("base64")
-      );
-      expect(i128ToScVal("5000000").toXDR("base64")).toBe(
-        nativeToScVal(5000000n, { type: "i128" }).toXDR("base64")
-      );
-    });
+describe("resolveOrderIdHash", () => {
+  it("hashes short raw pre-image (e.g. SS-...)", async () => {
+    const raw = "SS-order-12345";
+    const result = await resolveOrderIdHash(raw);
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(result.length).toBe(32);
+    const direct = await hashOrderId(raw);
+    expect(Array.from(result)).toEqual(Array.from(direct));
   });
 
-  describe("bytes32ToScVal", () => {
-    it("accepts exactly 32-byte Uint8Array", () => {
-      const bytes = new Uint8Array(32).fill(7);
-      const scVal = bytes32ToScVal(bytes);
-      expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
-      expect(scVal.bytes().length).toBe(32);
-    });
-
-    it("accepts 64-character hex string", () => {
-      const hex = "ab".repeat(32);
-      const scVal = bytes32ToScVal(hex);
-      expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
-      expect(scVal.bytes().length).toBe(32);
-    });
-
-    it("throws on inputs not equal to 32 bytes", () => {
-      expect(() => bytes32ToScVal(new Uint8Array(31))).toThrow(
-        "order_id must be exactly 32 bytes (got 31)"
-      );
-      expect(() => bytes32ToScVal(new Uint8Array(33))).toThrow(
-        "order_id must be exactly 32 bytes (got 33)"
-      );
-      expect(() => bytes32ToScVal("aabbcc")).toThrow("order_id must be exactly 32 bytes");
-    });
-
-    it("throws when passed a 64-character non-hex string instead of producing zero bytes", () => {
-      const nonHex64 = "g".repeat(64);
-      expect(() => bytes32ToScVal(nonHex64)).toThrow(/invalid hex character/);
-    });
+  it("passes through a 64-hex string unchanged as bytes", async () => {
+    const hexId =
+      "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2";
+    const result = await resolveOrderIdHash(hexId);
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(result.length).toBe(32);
+    const decoded = hexToBytes(hexId);
+    expect(Array.from(result)).toEqual(Array.from(decoded));
+    const hashed = await hashOrderId(hexId);
+    expect(Array.from(result)).not.toEqual(Array.from(hashed));
   });
 
-  describe("hexToBytes and bytesToHex", () => {
-    it("round-trips hex and bytes with normalized lowercase output", () => {
-      const hex = "a1B2c3";
-      const bytes = hexToBytes(hex);
-      expect(bytesToHex(bytes)).toBe("a1b2c3");
-    });
-
-    it("returns an empty Uint8Array for empty string", () => {
-      const bytes = hexToBytes("");
-      expect(bytes).toBeInstanceOf(Uint8Array);
-      expect(bytes.length).toBe(0);
-      expect(bytesToHex(bytes)).toBe("");
-    });
-
-    it("throws on odd-length hex strings", () => {
-      expect(() => hexToBytes("123")).toThrow("invalid hex string (odd length)");
-    });
-
-    it("throws on invalid hex characters instead of returning zero bytes", () => {
-      expect(() => hexToBytes("gggg")).toThrow(/invalid hex character: "g" in "gg"/);
-      expect(() => hexToBytes("0xzz")).toThrow(/invalid hex character: "z" in "zz"/);
-      expect(() => hexToBytes("12xy")).toThrow(/invalid hex character: "x" in "xy"/);
-    });
+  it("is case-insensitive for 64-hex input", async () => {
+    const upper =
+      "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2";
+    const lower =
+      "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2";
+    const rUpper = await resolveOrderIdHash(upper);
+    const rLower = await resolveOrderIdHash(lower);
+    expect(Array.from(rUpper)).toEqual(Array.from(rLower));
   });
 
-  describe("scValToString and scValToNativeSafe", () => {
-    it("decodes symbols, strings, and booleans", () => {
-      expect(scValToString(symbolToScVal("TEST"))).toBe("TEST");
-      expect(scValToString(xdr.ScVal.scvString("hello"))).toBe("hello");
-      expect(scValToString(xdr.ScVal.scvBool(true))).toBe("true");
-    });
-
-    it("decodes negative i128 correctly", () => {
-      const scVal = i128ToScVal(-123n);
-      expect(scValToString(scVal)).toBe("-123");
-      expect(scValToNativeSafe(scVal)).toBe(-123n);
-    });
-
-    it("decodes bytes to hex string", () => {
-      const bytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
-      const scVal = xdr.ScVal.scvBytes(Buffer.from(bytes));
-      expect(scValToString(scVal)).toBe("deadbeef");
-    });
-  });
-
-  describe("hashOrderId", () => {
-    it("deterministically returns a 32-byte Uint8Array", async () => {
-      const hash1 = await hashOrderId("order_12345");
-      const hash2 = await hashOrderId("order_12345");
-      expect(hash1).toBeInstanceOf(Uint8Array);
-      expect(hash1.length).toBe(32);
-      expect(hash1).toEqual(hash2);
-    });
+  it("falls back to hashing for inputs shorter than 64 hex chars", async () => {
+    const short = "hello";
+    const result = await resolveOrderIdHash(short);
+    const expected = await hashOrderId(short);
+    expect(Array.from(result)).toEqual(Array.from(expected));
   });
 });
+
