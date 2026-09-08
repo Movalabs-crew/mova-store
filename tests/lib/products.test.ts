@@ -46,6 +46,7 @@ describe("lib/products data layer", () => {
         price: "49.99",
         img: "https://example.com/shoe.jpg",
         created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-01T00:00:00Z",
       };
 
       const mapped = mapProduct(raw);
@@ -55,6 +56,7 @@ describe("lib/products data layer", () => {
         price: 49.99,
         img: "https://example.com/shoe.jpg",
         created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-01T00:00:00Z",
       });
       expect(typeof mapped?.price).toBe("number");
     });
@@ -229,7 +231,7 @@ describe("lib/products data layer", () => {
   describe("updateProduct", () => {
     it("updates product fields by id and returns mapped product", async () => {
       const updates = { name: "Updated Shoe", price: 130 };
-      const returnedRow = { id: "p-1", img: "/shoe.png", ...updates, price: "130" };
+      const returnedRow = { id: "p-1", img: "/shoe.png", ...updates, price: "130", updated_at: "2026-09-01T00:00:00Z" };
 
       const mockSingle = vi.fn().mockResolvedValue({ data: returnedRow, error: null });
       const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
@@ -247,6 +249,7 @@ describe("lib/products data layer", () => {
         img: "/shoe.png",
         name: "Updated Shoe",
         price: 130,
+        updated_at: "2026-09-01T00:00:00Z",
       });
     });
 

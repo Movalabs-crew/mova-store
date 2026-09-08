@@ -1,14 +1,11 @@
 import Toast from "../../components/Toast";
+import useToast from "../../hooks/useToast";
 import { useState } from "react";
 import { validateEmail } from "../../lib/validation";
 
 export default function Newsletter() {
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(5000);
   const [email, setEmail] = useState("");
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,14 +31,10 @@ export default function Newsletter() {
         Stay in the Loop
       </h2>
       <p className="text-lg sm:text-xl text-gray-600 mb-8 text-center max-w-xl">
-        New shoe drops, Stellar integration updates, and insights on crypto
-        commerce — straight to your inbox. No spam, unsubscribe anytime.
+        New shoe drops, Stellar integration updates, and insights on crypto commerce — straight to
+        your inbox. No spam, unsubscribe anytime.
       </p>
-      <form
-        className="w-full max-w-md"
-        onSubmit={handleSubmit}
-        noValidate={true}
-      >
+      <form className="w-full max-w-md" onSubmit={handleSubmit} noValidate={true}>
         <div className="flex items-center border-b border-purple-700 py-2">
           <input
             type="email"
@@ -63,11 +56,7 @@ export default function Newsletter() {
           </button>
         </div>
       </form>
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
-      />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
     </div>
   );
 }

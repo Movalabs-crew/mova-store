@@ -60,4 +60,18 @@ describe("Sidebar component", () => {
     const adminLinks = screen.queryAllByRole("link", { name: /admin/i });
     expect(adminLinks.length).toBe(0);
   });
+
+  it("does not render inert search input or search modal", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAdmin: false,
+      loading: false,
+    });
+
+    render(<Sidebar />);
+
+    expect(screen.queryByPlaceholderText("Search Shoes")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
+  });
 });
+

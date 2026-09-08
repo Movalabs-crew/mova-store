@@ -4,13 +4,14 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { login, loginWithGoogle, signup } from "../../../lib/auth";
 import Toast from "../../../components/Toast";
+import useToast from "../../../hooks/useToast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import img from "../../../public/images/welcome-mova.png";
 
 const AuthPage = () => {
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(3000);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,11 +21,6 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
-
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -244,11 +240,7 @@ const AuthPage = () => {
           </div>
         </div>
       </div>
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
-      />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
     </section>
   );
 };

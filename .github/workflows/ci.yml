@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -151,7 +155,9 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
 
       - name: Run cargo audit
         working-directory: contracts/checkout
@@ -161,7 +167,7 @@ jobs:
   # Summary job that requires all checks to pass
   ci-success:
     name: CI Success
-    needs: [frontend, contracts, security]
+    needs: [frontend, contracts, security, rust-security]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -175,6 +181,14 @@ jobs:
           fi
           if [[ "${{ needs.contracts.result }}" != "success" ]]; then
             echo "Contracts job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "Security job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.rust-security.result }}" != "success" ]]; then
+            echo "Rust security job failed"
             exit 1
           fi
           echo "All required checks passed!"

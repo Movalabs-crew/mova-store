@@ -6,6 +6,7 @@ import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { useAuth } from "../lib/AuthContext";
 import { logout } from "../lib/auth";
 import Toast from "../components/Toast";
+import useToast from "../hooks/useToast";
 import { useRouter } from "next/navigation";
 import { TfiAngleRight } from "react-icons/tfi";
 
@@ -47,16 +48,10 @@ function Navbar() {
     links.forEach((link) => link.addEventListener("click", handleLinkClick));
 
     return () => {
-      links.forEach((link) =>
-        link.removeEventListener("click", handleLinkClick)
-      );
+      links.forEach((link) => link.removeEventListener("click", handleLinkClick));
     };
   }, [router]);
-  const [toast, setToast] = useState({ show: false, message: "" });
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
+  const { toast, showToast, hideToast } = useToast(3000);
 
   const [showNav, setShowNav] = useState(false);
   const { user } = useAuth();
@@ -122,6 +117,11 @@ function Navbar() {
             <Link href="#contact" className={navLinkClass}>
               Contact Us
             </Link>
+            {user && (
+              <Link href="/orders" className={navLinkClass}>
+                Orders
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {user ? (
@@ -138,9 +138,7 @@ function Navbar() {
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-mova-mist" />
                   )}
-                  <span className="text-md font-medium text-mova-ink">
-                    {user.displayName}
-                  </span>
+                  <span className="text-md font-medium text-mova-ink">{user.displayName}</span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -195,6 +193,7 @@ function Navbar() {
                 { href: "#aboutus", label: "About Us", onClick: closeNavOnClick },
                 { href: "/blog", label: "Blog", onClick: closeNavOnClick },
                 { href: "#contact", label: "Contact Us", onClick: closeNavOnClick },
+                ...(user ? [{ href: "/orders", label: "My Orders", onClick: closeNavOnClick }] : []),
               ].map((item) => (
                 <Link
                   key={item.label}
@@ -222,9 +221,7 @@ function Navbar() {
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-mova-mist" />
                     )}
-                    <span className="text-sm font-medium text-mova-ink">
-                      {user.displayName}
-                    </span>
+                    <span className="text-sm font-medium text-mova-ink">{user.displayName}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -254,11 +251,7 @@ function Navbar() {
           </div>
         )}
 
-        <Toast
-          message={toast.message}
-          show={toast.show}
-          onClose={() => setToast({ show: false, message: "" })}
-        />
+        <Toast message={toast.message} show={toast.show} onClose={hideToast} />
       </nav>
     </>
   );

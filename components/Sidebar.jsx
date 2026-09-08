@@ -7,7 +7,6 @@ import {
   FaInfoCircle,
   FaShoppingCart,
   FaList,
-  FaSearch,
 } from "react-icons/fa";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
@@ -51,7 +50,7 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
-                href="/"
+                href="/shop?category=men"
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FaHome className="mr-3" />
