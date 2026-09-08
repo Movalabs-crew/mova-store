@@ -477,6 +477,10 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 | `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Supabase project URL                      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | yes      | Supabase anon/public key                  |
 | `NEXT_PUBLIC_ADMIN_EMAILS`            | no       | Comma-separated admin emails              |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`      | yes      | EmailJS service ID (OTP/notifications)    |
+| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`     | yes      | EmailJS template ID                       |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`      | yes      | EmailJS public key                        |
+| `NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL` | no       | Default contact-form recipient email      |
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
 
