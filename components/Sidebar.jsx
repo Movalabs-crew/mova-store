@@ -29,28 +29,8 @@ export default function Sidebar() {
         <nav className="divide-y divide-gray-200">
           <ul className="px-5 py-6 space-y-2">
             <li>
-              <form onSubmit={handleSearchSubmit}>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-100 rounded-lg border border-gray-300 pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500 text-sm"
-                    placeholder="Search Shoes (Press Enter)"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2.5 top-2.5 text-gray-500 hover:text-purple-600"
-                    aria-label="Submit search"
-                  >
-                    <FaSearch size={14} />
-                  </button>
-                </div>
-              </form>
-            </li>
-            <li>
               <Link
-                href="/shop?category=men"
+                href="/"
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FaHome className="mr-3" />
@@ -93,8 +73,10 @@ export default function Sidebar() {
                   <FaInfoCircle className="mr-3" />
                   Admin
                 </Link>
-              </li>
-            ) : null}
+              ) : (
+                ""
+              )}
+            </li>
           </ul>
         </nav>
       </aside>
@@ -105,33 +87,27 @@ export default function Sidebar() {
           <ul className="py-6 space-y-14 px-2">
             <li>
               <Link
-                href="/shop"
-                className="hover:text-white transition-colors duration-200"
-                title="Search / Shop"
+                href="/"
+                className=" hover:text-white transition-colors duration-200"
+                title="Home"
               >
-                <FaSearch size={20} className="mr-3 text-white" />
+                <FaHome className="mr-3" size={20} />
               </Link>
             </li>
             <li>
               <Link
-                href="/"
-                className="hover:text-white transition-colors duration-200"
+                href="/shop"
+                className="  hover:text-white transition-colors duration-200"
+                title="Shop"
               >
                 <FaHome className="mr-3 text-white" size={20} />
               </Link>
             </li>
             <li>
               <Link
-                href="/shop"
-                className="hover:text-white transition-colors duration-200"
-              >
-                <FaShoppingCart className="mr-3 text-white" size={20} />
-              </Link>
-            </li>
-            <li>
-              <Link
                 href="/collections"
                 className="hover:text-purple-500 transition-colors duration-200"
+                title="Collections"
               >
                 <FcSportsMode className="mr-3" size={20} />
               </Link>
@@ -139,21 +115,25 @@ export default function Sidebar() {
             <li>
               <Link
                 href="/blog"
-                className="hover:text-white transition-colors duration-200"
+                className=" hover:text-white transition-colors duration-200"
+                title="Blog"
               >
-                <FaList className="mr-3 text-white" size={20} />
+                <FaList className="mr-3" size={20} />
               </Link>
             </li>
-            {isAdmin ? (
-              <li>
+            <li>
+              {isAdmin ? (
                 <Link
                   href="/admin"
-                  className="hover:text-white transition-colors duration-200"
+                  className=" hover:text-white transition-colors duration-200"
+                  title="Admin"
                 >
-                  <FaInfoCircle className="mr-3 text-white" size={20} />
+                  <FaInfoCircle className="mr-3" size={20} />
                 </Link>
-              </li>
-            ) : null}
+              ) : (
+                ""
+              )}
+            </li>
           </ul>
         </nav>
       </aside>
