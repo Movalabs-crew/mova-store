@@ -16,6 +16,9 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    // Clear stale messages from a previously selected product.
+    setSuccessMessage("");
+    setErrorMessage("");
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -41,6 +44,8 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
     setLoading(true);
 
     try {
@@ -77,7 +82,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </div>
         )}
         {errorMessage && (
-          <div className="mb-4 p-4 text-white bg-purple-500 rounded-md">
+          <div className="mb-4 p-4 text-white bg-red-500 rounded-md">
             {errorMessage}
           </div>
         )}
