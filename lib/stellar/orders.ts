@@ -13,6 +13,7 @@ import {
   xdr,
   Keypair,
   StrKey,
+  Address,
 } from "@stellar/stellar-sdk";
 
 import {
@@ -25,7 +26,7 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex, resolveOrderIdHash } from "./scval";
+import { hashOrderId, bytesToHex, bytes32ToScVal } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,7 +108,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       .addOperation(
         contract.call(
           "order",
-          xdr.ScVal.scvBytes(hexToBytes(orderIdHash))
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(30)
@@ -170,12 +171,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
             break;
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              const contractIdBytes = val.address().contractId();
-              order.token = StrKey.encodeContract(
-                contractIdBytes instanceof Uint8Array
-                  ? contractIdBytes
-                  : new Uint8Array(contractIdBytes)
-              );
+              order.token = Address.fromScVal(val).toString();
             }
             break;
           case "timestamp":
@@ -233,7 +229,7 @@ export async function dispatchOrder(
       .addOperation(
         contract.call(
           "dispatch",
-          xdr.ScVal.scvBytes(orderIdHashBytes)
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
@@ -314,7 +310,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       .addOperation(
         contract.call(
           "refund",
-          xdr.ScVal.scvBytes(orderIdHashBytes)
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
