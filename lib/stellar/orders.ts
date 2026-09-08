@@ -26,7 +26,7 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex, bytes32ToScVal } from "./scval";
+import { hashOrderId, bytesToHex, hexToBytes, bytes32ToScVal } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,7 +108,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       .addOperation(
         contract.call(
           "order",
-          xdr.ScVal.scvBytes(hexToBytes(orderIdHash))
+          bytes32ToScVal(orderIdHash)
         )
       )
       .setTimeout(30)
@@ -172,7 +172,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
               order.token = StrKey.encodeContract(
-                StrKey.encodeContract(val.address().contractId() as unknown as Uint8Array)
+                val.address().contractId() as any
               );
             }
             break;
@@ -231,7 +231,7 @@ export async function dispatchOrder(
       .addOperation(
         contract.call(
           "dispatch",
-          xdr.ScVal.scvBytes(orderIdHashBytes)
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
@@ -312,7 +312,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       .addOperation(
         contract.call(
           "refund",
-          xdr.ScVal.scvBytes(orderIdHashBytes)
+          bytes32ToScVal(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
