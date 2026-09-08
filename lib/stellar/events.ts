@@ -82,9 +82,11 @@ export function decodePaymentEvent(
 
     let eventContractId: string | undefined;
     try {
-      const contractId = event.contractId();
-      if (contractId) {
-        eventContractId = StrKey.encodeContract(contractId);
+      if (event.contractId()) {
+        -        StrKey.encodeContract(
+-          Buffer.from(event.contractId() as unknown as Uint8Array)
+-        )
++        StrKey.encodeContract(event.contractId() as unknown as Uint8Array)
       }
     } catch {
       // system events have no contract id

@@ -108,7 +108,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       .addOperation(
         contract.call(
           "order",
-          bytes32ToScVal(orderIdHashBytes)
+          xdr.ScVal.scvBytes(hexToBytes(orderIdHash))
         )
       )
       .setTimeout(30)
@@ -171,7 +171,9 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
             break;
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.token = Address.fromScVal(val).toString();
+              order.token = StrKey.encodeContract(
+                StrKey.encodeContract(val.address().contractId() as unknown as Uint8Array)
+              );
             }
             break;
           case "timestamp":
@@ -229,7 +231,7 @@ export async function dispatchOrder(
       .addOperation(
         contract.call(
           "dispatch",
-          bytes32ToScVal(orderIdHashBytes)
+          xdr.ScVal.scvBytes(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)
@@ -310,7 +312,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       .addOperation(
         contract.call(
           "refund",
-          bytes32ToScVal(orderIdHashBytes)
+          xdr.ScVal.scvBytes(orderIdHashBytes)
         )
       )
       .setTimeout(TX_TIMEOUT_SECONDS)

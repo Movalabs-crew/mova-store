@@ -19,7 +19,7 @@ export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
   (IS_MAINNET
     ? "https://soroban-rpc.mainnet.stellar.gateway.fm"
-    : "https://soroban-testnet.stellar.gateway.fm");
+    : "https://soroban-testnet.stellar.org");
 
 export const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ??

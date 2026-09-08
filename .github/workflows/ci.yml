@@ -13,6 +13,10 @@ concurrency:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: "20"
   RUST_VERSION: "1.91.0"
@@ -40,6 +44,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Check code formatting
+        run: npm run format:check
+
       - name: Type check
         run: npm run type-check
 
@@ -63,7 +70,7 @@ jobs:
 
   # Soroban contract checks
   contracts:
-    name: Soroban Contracts (Fmt, Clippy, Build, Test)
+    name: Soroban Contracts (Build, Test, Format, Clippy)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -96,7 +103,7 @@ jobs:
         working-directory: contracts/checkout
         run: cargo fmt -- --check
 
-      - name: Clippy
+      - name: Run clippy
         working-directory: contracts/checkout
         run: cargo clippy --all-targets -- -D warnings
 
@@ -128,7 +135,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.97.4
+        uses: trufflesecurity/trufflehog@v3.88.1
         with:
           extra_args: --only-verified
 
