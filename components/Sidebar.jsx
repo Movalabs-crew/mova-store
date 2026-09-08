@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   FaHome,
   FaInfoCircle,
-  FaPhone,
   FaShoppingCart,
   FaList,
 } from "react-icons/fa";
@@ -24,25 +23,7 @@ export default function Sidebar() {
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FaHome className="mr-3" />
-                Men
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/about"
-                className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
-              >
-                <FaInfoCircle className="mr-3" />
-                Women
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/contact"
-                className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
-              >
-                <FaPhone className="mr-3" />
-                Kids
+                Home
               </Link>
             </li>
             <li>
@@ -51,7 +32,7 @@ export default function Sidebar() {
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FaShoppingCart className="mr-3" />
-                Casual
+                Shop
               </Link>
             </li>
             <li>
@@ -60,7 +41,16 @@ export default function Sidebar() {
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FcSportsMode className="mr-3" />
-                Sport
+                Collections
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/blog"
+                className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
+              >
+                <FaList className="mr-3" />
+                Blog
               </Link>
             </li>
             <li>
@@ -76,46 +66,49 @@ export default function Sidebar() {
                 ""
               )}
             </li>
-            <li>
-              <Link
-                href="/categories"
-                className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
-              >
-                <FaList className="mr-3" />
-                Categories
-              </Link>
-            </li>
           </ul>
         </nav>
       </aside>
 
-      {/* small screen mobile sidevar */}
+      {/* small screen mobile sidebar */}
 
       <aside className="flex flex-col justify-center  w-10 bg-purple-600 text-gray-700 flex-shrink-0  sm:hidden  pt-10">
         <nav className="divide-y divide-gray-200">
           <ul className="py-6 space-y-14 px-2">
             <li>
               <Link
-                href="/categories"
+                href="/"
                 className=" hover:text-white transition-colors duration-200"
+                title="Home"
               >
-                <FaList className="mr-3" size={20} />
+                <FaHome className="mr-3" size={20} />
               </Link>
             </li>
             <li>
               <Link
                 href="/shop"
                 className="  hover:text-white transition-colors duration-200"
+                title="Shop"
               >
                 <FaShoppingCart className="mr-3" size={20} />
               </Link>
             </li>
             <li>
               <Link
-                href="/"
-                className=" hover:text-white transition-colors duration-200"
+                href="/collections"
+                className="hover:text-purple-500 transition-colors duration-200"
+                title="Collections"
               >
-                <FaHome className="mr-3" size={20} />
+                <FcSportsMode className="mr-3" size={20} />
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/blog"
+                className=" hover:text-white transition-colors duration-200"
+                title="Blog"
+              >
+                <FaList className="mr-3" size={20} />
               </Link>
             </li>
             <li>
@@ -123,6 +116,7 @@ export default function Sidebar() {
                 <Link
                   href="/admin"
                   className=" hover:text-white transition-colors duration-200"
+                  title="Admin"
                 >
                   <FaInfoCircle className="mr-3" size={20} />
                   Admin
@@ -130,14 +124,6 @@ export default function Sidebar() {
               ) : (
                 ""
               )}
-            </li>
-            <li>
-              <Link
-                href="/collections"
-                className="hover:text-purple-500 transition-colors duration-200"
-              >
-                <FcSportsMode className="mr-3" size={20} />
-              </Link>
             </li>
           </ul>
         </nav>
