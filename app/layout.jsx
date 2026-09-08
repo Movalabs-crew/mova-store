@@ -8,6 +8,8 @@ import Footer from "../components/Footer";
 import { AuthProvider } from "../lib/AuthContext";
 import Head from "next/head";
 import logo from "../public/images/favicon.ico";
+import ErrorBoundary from "../components/ErrorBoundary";
+import SkipLink from "../components/SkipLink";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -62,16 +64,19 @@ const RootLayout = ({ children }) => {
         />
       </Head>
       <body className="h-full font-body antialiased">
+        <SkipLink />
         <NextTopLoader color="#7c3aed" showSpinner={false} />
 
         <AuthProvider>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="app flex-grow pt-10">{children}</main>
-            <Whatsapp />
-            <ScrollToTop />
-            <Footer />
-          </div>
+          <ErrorBoundary>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main id="main-content" className="app flex-grow pt-10">{children}</main>
+              <Whatsapp />
+              <ScrollToTop />
+              <Footer />
+            </div>
+          </ErrorBoundary>
         </AuthProvider>
       </body>
     </html>
