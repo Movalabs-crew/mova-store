@@ -6,6 +6,7 @@ import { PaymentEventIndexer, IndexedEvent } from "../../../lib/stellar/indexer"
 import {
   dispatchOrder,
   refundOrder,
+  mergeOrderEvent,
   OrderEvent,
   eventToOrder,
   OrderStatus,
@@ -201,7 +202,7 @@ const OrdersManagementContent = () => {
             if (existing) {
               // Update status if the new event is more recent
               if (event.ledger > (existing.ledger || 0)) {
-                newMap.set(order.orderId, { ...existing, ...order });
+                newMap.set(order.orderId, mergeOrderEvent(existing, order));
               }
             } else {
               newMap.set(order.orderId, order);

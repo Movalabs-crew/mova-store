@@ -500,3 +500,28 @@ export function eventToOrder(
     txHash,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Order Merge (admin dashboard reducer)
+// ---------------------------------------------------------------------------
+
+/**
+ * Merges a newer event-derived order (dispatch/refund) into an existing row.
+ *
+ * Only lifecycle fields carry forward: status, ledger and txHash. Dispatch
+ * events carry [order_id, merchant] in their topics, so the event-derived
+ * "buyer" is the *merchant* address - blindly spreading the incoming row over
+ * the existing one would replace the stored buyer and could clobber
+ * tokenSymbol with the unknown-contract fallback.
+ */
+export function mergeOrderEvent(
+  existing: OrderEvent,
+  incoming: OrderEvent
+): OrderEvent {
+  return {
+    ...existing,
+    status: incoming.status,
+    ledger: incoming.ledger,
+    txHash: incoming.txHash,
+  };
+}
