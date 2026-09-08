@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction, validateEnv } from "../../lib/env";
+import {
+  isAdminEmail,
+  isDevelopment,
+  isProduction,
+  loadAdminConfig,
+  loadEmailJSConfig,
+  loadSupabaseConfig,
+  validateEnv,
+} from "../../lib/env";
 
 describe("isAdminEmail", () => {
   beforeEach(() => {
@@ -98,5 +106,131 @@ describe("validateEnv", () => {
     expect(config.emailjs.templateId).toBe("template_xyz");
     expect(config.emailjs.publicKey).toBe("pubkey_789");
     expect(config.admin.adminEmails).toContain("admin@store.org");
+  });
+});
+
+describe("loadEmailJSConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("reports each missing variable with its own error message", () => {
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL", "");
+
+    const errors: { field: string; message: string }[] = [];
+    const config = loadEmailJSConfig(errors);
+
+    expect(errors).toEqual([
+      {
+        field: "NEXT_PUBLIC_EMAILJS_SERVICE_ID",
+        message:
+          "NEXT_PUBLIC_EMAILJS_SERVICE_ID is required for email notifications",
+      },
+      {
+        field: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID",
+        message:
+          "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID is required for email notifications",
+      },
+      {
+        field: "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY",
+        message: "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY is required for email notifications",
+      },
+    ]);
+    expect(config.serviceId).toBe("");
+    expect(config.templateId).toBe("");
+    expect(config.publicKey).toBe("");
+    expect(config.defaultRecipientEmail).toBe("");
+  });
+
+  it("counts whitespace-only values as missing and trims valid ones", () => {
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "   ");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "  template_xyz  ");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pubkey_789");
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL", "  ops@store.org  ");
+
+    const errors: { field: string; message: string }[] = [];
+    const config = loadEmailJSConfig(errors);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].field).toBe("NEXT_PUBLIC_EMAILJS_SERVICE_ID");
+    expect(config.templateId).toBe("template_xyz");
+    expect(config.publicKey).toBe("pubkey_789");
+    expect(config.defaultRecipientEmail).toBe("ops@store.org");
+  });
+});
+
+describe("loadSupabaseConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("accumulates one error per missing variable with the Supabase context", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "   ");
+
+    const errors: { field: string; message: string }[] = [];
+    const config = loadSupabaseConfig(errors);
+
+    expect(errors).toEqual([
+      {
+        field: "NEXT_PUBLIC_SUPABASE_URL",
+        message: "NEXT_PUBLIC_SUPABASE_URL is required for Supabase",
+      },
+      {
+        field: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        message: "NEXT_PUBLIC_SUPABASE_ANON_KEY is required for Supabase",
+      },
+    ]);
+    expect(config.url).toBe("");
+    expect(config.anonKey).toBe("");
+  });
+
+  it("returns trimmed values and no errors when both variables are set", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "  https://project.supabase.co  ");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "key123");
+
+    const errors: { field: string; message: string }[] = [];
+    const config = loadSupabaseConfig(errors);
+
+    expect(errors).toHaveLength(0);
+    expect(config.url).toBe("https://project.supabase.co");
+    expect(config.anonKey).toBe("key123");
+  });
+});
+
+describe("loadAdminConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("trims and lowercases entries and drops empty ones", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "  Admin@Store.org ,ops@store.org,, ");
+    expect(loadAdminConfig().adminEmails).toEqual([
+      "admin@store.org",
+      "ops@store.org",
+    ]);
+  });
+
+  it("returns an empty list for blank or comma-only values", () => {
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "");
+    expect(loadAdminConfig().adminEmails).toEqual([]);
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", " , ,");
+    expect(loadAdminConfig().adminEmails).toEqual([]);
+  });
+
+  it("returns an empty list when the variable is unset", () => {
+    // vi.stubEnv(name, undefined) stringifies to "undefined", so remove the
+    // variable directly to simulate a genuinely unset env (and restore it).
+    const saved = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+    delete process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+    try {
+      expect(loadAdminConfig().adminEmails).toEqual([]);
+    } finally {
+      if (saved === undefined) delete process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+      else process.env.NEXT_PUBLIC_ADMIN_EMAILS = saved;
+    }
   });
 });
