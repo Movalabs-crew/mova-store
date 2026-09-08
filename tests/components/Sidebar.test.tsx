@@ -73,5 +73,58 @@ describe("Sidebar component", () => {
     expect(screen.queryByPlaceholderText("Search Shoes")).not.toBeInTheDocument();
     expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
   });
+
+  it("points every link at a real route that exists under app/ without dead links", () => {
+    mockUseAuth.mockReturnValue({
+      user: { uid: "admin-user", email: "admin@test.com" },
+      isAdmin: true,
+      loading: false,
+    });
+
+    const { container } = render(<Sidebar />);
+    const links = Array.from(container.querySelectorAll("a")).map((a) =>
+      a.getAttribute("href")
+    );
+
+    expect(links.length).toBeGreaterThan(0);
+
+    // Dead routes must never appear
+    const deadRoutes = ["/about", "/contact", "/categories"];
+    deadRoutes.forEach((route) => {
+      expect(links).not.toContain(route);
+    });
+
+    // All links must be valid known routes
+    const validRoutes = new Set(["/", "/shop", "/collections", "/blog", "/admin"]);
+    links.forEach((href) => {
+      expect(validRoutes.has(href!)).toBe(true);
+    });
+  });
+
+  it("matches entry labels to their corresponding destinations", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAdmin: false,
+      loading: false,
+    });
+
+    render(<Sidebar />);
+
+    const homeLinks = screen.getAllByRole("link", { name: "Home" });
+    expect(homeLinks.length).toBeGreaterThanOrEqual(1);
+    homeLinks.forEach((link) => expect(link).toHaveAttribute("href", "/"));
+
+    const shopLinks = screen.getAllByRole("link", { name: "Shop" });
+    expect(shopLinks.length).toBeGreaterThanOrEqual(1);
+    shopLinks.forEach((link) => expect(link).toHaveAttribute("href", "/shop"));
+
+    const collectionLinks = screen.getAllByRole("link", { name: "Collections" });
+    expect(collectionLinks.length).toBeGreaterThanOrEqual(1);
+    collectionLinks.forEach((link) => expect(link).toHaveAttribute("href", "/collections"));
+
+    const blogLinks = screen.getAllByRole("link", { name: "Blog" });
+    expect(blogLinks.length).toBeGreaterThanOrEqual(1);
+    blogLinks.forEach((link) => expect(link).toHaveAttribute("href", "/blog"));
+  });
 });
 
