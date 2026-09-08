@@ -25,7 +25,7 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex } from "./scval";
+import { hashOrderId, hexToBytes, bytesToHex } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,6 +204,28 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Order Id Resolution
+// ---------------------------------------------------------------------------
+
+const HASHED_ORDER_ID_RE = /^[0-9a-fA-F]{64}$/;
+
+/**
+ * Resolves the 32-byte order id hash to pass to the contract.
+ *
+ * Indexer events carry the already-hashed order id (64 hex chars) in their
+ * topic, and the admin page passes that straight into dispatchOrder /
+ * refundOrder. SHA-256 is one-way, so re-hashing the hex can never reproduce
+ * the stored BytesN<32> - such ids are passed through unchanged, while short
+ * raw pre-images (e.g. "SS-2024-0001") are hashed.
+ */
+export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
+  if (HASHED_ORDER_ID_RE.test(orderId)) {
+    return hexToBytes(orderId);
+  }
+  return hashOrderId(orderId);
+}
+
+// ---------------------------------------------------------------------------
 // Dispatch Order (Release Escrow to Merchant)
 // ---------------------------------------------------------------------------
 
@@ -219,7 +241,7 @@ export async function dispatchOrder(
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
@@ -300,7 +322,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
