@@ -42,8 +42,8 @@ export default function ShoesCollection() {
               <Image
                 src={shoe.imageUrl}
                 alt={shoe.name}
-                layout="fill"
-                objectFit="cover"
+                fill
+                className="object-cover"
                 className="rounded-t-lg"
               />
             </div>
