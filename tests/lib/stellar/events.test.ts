@@ -2,7 +2,7 @@ import { StrKey, xdr, Address, rpc } from "@stellar/stellar-sdk";
 import { describe, expect, it, vi } from "vitest";
 
 import { decodePaymentEvent, waitForTransaction } from "../../../lib/stellar/events";
-import { i128ToScVal } from "../../../lib/stellar/scval";
+import { i128ToScVal, hexToBytes } from "../../../lib/stellar/scval";
 
 // ---------------------------------------------------------------------------
 // Fixture builders for GetSuccessfulTransactionResponse-shaped objects.
@@ -55,7 +55,7 @@ const payTopics = () => [
   addressScVal(TOKEN),
   addressScVal(BUYER),
   addressScVal(MERCHANT),
-  xdr.ScVal.scvBytes(Buffer.from(ORDER_ID_HEX, "hex")),
+  xdr.ScVal.scvBytes(hexToBytes(ORDER_ID_HEX)),
 ];
 
 const amountMap = (amount: bigint) =>

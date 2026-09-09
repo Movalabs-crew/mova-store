@@ -40,6 +40,10 @@ describe("lib/products data layer", () => {
     vi.useRealTimers();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe("mapProduct", () => {
     it("returns null when passed null or undefined", () => {
       expect(mapProduct(null)).toBeNull();
@@ -407,15 +411,29 @@ describe("lib/products data layer", () => {
 
       await deleteProduct("p-del");
 
-      expect(mockFrom).toHaveBeenCalledWith("products");
-      expect(mockDelete).toHaveBeenCalledTimes(1);
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mocks.mockSelect).toHaveBeenCalledWith("img");
+      expect(mocks.mockSelectEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
+      expect(mocks.mockDeleteEq.mock.invocationCallOrder[0]).toBeLessThan(
+        mockStorageFrom.remove.mock.invocationCallOrder[0]
+      );
+    });
+
+    it("still deletes the row when storage removal rejects", async () => {
+      const mocks = mockProductDeletion();
+      mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
+
+      await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
     });
 
     it("throws error when delete fails", async () => {
       stubFrom(null, {
         data: null,
-        error: new Error("Foreign key constraint violation"),
+        error: new Error("Object not found"),
       });
 
       await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
