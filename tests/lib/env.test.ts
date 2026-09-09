@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction, validateEnv } from "../../lib/env";
+import { isAdminEmail, isDevelopment, isProduction, validateEnv, loadStellarConfig } from "../../lib/env";
 
 describe("isAdminEmail", () => {
   beforeEach(() => {
