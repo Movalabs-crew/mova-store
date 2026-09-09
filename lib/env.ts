@@ -54,7 +54,7 @@ const STELLAR_DEFAULTS = {
       "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
   },
   mainnet: {
-    rpcUrl: "https://soroban-rpc.mainnet.stellar.gateway.fm",
+    rpcUrl: "https://soroban-rpc.stellar.org",
     networkPassphrase: "Public Global Stellar Network ; September 2015",
     usdcContractId: "", // Must be configured for mainnet
     nativeAssetContractId: "", // Must be configured for mainnet
