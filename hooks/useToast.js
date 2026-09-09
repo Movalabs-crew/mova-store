@@ -1,20 +1,11 @@
 "use client";
-
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
- * Shared toast hook for managing toast notification state and dismiss timing.
- * Cleans up pending dismiss timers on unmount to prevent state updates on unmounted components.
- *
- * @param {number} [autoHideMs=3000] - Duration in milliseconds before auto-dismissing.
- * @returns {{
- *   toast: { show: boolean, message: string },
- *   showToast: (message: string) => void,
- *   hideToast: () => void,
- *   setToast: React.Dispatch<React.SetStateAction<{ show: boolean, message: string }>>
- * }}
+ * Custom hook for managing toast notification state with automatic timer cleanup.
+ * Prevents memory leaks and setState-after-unmount warnings.
  */
-export function useToast(autoHideMs = 3000) {
+export function useToast(defaultDuration = 3000) {
   const [toast, setToast] = useState({ show: false, message: "" });
   const timerRef = useRef(null);
 
@@ -27,36 +18,28 @@ export function useToast(autoHideMs = 3000) {
   }, []);
 
   const showToast = useCallback(
-    (message) => {
+    (message, duration = defaultDuration) => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
       setToast({ show: true, message });
-      if (autoHideMs && autoHideMs > 0) {
-        timerRef.current = setTimeout(() => {
-          timerRef.current = null;
-          setToast({ show: false, message: "" });
-        }, autoHideMs);
-      }
+      timerRef.current = setTimeout(() => {
+        setToast({ show: false, message: "" });
+        timerRef.current = null;
+      }, duration);
     },
-    [autoHideMs]
+    [defaultDuration]
   );
 
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
     };
   }, []);
 
-  return {
-    toast,
-    showToast,
-    hideToast,
-    setToast,
-  };
+  return { toast, showToast, hideToast };
 }
 
 export default useToast;
