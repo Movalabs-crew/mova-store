@@ -31,13 +31,9 @@ export default function Products() {
           setProducts(data);
         }
       } catch (err) {
-        if (isMounted) {
-          setError(err.message);
-        }
+        setError(err.message);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
@@ -72,22 +68,8 @@ export default function Products() {
           {error && <p className="text-red-500 text-center">{error}</p>}
 
           {loading ? (
-            <div data-testid="products-loading" className="py-6">
-              <ProductGridSkeleton />
-            </div>
-          ) : products.length === 0 && !error ? (
-            <div
-              data-testid="products-empty"
-              className="py-16 text-center text-gray-500"
-            >
-              <p className="text-2xl font-semibold text-mova-ink">
-                No products yet
-              </p>
-              <p className="text-sm text-gray-400 mt-2">
-                Check back soon — new products are on their way!
-              </p>
-            </div>
-          ) : (
+            <ProductGridSkeleton />
+          ) : products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {products.map((prod) => (
                 <div key={prod.id} className="p-4 border rounded-lg shadow">
@@ -114,6 +96,15 @@ export default function Products() {
                 </div>
               ))}
             </div>
+          ) : (
+            // Only when the fetch resolved empty. On rejection the error above
+            // is the whole story, and showing "no products yet" beside it would
+            // read as an empty catalogue rather than a failed request.
+            !error && (
+              <p className="text-center py-16 text-mova-ink/70">
+                No products yet.
+              </p>
+            )
           )}
         </section>
       </div>
