@@ -20,13 +20,13 @@ export default function Footer() {
             Privacy Policy
           </span>
           <Link
-            href="/#aboutus"
+            href="/about"
             className="transition hover:underline hover:underline-offset-1"
           >
             About Us
           </Link>
           <Link
-            href="/#contact"
+            href="/contact"
             className="transition hover:underline hover:underline-offset-1"
           >
             Contact Us
