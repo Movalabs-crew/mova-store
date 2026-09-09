@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from 'next/image';
 import shoeImage1 from "/public/images/shoe1.png";
 import shoeImage2 from "/public/images/shoe2.png";
 import shoeImage3 from "/public/images/shoe3.png";
@@ -43,7 +43,7 @@ export default function ShoesCollection() {
                 src={shoe.imageUrl}
                 alt={shoe.name}
                 fill
-                style={{ objectFit: "cover" }}
+                style={{ objectFit: 'cover' }}
                 className="rounded-t-lg"
               />
             </div>

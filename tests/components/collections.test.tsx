@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import { render, screen } from "@testing-library/react";
 
-// Mock next/image to inspect props and verify modern attributes
+// Mock next/image to inspect rendered attributes and verify modern props
 vi.mock("next/image", () => ({
   default: ({
     fill,
@@ -25,7 +25,7 @@ vi.mock("next/image", () => ({
     [key: string]: any;
   }) => (
     <img
-      src={typeof src === "string" ? src : src?.src || "test-image"}
+      src={typeof src === "string" ? src : src?.src || "shoe-image"}
       alt={alt}
       className={className}
       data-fill={fill ? "true" : undefined}
@@ -70,6 +70,9 @@ describe("ShoesCollection Component", () => {
 
     const alts = images.map((img) => img.getAttribute("alt"));
     expect(new Set(alts).size).toBe(4);
+
+    const srcs = images.map((img) => img.getAttribute("src"));
+    expect(new Set(srcs).size).toBe(4);
   });
 
   it("passes fill and cover objectFit style to images without legacy layout/objectFit props", () => {
