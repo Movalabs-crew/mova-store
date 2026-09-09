@@ -13,6 +13,10 @@ concurrency:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: "20"
   RUST_VERSION: "1.91.0"
@@ -40,6 +44,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Check code formatting
+        run: npm run format:check
+
       - name: Type check
         run: npm run type-check
 
@@ -63,7 +70,7 @@ jobs:
 
   # Soroban contract checks
   contracts:
-    name: Soroban Contracts (Build, Test)
+    name: Soroban Contracts (Build, Test, Format, Clippy)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -76,6 +83,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: wasm32v1-none
+          components: rustfmt, clippy
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -90,6 +98,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-${{ env.RUST_VERSION }}-
             ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        working-directory: contracts/checkout
+        run: cargo fmt -- --check
+
+      - name: Run clippy
+        working-directory: contracts/checkout
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Build contracts
         working-directory: contracts/checkout
@@ -139,7 +155,9 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
 
       - name: Run cargo audit
         working-directory: contracts/checkout
