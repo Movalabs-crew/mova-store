@@ -18,7 +18,7 @@ export default function Footer() {
             className="transition hover:underline hover:underline-offset-1"
           >
             Privacy Policy
-          </Link>
+          </span>
           <Link
             href="/about"
             className="transition hover:underline hover:underline-offset-1"
@@ -29,7 +29,7 @@ export default function Footer() {
             href="/contact"
             className="transition hover:underline hover:underline-offset-1"
           >
-            24/7 Customer Service
+            Contact Us
           </Link>
         </span>
         <span className="my-10 sm:my-0 sm:pl-10">
