@@ -81,7 +81,7 @@ buyer ──pay──▶ contract (escrow) ──dispatch──▶ merchant
   - [Step 5 — Initialize with your merchant wallet](#step-5--initialize-with-your-merchant-wallet)
   - [Step 6 — Wire the deployed contract to the storefront](#step-6--wire-the-deployed-contract-to-the-storefront)
   - [Convenience script](#convenience-script)
-- [Paying with USDC (testnet)](#paying-with-usdc-testnet)
+- [Paying with Stellar (testnet)](#paying-with-stellar-testnet)
 - [Environment Variables Reference](#environment-variables-reference)
 - [Security Notes](#security-notes)
 - [Contributing](#contributing)
@@ -474,6 +474,10 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 | `NEXT_PUBLIC_USDC_CONTRACT_ID`        | no       | USDC token contract (testnet default)     |
 | `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`| no       | Native XLM SAC (verified testnet default) |
 | `PUBLIC_MERCHANT_ADDRESS`             | no       | Display-only merchant wallet (on-chain value is authoritative) |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`      | yes      | EmailJS service ID (for OTP and notifications) |
+| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`     | yes      | EmailJS template ID                       |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`      | yes      | EmailJS public key                        |
+| `NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL` | no       | Default recipient email for EMAILJS contact forms |
 | `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Supabase project URL                      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | yes      | Supabase anon/public key                  |
 | `NEXT_PUBLIC_ADMIN_EMAILS`            | no       | Comma-separated admin emails              |
