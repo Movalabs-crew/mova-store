@@ -1,4 +1,4 @@
-import { xdr, Address, scValToNative } from "@stellar/stellar-sdk";
+import { xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
 
 // ---------------------------------------------------------------------------
 // ScVal construction + decoding helpers for the checkout contract.
@@ -22,11 +22,11 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf = typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
-  if (buf.length !== 32) {
-    throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
+  const b = typeof bytes === "string" ? hexToBytes(bytes) : bytes;
+  if (b.length !== 32) {
+    throw new Error(`order_id must be exactly 32 bytes (got ${b.length})`);
   }
-  return xdr.ScVal.scvBytes(buf);
+  return nativeToScVal(b);
 }
 
 /**
@@ -108,9 +108,7 @@ export function hexToBytes(hex: string): Uint8Array {
   for (let i = 0; i < out.length; i++) {
     const chunk = clean.slice(i * 2, i * 2 + 2);
     if (!/^[0-9a-fA-F]{2}$/.test(chunk)) {
-      const match = chunk.match(/[^0-9a-fA-F]/);
-      const offending = match ? match[0] : chunk;
-      throw new Error(`invalid hex character: "${offending}" in "${chunk}"`);
+      throw new Error(`invalid hex character in "${chunk}"`);
     }
     out[i] = parseInt(chunk, 16);
   }
@@ -130,4 +128,21 @@ export async function hashOrderId(orderId: string): Promise<Uint8Array> {
   const data = new TextEncoder().encode(orderId);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return new Uint8Array(digest);
+}
+// ---------------------------------------------------------------------------
+// Order ID Resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves an order ID to its 32-byte hash for contract operations.
+ * - If orderId is a 64-character hex string, it is already hashed (from indexer events) -> return as-is
+ * - Otherwise, it is a raw pre-image (e.g., SS-...) -> SHA-256 hash it
+ */
+export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
+  // Check if already a 64-hex hash (from indexer events)
+  if (/^[0-9a-fA-F]{64}$/.test(orderId)) {
+    return hexToBytes(orderId);
+  }
+  // Hash the raw pre-image
+  return hashOrderId(orderId);
 }
