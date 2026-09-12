@@ -1,4 +1,4 @@
-import { xdr, Address, scValToNative } from "@stellar/stellar-sdk";
+import { xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
 
 // ---------------------------------------------------------------------------
 // ScVal construction + decoding helpers for the checkout contract.
@@ -19,14 +19,27 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
 }
 
 /**
+ * The SDK's generated typings still ask for Node's byte type on
+ * `xdr.ScVal.scvBytes` and `StrKey.encodeContract`. Both accept any
+ * `Uint8Array` at runtime, and these modules are bundled for the browser where
+ * that global is not guaranteed, so widen at the call boundary instead of
+ * constructing a Node value.
+ */
+type SdkBytes = Parameters<typeof xdr.ScVal.scvBytes>[0];
+
+export function toSdkBytes(bytes: Uint8Array): SdkBytes {
+  return bytes as unknown as SdkBytes;
+}
+
+/**
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf = typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
-  if (buf.length !== 32) {
-    throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
+  const raw = typeof bytes === "string" ? hexToBytes(bytes) : Uint8Array.from(bytes);
+  if (raw.length !== 32) {
+    throw new Error(`order_id must be exactly 32 bytes (got ${raw.length})`);
   }
-  return xdr.ScVal.scvBytes(buf);
+  return xdr.ScVal.scvBytes(toSdkBytes(raw));
 }
 
 /**
@@ -108,9 +121,7 @@ export function hexToBytes(hex: string): Uint8Array {
   for (let i = 0; i < out.length; i++) {
     const chunk = clean.slice(i * 2, i * 2 + 2);
     if (!/^[0-9a-fA-F]{2}$/.test(chunk)) {
-      const match = chunk.match(/[^0-9a-fA-F]/);
-      const offending = match ? match[0] : chunk;
-      throw new Error(`invalid hex character: "${offending}" in "${chunk}"`);
+      throw new Error(`invalid hex character in "${chunk}"`);
     }
     out[i] = parseInt(chunk, 16);
   }
@@ -130,4 +141,27 @@ export async function hashOrderId(orderId: string): Promise<Uint8Array> {
   const data = new TextEncoder().encode(orderId);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return new Uint8Array(digest);
+}
+
+/**
+ * True when `value` is already a 32-byte order id rendered as hex.
+ */
+export function isOrderIdHashHex(value: string): boolean {
+  return /^(0x)?[0-9a-fA-F]{64}$/.test(value);
+}
+
+/**
+ * Resolve an order id to the raw 32 bytes the contract stores it under.
+ *
+ * Callers hold one of two things. Checkout holds the pre-image ("SS-..."),
+ * which has to be hashed. Admin views build their rows from indexer events,
+ * whose `order_id` topic is already the hashed BytesN<32> rendered as 64 hex
+ * characters. SHA-256 is one-way, so hashing that hex a second time can never
+ * reproduce the stored value and the contract call fails with OrderNotFound.
+ *
+ * A 64-hex id is therefore decoded straight to bytes and passed through
+ * unchanged; anything else is treated as a pre-image and hashed.
+ */
+export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
+  return isOrderIdHashHex(orderId) ? hexToBytes(orderId) : hashOrderId(orderId);
 }
