@@ -42,7 +42,7 @@ describe("Payment Event Decoding (__tests__/events.test.ts)", () => {
       ext: new xdr.ExtensionPoint(0),
       contractId: null,
       type: xdr.ContractEventType.contract(),
-      body: xdr.ContractEventBody.v0(v0),
+      body: new xdr.ContractEventBody(0, v0),
     });
 
     const mockTx = {
@@ -81,7 +81,7 @@ describe("Payment Event Decoding (__tests__/events.test.ts)", () => {
       ext: new xdr.ExtensionPoint(0),
       contractId: null,
       type: xdr.ContractEventType.contract(),
-      body: xdr.ContractEventBody.v0(v0),
+      body: new xdr.ContractEventBody(0, v0),
     });
 
     const mockTx = {

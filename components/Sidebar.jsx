@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FaHome, FaInfoCircle, FaShoppingCart } from "react-icons/fa";
+import { FaHome, FaInfoCircle, FaList, FaShoppingCart } from "react-icons/fa";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
 
@@ -59,10 +59,8 @@ export default function Sidebar() {
                   <FaInfoCircle className="mr-3" />
                   Admin
                 </Link>
-              ) : (
-                ""
-              )}
-            </li>
+              </li>
+            ) : null}
           </ul>
         </nav>
       </aside>
@@ -75,7 +73,6 @@ export default function Sidebar() {
               <Link
                 href="/shop"
                 aria-label="Shop"
-                title="Shop"
                 className="  hover:text-white transition-colors duration-200"
                 title="Shop"
               >
@@ -86,9 +83,8 @@ export default function Sidebar() {
               <Link
                 href="/"
                 aria-label="Home"
-                title="Home"
                 className=" hover:text-white transition-colors duration-200"
-                title="Blog"
+                title="Home"
               >
                 <FaList className="mr-3" size={20} />
               </Link>
@@ -98,7 +94,6 @@ export default function Sidebar() {
                 <Link
                   href="/admin"
                   aria-label="Admin"
-                  title="Admin"
                   className=" hover:text-white transition-colors duration-200"
                   title="Admin"
                 >
