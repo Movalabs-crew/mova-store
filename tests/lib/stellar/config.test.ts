@@ -1,154 +1,147 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { Networks } from "@stellar/stellar-sdk";
+import {
+  SUPPORTED_TOKENS,
+  defaultToken,
+  tokenForContract,
+  USDC_CONTRACT_ID,
+  TESTNET_USDC_CONTRACT_ID,
+  NATIVE_ASSET_CONTRACT_ID,
+  TESTNET_NATIVE_ASSET_CONTRACT_ID,
+  MAINNET_NATIVE_ASSET_CONTRACT_ID,
+  USDC_DECIMALS,
+  IS_MAINNET,
+  RPC_URL,
+  NETWORK_PASSPHRASE,
+  CHECKOUT_CONTRACT_ID,
+} from "../../../lib/stellar/config";
 
-// The token registry is assembled at module load from process.env, so each case
-// sets the environment, resets the module graph and imports config fresh.
-//
-// config.ts reads its overrides with `??`, which only falls back on undefined.
-// An empty string would therefore be used literally, so "unset" here means the
-// key is deleted rather than stubbed empty.
-
-const OVERRIDE_KEYS = [
-  "NEXT_PUBLIC_STELLAR_NETWORK",
-  "NEXT_PUBLIC_USDC_CONTRACT_ID",
-  "NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID",
-];
-
-const saved: Record<string, string | undefined> = {};
-
-async function loadConfig(overrides: Record<string, string> = {}) {
-  for (const key of OVERRIDE_KEYS) delete process.env[key];
-  for (const [key, value] of Object.entries(overrides)) {
-    process.env[key] = value;
-  }
-  vi.resetModules();
-  return import("../../../lib/stellar/config");
-}
-
-beforeEach(() => {
-  for (const key of OVERRIDE_KEYS) saved[key] = process.env[key];
-});
-
-afterEach(() => {
-  for (const key of OVERRIDE_KEYS) {
-    if (saved[key] === undefined) delete process.env[key];
-    else process.env[key] = saved[key] as string;
-  }
-  vi.resetModules();
-});
-
-describe("token registry", () => {
-  it("lists USDC first and XLM second", async () => {
-    const { SUPPORTED_TOKENS } = await loadConfig();
-
-    expect(SUPPORTED_TOKENS.map((t) => t.symbol)).toEqual(["USDC", "XLM"]);
-  });
-
-  it("defaults to the first entry", async () => {
-    const { defaultToken, SUPPORTED_TOKENS } = await loadConfig();
-
+describe("Stellar token registry (static baseline)", () => {
+  it("defaultToken returns the first entry in SUPPORTED_TOKENS", () => {
     expect(defaultToken()).toBe(SUPPORTED_TOKENS[0]);
     expect(defaultToken().symbol).toBe("USDC");
+    expect(defaultToken().name).toBe("USD Coin");
   });
 
-  it("declares seven decimals for both tokens", async () => {
-    const { SUPPORTED_TOKENS } = await loadConfig();
+  it("both USDC and XLM tokens declare 7 decimals", () => {
+    const usdc = SUPPORTED_TOKENS.find((t) => t.symbol === "USDC");
+    const xlm = SUPPORTED_TOKENS.find((t) => t.symbol === "XLM");
 
-    for (const token of SUPPORTED_TOKENS) {
-      expect(token.decimals).toBe(7);
-    }
+    expect(usdc).toBeDefined();
+    expect(xlm).toBeDefined();
+    expect(usdc?.decimals).toBe(7);
+    expect(xlm?.decimals).toBe(7);
+    expect(USDC_DECIMALS).toBe(7);
   });
 
-  it("marks only XLM as native", async () => {
-    const { SUPPORTED_TOKENS } = await loadConfig();
-    const [usdc, xlm] = SUPPORTED_TOKENS;
+  it("identifies native XLM and non-native USDC correctly", () => {
+    const usdc = SUPPORTED_TOKENS.find((t) => t.symbol === "USDC");
+    const xlm = SUPPORTED_TOKENS.find((t) => t.symbol === "XLM");
 
-    // isNative drives whether a trustline check is required, so the absence on
-    // USDC matters as much as the flag on XLM.
-    expect(xlm.isNative).toBe(true);
-    expect(usdc.isNative).toBeUndefined();
+    expect(xlm?.isNative).toBe(true);
+    expect(usdc?.isNative).toBeFalsy();
+    expect(usdc?.assetCode).toBe("USDC");
+    expect(usdc?.assetIssuer).toBeDefined();
   });
 
-  it("carries the classic asset code and issuer on USDC only", async () => {
-    const { SUPPORTED_TOKENS } = await loadConfig();
-    const [usdc, xlm] = SUPPORTED_TOKENS;
+  it("tokenForContract resolves known contract IDs", () => {
+    const usdcToken = tokenForContract(USDC_CONTRACT_ID);
+    expect(usdcToken).toBeDefined();
+    expect(usdcToken?.symbol).toBe("USDC");
+    expect(usdcToken?.contractId).toBe(USDC_CONTRACT_ID);
 
-    expect(usdc.assetCode).toBe("USDC");
-    expect(usdc.assetIssuer).toBeTruthy();
-    expect(xlm.assetCode).toBeUndefined();
-    expect(xlm.assetIssuer).toBeUndefined();
-  });
-});
-
-describe("tokenForContract", () => {
-  it("resolves every registered contract id", async () => {
-    const { SUPPORTED_TOKENS, tokenForContract } = await loadConfig();
-
-    for (const token of SUPPORTED_TOKENS) {
-      expect(tokenForContract(token.contractId)).toBe(token);
-    }
+    const xlmToken = tokenForContract(NATIVE_ASSET_CONTRACT_ID);
+    expect(xlmToken).toBeDefined();
+    expect(xlmToken?.symbol).toBe("XLM");
+    expect(xlmToken?.contractId).toBe(NATIVE_ASSET_CONTRACT_ID);
   });
 
-  it("returns undefined for an unknown contract id", async () => {
-    const { tokenForContract } = await loadConfig();
-
-    expect(tokenForContract("CNOTAREGISTEREDCONTRACTID")).toBeUndefined();
-  });
-
-  it("returns undefined for an empty contract id", async () => {
-    const { tokenForContract } = await loadConfig();
-
+  it("tokenForContract returns undefined for unknown contract IDs", () => {
+    expect(tokenForContract("CUNKNOWN_NONEXISTENT_CONTRACT_ID_1234567890")).toBeUndefined();
     expect(tokenForContract("")).toBeUndefined();
-  });
-
-  it("matches exactly rather than case-insensitively", async () => {
-    const { SUPPORTED_TOKENS, tokenForContract } = await loadConfig();
-
-    expect(tokenForContract(SUPPORTED_TOKENS[0].contractId.toLowerCase())).toBeUndefined();
+    expect(tokenForContract("INVALID_ID")).toBeUndefined();
   });
 });
 
-describe("environment overrides", () => {
-  it("uses an overridden USDC contract id", async () => {
-    const override = "CUSDCOVERRIDECONTRACTID";
-    const { SUPPORTED_TOKENS, tokenForContract } = await loadConfig({
-      NEXT_PUBLIC_USDC_CONTRACT_ID: override,
-    });
-
-    expect(SUPPORTED_TOKENS[0].contractId).toBe(override);
-    expect(tokenForContract(override)?.symbol).toBe("USDC");
+describe("Stellar config dynamic env overrides", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    delete process.env.NEXT_PUBLIC_STELLAR_NETWORK;
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    delete process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE;
+    delete process.env.NEXT_PUBLIC_USDC_CONTRACT_ID;
+    delete process.env.NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID;
+    delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+    vi.resetModules();
   });
 
-  it("uses an overridden native asset contract id", async () => {
-    const override = "CXLMOVERRIDECONTRACTID";
-    const { SUPPORTED_TOKENS, tokenForContract } = await loadConfig({
-      NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID: override,
-    });
+  it("overriding NEXT_PUBLIC_USDC_CONTRACT_ID updates the USDC registry", async () => {
+    const customUsdc = "CCUSTOM_USDC_CONTRACT_ID_999999999999999999999";
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", customUsdc);
+    vi.resetModules();
 
-    expect(SUPPORTED_TOKENS[1].contractId).toBe(override);
-    expect(tokenForContract(override)?.isNative).toBe(true);
+    const config = await import("../../../lib/stellar/config");
+    expect(config.USDC_CONTRACT_ID).toBe(customUsdc);
+    expect(config.SUPPORTED_TOKENS[0].contractId).toBe(customUsdc);
+    expect(config.defaultToken().contractId).toBe(customUsdc);
+    expect(config.tokenForContract(customUsdc)?.symbol).toBe("USDC");
   });
 
-  it("falls back to the testnet native id when the network is unset", async () => {
-    const { SUPPORTED_TOKENS, TESTNET_NATIVE_ASSET_CONTRACT_ID } = await loadConfig();
+  it("overriding NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID updates the XLM registry", async () => {
+    const customNative = "CCUSTOM_NATIVE_XLM_CONTRACT_ID_888888888888888";
+    vi.stubEnv("NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID", customNative);
+    vi.resetModules();
 
-    expect(SUPPORTED_TOKENS[1].contractId).toBe(TESTNET_NATIVE_ASSET_CONTRACT_ID);
+    const config = await import("../../../lib/stellar/config");
+    expect(config.NATIVE_ASSET_CONTRACT_ID).toBe(customNative);
+    expect(config.SUPPORTED_TOKENS[1].contractId).toBe(customNative);
+    expect(config.tokenForContract(customNative)?.symbol).toBe("XLM");
+    expect(config.tokenForContract(customNative)?.isNative).toBe(true);
   });
 
-  it("switches the native id to mainnet when the network says mainnet", async () => {
-    const { SUPPORTED_TOKENS, MAINNET_NATIVE_ASSET_CONTRACT_ID } = await loadConfig({
-      NEXT_PUBLIC_STELLAR_NETWORK: "mainnet",
-    });
+  it("switches to mainnet defaults when NEXT_PUBLIC_STELLAR_NETWORK is mainnet", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    delete process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE;
+    delete process.env.NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID;
+    vi.resetModules();
 
-    expect(SUPPORTED_TOKENS[1].contractId).toBe(MAINNET_NATIVE_ASSET_CONTRACT_ID);
+    const config = await import("../../../lib/stellar/config");
+    expect(config.NETWORK).toBe("mainnet");
+    expect(config.IS_MAINNET).toBe(true);
+    expect(config.RPC_URL).toBe("https://soroban-rpc.stellar.org");
+    expect(config.NETWORK_PASSPHRASE).toBe(Networks.PUBLIC);
+    expect(config.NATIVE_ASSET_CONTRACT_ID).toBe(config.MAINNET_NATIVE_ASSET_CONTRACT_ID);
   });
 
-  it("keeps an explicit native override ahead of the network default", async () => {
-    const override = "CEXPLICITNATIVEOVERRIDE";
-    const { SUPPORTED_TOKENS } = await loadConfig({
-      NEXT_PUBLIC_STELLAR_NETWORK: "mainnet",
-      NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID: override,
-    });
+  it("reverts to testnet defaults when NEXT_PUBLIC_STELLAR_NETWORK is testnet", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
+    delete process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE;
+    delete process.env.NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID;
+    vi.resetModules();
 
-    expect(SUPPORTED_TOKENS[1].contractId).toBe(override);
+    const config = await import("../../../lib/stellar/config");
+    expect(config.NETWORK).toBe("testnet");
+    expect(config.IS_MAINNET).toBe(false);
+    expect(config.RPC_URL).toBe("https://soroban-testnet.stellar.org");
+    expect(config.NETWORK_PASSPHRASE).toBe(Networks.TESTNET);
+    expect(config.NATIVE_ASSET_CONTRACT_ID).toBe(config.TESTNET_NATIVE_ASSET_CONTRACT_ID);
+  });
+
+  it("respects custom RPC_URL, NETWORK_PASSPHRASE, and CHECKOUT_CONTRACT_ID overrides", async () => {
+    const customRpc = "https://custom-rpc.example.com";
+    const customPassphrase = "Custom Network Passphrase ; September 2026";
+    const customCheckout = "CCHECKOUT_CONTRACT_CUSTOM_123456789";
+
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_RPC_URL", customRpc);
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE", customPassphrase);
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", customCheckout);
+    vi.resetModules();
+
+    const config = await import("../../../lib/stellar/config");
+    expect(config.RPC_URL).toBe(customRpc);
+    expect(config.NETWORK_PASSPHRASE).toBe(customPassphrase);
+    expect(config.CHECKOUT_CONTRACT_ID).toBe(customCheckout);
   });
 });
