@@ -129,20 +129,26 @@ export async function hashOrderId(orderId: string): Promise<Uint8Array> {
   const digest = await crypto.subtle.digest("SHA-256", data);
   return new Uint8Array(digest);
 }
-// ---------------------------------------------------------------------------
-// Order ID Resolution
-// ---------------------------------------------------------------------------
 
 /**
- * Resolves an order ID to its 32-byte hash for contract operations.
- * - If orderId is a 64-character hex string, it is already hashed (from indexer events) -> return as-is
- * - Otherwise, it is a raw pre-image (e.g., SS-...) -> SHA-256 hash it
+ * True when `value` is already a 32-byte order id rendered as hex.
+ */
+export function isOrderIdHashHex(value: string): boolean {
+  return /^(0x)?[0-9a-fA-F]{64}$/.test(value);
+}
+
+/**
+ * Resolve an order id to the raw 32 bytes the contract stores it under.
+ *
+ * Callers hold one of two things. Checkout holds the pre-image ("SS-..."),
+ * which has to be hashed. Admin views build their rows from indexer events,
+ * whose `order_id` topic is already the hashed BytesN<32> rendered as 64 hex
+ * characters. SHA-256 is one-way, so hashing that hex a second time can never
+ * reproduce the stored value and the contract call fails with OrderNotFound.
+ *
+ * A 64-hex id is therefore decoded straight to bytes and passed through
+ * unchanged; anything else is treated as a pre-image and hashed.
  */
 export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
-  // Check if already a 64-hex hash (from indexer events)
-  if (/^[0-9a-fA-F]{64}$/.test(orderId)) {
-    return hexToBytes(orderId);
-  }
-  // Hash the raw pre-image
-  return hashOrderId(orderId);
+  return isOrderIdHashHex(orderId) ? hexToBytes(orderId) : hashOrderId(orderId);
 }
