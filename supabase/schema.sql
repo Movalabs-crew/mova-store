@@ -13,18 +13,19 @@ create table if not exists public.products (
 
 create index if not exists products_created_at_idx on public.products (created_at desc);
 
-create or replace function public.handle_updated_at()
-returns trigger as \$\$
+create index if not exists products_updated_at_idx on public.products (updated_at desc);
+
+create or replace function set_updated_at()
+returns trigger as ''
 begin
   new.updated_at = now();
   return new;
-end;
-\$\$ language plpgsql;
+end;'' language plpgsql;
 
 drop trigger if exists products_updated_at_trigger on public.products;
 create trigger products_updated_at_trigger
   before update on public.products
-  for each row execute procedure public.handle_updated_at();
+  for each row execute function set_updated_at();
 
 -- Public read; authenticated write (tighten further for production admins)
 alter table public.products enable row level security;
