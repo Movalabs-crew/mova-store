@@ -1,66 +1,64 @@
-import Link from "next/link";
-
 export const metadata = {
-  title: "Privacy Policy | Mova Store",
-  description: "Privacy policy for Mova Store explaining how we handle user data and blockchain transactions.",
+  title: "Privacy Policy · Mova Store",
+  description: "Privacy policy for the Mova Store storefront.",
 };
 
-export default function PrivacyPolicy() {
+const sections = [
+  {
+    heading: "1. What we collect",
+    body: "Account information you provide when signing in (email address and, if you choose, a display name and avatar). Order information such as shipping address and contact details. Payment happens on the Stellar network via your own wallet (Freighter); we never see your wallet seed or private keys.",
+  },
+  {
+    heading: "2. How we use your data",
+    body: "To fulfill and track your orders, communicate with you about purchases and customer service requests, and improve the Store. We do not sell your personal data.",
+  },
+  {
+    heading: "3. Wallet and on-chain data",
+    body: "Checkouts settle in USDC on the Stellar network through the Soroban escrow contract. Your wallet address, order id and payment amount are recorded on-chain as part of the public ledger. Transaction hashes are shared with you for verification.",
+  },
+  {
+    heading: "4. Cookies and local storage",
+    body: "The Store uses your browser's local storage to keep your shopping cart between visits and to remember your authenticated session (managed by Supabase Auth). No third-party advertising trackers are used.",
+  },
+  {
+    heading: "5. Sharing",
+    body: "We share the minimum information required to deliver your order (carriers, payment/escrow infrastructure, hosting). We may disclose data when required by law.",
+  },
+  {
+    heading: "6. Retention and security",
+    body: "Order records are kept for accounting and support purposes. We use reasonable technical and organizational measures to protect your data, and session credentials are stored only as encrypted tokens by the auth provider.",
+  },
+  {
+    heading: "7. Your rights",
+    body: "Depending on where you live, you may have rights to access, correct or delete your personal data. To exercise any of these rights, contact us via the Customer Service page.",
+  },
+  {
+    heading: "8. Changes",
+    body: "We may update this policy from time to time. The latest version will always be published on this page.",
+  },
+];
+
+export default function PrivacyPage() {
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <header className="bg-gradient-to-r from-mova-deep via-purple-700 to-purple-600 text-white py-14 px-4 text-center mt-16">
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Privacy Policy</h1>
-        <p className="mt-2 text-lg text-purple-100">Last updated: {new Date().getFullYear()}</p>
-      </header>
-
-      <main className="py-12 px-4">
-        <div className="container mx-auto max-w-3xl bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 space-y-8 text-gray-700 leading-relaxed">
-          <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">1. Information We Collect</h2>
-            <p>
-              When you use Mova Store, we collect information necessary to fulfill your orders and improve our service.
-              This may include your contact details (such as email address), shipping information, and your public
-              Stellar wallet address when completing an on-chain checkout.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">2. Blockchain Transparency</h2>
-            <p>
-              Please note that transactions conducted on the Stellar network are publicly recorded on an immutable ledger.
-              Your public wallet address, transaction amounts, and transaction hashes are visible on public block explorers
-              by design.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">3. How We Use Your Data</h2>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>Process and verify Stellar payments and order status.</li>
-              <li>Communicate order updates and customer service inquiries.</li>
-              <li>Prevent fraudulent transactions and secure the platform.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">4. Third-Party Services</h2>
-            <p>
-              We do not sell your personal information. We may share information with trusted third-party providers
-              (such as Supabase for database storage and email delivery services) solely to operate the platform.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">5. Contact Us</h2>
-            <p>
-              If you have any questions or requests regarding your personal data, please reach out via our{" "}
-              <Link href="/contact" className="text-purple-600 font-semibold hover:underline">
-                Contact Page
-              </Link>.
-            </p>
-          </section>
+    <div className="min-h-screen bg-mova-surface text-slate-900">
+      <div className="container mx-auto max-w-3xl px-6 py-16">
+        <h1 className="text-3xl font-bold text-purple-900 sm:text-4xl">
+          Privacy Policy
+        </h1>
+        <p className="mt-2 text-sm text-slate-500">
+          Last updated: September 8, 2026
+        </p>
+        <div className="mt-10 space-y-8">
+          {sections.map((s) => (
+            <section key={s.heading}>
+              <h2 className="text-lg font-semibold text-purple-900">
+                {s.heading}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{s.body}</p>
+            </section>
+          ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
