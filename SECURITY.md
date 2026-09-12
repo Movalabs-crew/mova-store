@@ -37,14 +37,14 @@ cp .env.local.example .env.local
 
 ### Sensitive Data Handling
 
-| Data Type | Storage | Notes |
-|-----------|---------|-------|
-| API Keys | Environment variables | Never hardcode |
-| Supabase Config | Environment variables | Client-side anon key is safe; never commit service role key |
-| EmailJS Credentials | Environment variables | Required for email functionality |
-| Stellar Contract IDs | Environment variables | Public but environment-specific |
-| User Passwords | Supabase Auth | Handled by Supabase, never stored locally |
-| Payment Data | On-chain (Stellar) | Non-custodial, no card data stored |
+| Data Type            | Storage               | Notes                                                       |
+| -------------------- | --------------------- | ----------------------------------------------------------- |
+| API Keys             | Environment variables | Never hardcode                                              |
+| Supabase Config      | Environment variables | Client-side anon key is safe; never commit service role key |
+| EmailJS Credentials  | Environment variables | Required for email functionality                            |
+| Stellar Contract IDs | Environment variables | Public but environment-specific                             |
+| User Passwords       | Supabase Auth         | Handled by Supabase, never stored locally                   |
+| Payment Data         | On-chain (Stellar)    | Non-custodial, no card data stored                          |
 
 ### Smart Contract Security
 
@@ -64,11 +64,48 @@ The Soroban escrow contract follows security best practices:
 4. **No Sensitive Data in URLs**: Sensitive data is sent via POST body
 5. **Content Security Policy**: Configured in Next.js headers
 
-### Authentication
+### Authentication & Access Control
 
-- Supabase Authentication handles user sessions
-- Admin access is controlled via email whitelist (`NEXT_PUBLIC_ADMIN_EMAILS`)
-- No passwords are stored in the application
+- Supabase Authentication handles user sessions.
+- Client-side admin UI access is controlled via `NEXT_PUBLIC_ADMIN_EMAILS` or the `is_admin` JWT claim in `app_metadata`.
+- Server-side database and storage writes are enforced via PostgreSQL Row Level Security (RLS) policies in `supabase/schema.sql`.
+- No passwords or private secrets are stored in the application repository.
+
+#### Authorizing Administrators in Supabase
+
+To authorize an admin user for product mutations and storage uploads in Supabase, use one of the following methods:
+
+1.  **Method 1: `public.admin_users` table (Recommended)**
+    Insert the admin's email address into the `admin_users` table:
+
+    ```sql
+    insert into public.admin_users (email)
+    values ('admin@example.com')
+    on conflict (email) do nothing;
+    ```
+
+2.  **Method 2: Custom JWT App Metadata (`is_admin: true`)**
+    Assign the `is_admin: true` flag to the user's `app_metadata` in Supabase Auth:
+
+    ```sql
+    update auth.users
+    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"is_admin": true}'::jsonb
+    where email = 'admin@example.com';
+    ```
+
+    Or via the Supabase Admin API / Dashboard:
+
+    ```javascript
+    await supabase.auth.admin.updateUserById(userId, {
+      app_metadata: { is_admin: true },
+    });
+    ```
+
+3.  **Method 3: Whitelist Environment Variable (`NEXT_PUBLIC_ADMIN_EMAILS`)**
+    Include the admin email in `.env.local`:
+    ```
+    NEXT_PUBLIC_ADMIN_EMAILS=admin@example.com,lead@example.com
+    ```
 
 ### Dependencies
 
@@ -138,5 +175,6 @@ Before mainnet deployment:
 ## Contact
 
 For security-related inquiries:
+
 - Email: security@movalabs.dev
 - Response time: Within 48 hours
