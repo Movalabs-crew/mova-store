@@ -6,7 +6,7 @@ import {
   TX_TIMEOUT_SECONDS,
   TX_POLL_INTERVAL_MS,
 } from "./config";
-import { scValToString } from "./scval";
+import { scValToString, toSdkBytes } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Payment event decoding.
@@ -82,9 +82,10 @@ export function decodePaymentEvent(
 
     let eventContractId: string | undefined;
     try {
-      const cid = event.contractId();
-      if (cid) {
-        eventContractId = StrKey.encodeContract(cid as any);
+      if (event.contractId()) {
+        eventContractId = StrKey.encodeContract(
+          toSdkBytes(event.contractId() as unknown as Uint8Array)
+        );
       }
     } catch {
       // system events have no contract id
