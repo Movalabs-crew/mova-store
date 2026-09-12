@@ -128,10 +128,23 @@ export function loadStellarConfig(errors: ValidationError[] = []): StellarConfig
  */
 export function loadEmailJSConfig(errors: ValidationError[] = []): EmailJSConfig {
   return {
-    serviceId: requireEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", errors, "email notifications"),
-    templateId: requireEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", errors, "email notifications"),
-    publicKey: requireEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", errors, "email notifications"),
-    defaultRecipientEmail: getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
+    serviceId: requireEnv(
+      "NEXT_PUBLIC_EMAILJS_SERVICE_ID",
+      errors,
+      "email notifications"
+    ),
+    templateId: requireEnv(
+      "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID",
+      errors,
+      "email notifications"
+    ),
+    publicKey: requireEnv(
+      "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY",
+      errors,
+      "email notifications"
+    ),
+    defaultRecipientEmail:
+      getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
   };
 }
 
