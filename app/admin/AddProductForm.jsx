@@ -46,8 +46,11 @@ const AddProductForm = ({ onProductAdded }) => {
       <h1 className="text-3xl font-bold mb-6 text-center text-purple-500">Add New Product</h1>
       <form onSubmit={handleSubmit}>
         <div className="mb-6">
-          <label className="block text-gray-700 text-lg font-semibold">Product Name</label>
+          <label htmlFor="add-product-name" className="block text-gray-700 text-lg font-semibold">
+            Product Name
+          </label>
           <input
+            id="add-product-name"
             type="text"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productName}
@@ -56,9 +59,13 @@ const AddProductForm = ({ onProductAdded }) => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 text-lg font-semibold">Product Price</label>
+          <label htmlFor="add-product-price" className="block text-gray-700 text-lg font-semibold">
+            Product Price (USD)
+          </label>
           <input
+            id="add-product-price"
             type="number"
+            step="0.01"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productPrice}
             onChange={(e) => setProductPrice(e.target.value)}
@@ -66,8 +73,11 @@ const AddProductForm = ({ onProductAdded }) => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 text-lg font-semibold">Product Image</label>
+          <label htmlFor="add-product-image" className="block text-gray-700 text-lg font-semibold">
+            Product Image
+          </label>
           <input
+            id="add-product-image"
             type="file"
             accept="image/*"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"

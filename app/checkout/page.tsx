@@ -225,53 +225,68 @@ const Checkout = () => {
                 <h2 className="text-2xl mb-4 text-center">Checkout</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="mb-4">
-                    <label className="block text-gray-700">First Name</label>
+                    <label htmlFor="checkout-firstName" className="block text-gray-700">
+                      First Name
+                    </label>
                     <input
+                      id="checkout-firstName"
                       type="text"
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Last Name</label>
+                    <label htmlFor="checkout-lastName" className="block text-gray-700">
+                      Last Name
+                    </label>
                     <input
+                      id="checkout-lastName"
                       type="text"
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Email</label>
+                    <label htmlFor="checkout-email" className="block text-gray-700">
+                      Email
+                    </label>
                     <input
+                      id="checkout-email"
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Address</label>
+                    <label htmlFor="checkout-address" className="block text-gray-700">
+                      Address
+                    </label>
                     <input
+                      id="checkout-address"
                       type="text"
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Card Number</label>
+                    <label htmlFor="checkout-cardNumber" className="block text-gray-700">
+                      Card Number
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
+                        id="checkout-cardNumber"
                         type="text"
                         name="cardNumber"
                         value={formData.cardNumber}
@@ -289,15 +304,21 @@ const Checkout = () => {
                         maxLength={19}
                         placeholder="16-digit card number"
                         required
-                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                       />
-                      <FaCreditCard className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500" />
+                      <FaCreditCard
+                        className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Expiry Date</label>
+                    <label htmlFor="checkout-expiryDate" className="block text-gray-700">
+                      Expiry Date
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
+                        id="checkout-expiryDate"
                         type="text"
                         name="expiryDate"
                         value={formData.expiryDate}
@@ -321,17 +342,23 @@ const Checkout = () => {
                         }}
                         placeholder="MM/YY"
                         maxLength={5}
-                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
                       />
-                      <BsCalendarDate className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500" />
+                      <BsCalendarDate
+                        className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-gray-700">Cvv</label>
+                    <label htmlFor="checkout-cvv" className="block text-gray-700">
+                      Cvv
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
+                        id="checkout-cvv"
                         type="text"
                         name="cvv"
                         value={formData.cvv}
@@ -346,12 +373,15 @@ const Checkout = () => {
                             cvv: value,
                           }));
                         }}
-                        placeholder="3 or 4 digits"
+                        placeholder="CVV"
                         maxLength={4}
+                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
-                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
-                      <FaCreditCard className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500" />
+                      <FaCreditCard
+                        className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
                 </div>

@@ -97,7 +97,7 @@ const AuthPage = () => {
     <section className="px-4 md:px-10 bg-white py-12 flex items-center justify-center min-h-screen">
       <div className="flex flex-wrap justify-center md:justify-between items-center w-full max-w-4xl">
         <div className="w-full md:w-1/2 flex justify-center md:justify-start mb-8 md:mb-0 md:pr-8">
-          <Image src={img} alt="img" />
+          <Image src={img} alt="Mova Store authentication illustration" priority />
         </div>
         <div className="w-full md:w-1/2 text-center md:text-left">
           <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md mx-auto md:mx-0">
@@ -140,10 +140,15 @@ const AuthPage = () => {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={togglePasswordVisibility}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6 text-gray-500"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6 text-gray-500 hover:text-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 rounded"
                 >
-                  {showPassword ? <FaRegEye size={20} /> : <FaRegEyeSlash size={20} />}
+                  {showPassword ? (
+                    <FaRegEye size={20} aria-hidden="true" />
+                  ) : (
+                    <FaRegEyeSlash size={20} aria-hidden="true" />
+                  )}
                 </button>
               </div>
               {!isLoginMode && (
@@ -165,10 +170,17 @@ const AuthPage = () => {
                   />
                   <button
                     type="button"
+                    aria-label={
+                      showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+                    }
                     onClick={toggleConfirmPasswordVisibility}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6 text-gray-500"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6 text-gray-500 hover:text-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 rounded"
                   >
-                    {showConfirmPassword ? <FaRegEye size={20} /> : <FaRegEyeSlash size={20} />}
+                    {showConfirmPassword ? (
+                      <FaRegEye size={20} aria-hidden="true" />
+                    ) : (
+                      <FaRegEyeSlash size={20} aria-hidden="true" />
+                    )}
                   </button>
                 </div>
               )}

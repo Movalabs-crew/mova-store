@@ -59,10 +59,8 @@ export default function Sidebar() {
                   <FaInfoCircle className="mr-3" />
                   Admin
                 </Link>
-              ) : (
-                ""
-              )}
-            </li>
+              </li>
+            ) : null}
           </ul>
         </nav>
       </aside>
@@ -73,40 +71,23 @@ export default function Sidebar() {
           <ul className="py-6 space-y-14 px-2">
             <li>
               <Link
-                href="/shop"
-                aria-label="Shop"
-                title="Shop"
-                className="  hover:text-white transition-colors duration-200"
-                title="Shop"
+                href="/"
+                aria-label="Home"
+                title="Home"
+                className="hover:text-white transition-colors duration-200"
               >
                 <FaHome className="mr-3 text-white" size={20} />
               </Link>
             </li>
             <li>
               <Link
-                href="/"
-                aria-label="Home"
-                title="Home"
-                className=" hover:text-white transition-colors duration-200"
-                title="Blog"
+                href="/shop"
+                aria-label="Shop"
+                title="Shop"
+                className="hover:text-white transition-colors duration-200"
               >
-                <FaList className="mr-3" size={20} />
+                <FaShoppingCart className="mr-3 text-white" size={20} />
               </Link>
-            </li>
-            <li>
-              {isAdmin ? (
-                <Link
-                  href="/admin"
-                  aria-label="Admin"
-                  title="Admin"
-                  className=" hover:text-white transition-colors duration-200"
-                  title="Admin"
-                >
-                  <FaInfoCircle className="mr-3" size={20} />
-                </Link>
-              ) : (
-                ""
-              )}
             </li>
             <li>
               <Link
@@ -118,6 +99,18 @@ export default function Sidebar() {
                 <FcSportsMode className="mr-3" size={20} />
               </Link>
             </li>
+            {isAdmin ? (
+              <li>
+                <Link
+                  href="/admin"
+                  aria-label="Admin"
+                  title="Admin"
+                  className="hover:text-white transition-colors duration-200"
+                >
+                  <FaInfoCircle className="mr-3 text-white" size={20} />
+                </Link>
+              </li>
+            ) : null}
           </ul>
         </nav>
       </aside>
