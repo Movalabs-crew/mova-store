@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
+import { SiStellar } from "react-icons/si";
 
 import { payWithStellar } from "../lib/stellar/checkout";
+import { defaultToken } from "../lib/stellar/config";
+import { convertUsdToXlm } from "../lib/stellar/price";
 import { connectWallet, currentAddress, WalletError } from "../lib/stellar/freighter";
 
 /**
- * Pay the current cart total with USDC on Stellar (via Freighter).
+ * Pay the current cart total with USDC or native XLM on Stellar (via Freighter).
  */
-const StellarCheckoutButton = ({ amountUsd, orderId, onSuccess, disabled = false }) => {
+const StellarCheckoutButton = ({
+  amountUsd,
+  orderId,
+  onSuccess,
+  disabled = false,
+  token = defaultToken(),
+  tokenAmount = null,
+}) => {
   const [publicKey, setPublicKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -18,6 +28,11 @@ const StellarCheckoutButton = ({ amountUsd, orderId, onSuccess, disabled = false
     []
   );
   const effectiveOrderId = orderId || generatedOrderId;
+
+  const effectiveXlmAmount = useMemo(() => {
+    if (!token?.isNative) return null;
+    return tokenAmount ?? convertUsdToXlm(amountUsd);
+  }, [token, tokenAmount, amountUsd]);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,8 +65,10 @@ const StellarCheckoutButton = ({ amountUsd, orderId, onSuccess, disabled = false
     try {
       const res = await payWithStellar({
         amountUsd,
+        tokenAmount: effectiveXlmAmount ?? undefined,
         orderId: effectiveOrderId,
         publicKey: key,
+        token,
         onStatus: (msg) => setMessage(msg),
       });
       setResult(res);
@@ -85,15 +102,23 @@ const StellarCheckoutButton = ({ amountUsd, orderId, onSuccess, disabled = false
           <>
             <span className="font-semibold">Payment confirmed ✓</span>
             <span className="text-xs text-white/80">
-              ${Number(result.amountUsd).toFixed(2)} USDC · order {effectiveOrderId}
+              {token?.isNative && effectiveXlmAmount
+                ? `~${effectiveXlmAmount.toFixed(2)} XLM ($${Number(result.amountUsd).toFixed(2)})`
+                : `$${Number(result.amountUsd).toFixed(2)} ${token?.symbol || "USDC"}`}{" "}
+              · order {effectiveOrderId}
             </span>
           </>
         ) : (
           <>
-            <span className="font-semibold">
-              Pay with USDC{amountUsd ? ` · $${Number(amountUsd).toFixed(2)}` : ""}
+            <span className="flex items-center justify-center gap-2 font-semibold">
+              {token?.isNative && <SiStellar className="inline-block" size={16} />}
+              {token?.isNative
+                ? `Pay with XLM · ~${effectiveXlmAmount?.toFixed(2)} XLM ($${Number(amountUsd).toFixed(2)})`
+                : `Pay with USDC${amountUsd ? ` · $${Number(amountUsd).toFixed(2)}` : ""}`}
             </span>
-            <span className="text-xs text-white/80">From your Stellar wallet (Freighter)</span>
+            <span className="text-xs text-white/80">
+              From your Stellar wallet (Freighter)
+            </span>
           </>
         )}
       </button>
