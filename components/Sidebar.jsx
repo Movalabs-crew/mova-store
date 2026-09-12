@@ -2,12 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  FaHome,
-  FaInfoCircle,
-  FaShoppingCart,
-  FaList,
-} from "react-icons/fa";
+import { FaHome, FaInfoCircle, FaShoppingCart } from "react-icons/fa";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
 
@@ -39,7 +34,7 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
-                href="/shop"
+                href="/blog"
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FaShoppingCart className="mr-3" />
@@ -53,15 +48,6 @@ export default function Sidebar() {
               >
                 <FcSportsMode className="mr-3" />
                 Collections
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/blog"
-                className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
-              >
-                <FaList className="mr-3" />
-                Blog
               </Link>
             </li>
             {isAdmin ? (
@@ -87,16 +73,9 @@ export default function Sidebar() {
           <ul className="py-6 space-y-14 px-2">
             <li>
               <Link
-                href="/"
-                className=" hover:text-white transition-colors duration-200"
-                title="Home"
-              >
-                <FaHome className="mr-3" size={20} />
-              </Link>
-            </li>
-            <li>
-              <Link
                 href="/shop"
+                aria-label="Shop"
+                title="Shop"
                 className="  hover:text-white transition-colors duration-200"
                 title="Shop"
               >
@@ -105,16 +84,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
-                href="/collections"
-                className="hover:text-purple-500 transition-colors duration-200"
-                title="Collections"
-              >
-                <FcSportsMode className="mr-3" size={20} />
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/blog"
+                href="/"
+                aria-label="Home"
+                title="Home"
                 className=" hover:text-white transition-colors duration-200"
                 title="Blog"
               >
@@ -125,6 +97,8 @@ export default function Sidebar() {
               {isAdmin ? (
                 <Link
                   href="/admin"
+                  aria-label="Admin"
+                  title="Admin"
                   className=" hover:text-white transition-colors duration-200"
                   title="Admin"
                 >
@@ -133,6 +107,16 @@ export default function Sidebar() {
               ) : (
                 ""
               )}
+            </li>
+            <li>
+              <Link
+                href="/collections"
+                aria-label="Collections"
+                title="Collections"
+                className="hover:text-purple-500 transition-colors duration-200"
+              >
+                <FcSportsMode className="mr-3" size={20} />
+              </Link>
             </li>
           </ul>
         </nav>

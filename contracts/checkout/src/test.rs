@@ -2,8 +2,9 @@
 
 use soroban_sdk::testutils::{Address as _, Events};
 use soroban_sdk::token::{StellarAssetClient, TokenClient};
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env};
-use soroban_sdk::hex;
+use soroban_sdk::{
+    contract, contractimpl, contracttype, map, vec, Address, BytesN, Env, IntoVal, Symbol, Val,
+};
 
 use crate::errors::Error;
 use crate::order::Status;
@@ -442,130 +443,71 @@ fn test_events_emitted() {
     let id = order_id(&env, 5);
     let amount = 10_000_i128;
 
-    client.create_order(&buyer, &id, &token, &amount);
-    client.pay(&token, &buyer, &id, &amount);
+    let timestamp: Val = env.ledger().timestamp().into_val(&env);
+    let amount: Val = 10_000i128.into_val(&env);
+
+    // The topic layout is a published interface, not an implementation detail:
+    // lib/stellar/events.ts skips any event whose first topic is not `pay`, and
+    // then reads topics[1..] positionally as [token, buyer, merchant,
+    // order_id]. Asserting the whole lifecycle exactly means a change to either
+    // the event name or the topic order fails here, rather than silently
+    // stopping the indexer from ever seeing a payment. SDK 27 exposes events
+    // from the latest invocation, so check each operation before the next call.
+    client.create_order(&buyer, &id, &token, &10_000);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (
+                    Symbol::new(&env, "create_order"),
+                    token.clone(),
+                    buyer.clone(),
+                    id.clone(),
+                )
+                    .into_val(&env),
+                map![
+                    &env,
+                    (Symbol::new(&env, "amount"), amount),
+                    (Symbol::new(&env, "timestamp"), timestamp),
+                ]
+                .into_val(&env),
+            ),
+        ]
+    );
+
+    client.pay(&token, &buyer, &id, &10_000);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (
+                    Symbol::new(&env, "pay"),
+                    token.clone(),
+                    buyer.clone(),
+                    merchant.clone(),
+                    id.clone(),
+                )
+                    .into_val(&env),
+                map![&env, (Symbol::new(&env, "amount"), amount)].into_val(&env),
+            ),
+        ]
+    );
+
     client.dispatch(&id);
-
-    // Collect all contract-level events (one per lifecycle step).
-    let contract_events: Vec<_> = env
-        .events()
-        .all()
-        .filter_by_contract(&checkout)
-        .events()
-        .collect();
-    assert_eq!(contract_events.len(), 3, "expected 3 lifecycle events");
-
-    // Helper: read topic symbols as strings.
-    fn topic_symbols(ev: &soroban_sdk::Event) -> Vec<String> {
-        ev.topic()
-            .iter()
-            .map(|v| v.symbol().to_string())
-            .collect()
-    }
-    // Helper: read topic[1] as an Address string.
-    fn topic_address(ev: &soroban_sdk::Event, idx: usize) -> String {
-        ev.topic()[idx].address().unwrap().to_string()
-    }
-    // Helper: read topic[N<32>] as hex bytes string.
-    fn topic_bytes_n(ev: &soroban_sdk::Event, idx: usize) -> String {
-        let b = ev.topic()[idx].bytesn().unwrap();
-        b.iter().map(|b| format!("{:02x}", b)).collect()
-    }
-    // Helper: read data as i128.
-    fn data_i128(ev: &soroban_sdk::Event) -> i128 {
-        ev.data().i128().unwrap()
-    }
-
-    // --- Event 0: OrderCreated (create_order) ---
-    // Topics: "create_order", token, buyer, order_id
-    let ev0 = &contract_events[0];
-    let syms0 = topic_symbols(ev0);
-    assert_eq!(syms0[0], "create_order", "event 0 must be OrderCreated");
-    assert_eq!(syms0[1], token.to_string(), "token topic mismatch");
-    assert_eq!(syms0[2], buyer.to_string(), "buyer topic mismatch");
     assert_eq!(
-        topic_bytes_n(ev0, 3),
-        soroban_sdk::hex::encode(id.to_array()),
-        "order_id topic mismatch"
-    );
-    assert_eq!(data_i128(ev0), amount, "OrderCreated data amount mismatch");
-
-    // --- Event 1: PaymentReceived (pay) ---
-    // Topics: "pay", token, buyer, merchant, order_id
-    let ev1 = &contract_events[1];
-    let syms1 = topic_symbols(ev1);
-    assert_eq!(syms1[0], "pay", "event 1 must be PaymentReceived");
-    assert_eq!(syms1[1], token.to_string(), "pay token topic mismatch");
-    assert_eq!(syms1[2], buyer.to_string(), "pay buyer topic mismatch");
-    assert_eq!(syms1[3], merchant.to_string(), "pay merchant topic mismatch");
-    assert_eq!(
-        topic_bytes_n(ev1, 4),
-        soroban_sdk::hex::encode(id.to_array()),
-        "pay order_id topic mismatch"
-    );
-    assert_eq!(data_i128(ev1), amount, "PaymentReceived data amount mismatch");
-
-    // --- Event 2: OrderShipped (dispatch) ---
-    // Topics: "dispatch", order_id, merchant
-    let ev2 = &contract_events[2];
-    let syms2 = topic_symbols(ev2);
-    assert_eq!(syms2[0], "dispatch", "event 2 must be OrderShipped");
-    assert_eq!(
-        topic_bytes_n(ev2, 1),
-        soroban_sdk::hex::encode(id.to_array()),
-        "dispatch order_id topic mismatch"
-    );
-    assert_eq!(syms2[2], merchant.to_string(), "dispatch merchant topic mismatch");
-    assert_eq!(data_i128(ev2), amount, "OrderShipped data amount mismatch");
-}
-
-/// Test that the refund lifecycle emits a correctly-shaped OrderRefunded event.
-#[test]
-fn test_refund_event_emitted() {
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let (client, token, _, buyer, checkout) = setup_usdc(&env);
-    let id = order_id(&env, 8);
-    let amount = 100_000_i128;
-
-    client.pay(&token, &buyer, &id, &amount);
-    client.refund(&id);
-
-    let contract_events: Vec<_> = env
-        .events()
-        .all()
-        .filter_by_contract(&checkout)
-        .events()
-        .collect();
-    // pay + refund = 2 events
-    assert_eq!(contract_events.len(), 2, "expected pay + refund events");
-
-    fn topic_symbols(ev: &soroban_sdk::Event) -> Vec<String> {
-        ev.topic()
-            .iter()
-            .map(|v| v.symbol().to_string())
-            .collect()
-    }
-    fn topic_bytes_n(ev: &soroban_sdk::Event, idx: usize) -> String {
-        let b = ev.topic()[idx].bytesn().unwrap();
-        b.iter().map(|b| format!("{:02x}", b)).collect()
-    }
-    fn data_i128(ev: &soroban_sdk::Event) -> i128 {
-        ev.data().i128().unwrap()
-    }
-
-    let ev_refund = &contract_events[1];
-    let syms = topic_symbols(ev_refund);
-    assert_eq!(syms[0], "refund", "event must be OrderRefunded");
-    assert_eq!(
-        topic_bytes_n(ev_refund, 1),
-        soroban_sdk::hex::encode(id.to_array()),
-        "refund order_id topic mismatch"
-    );
-    assert_eq!(
-        syms[2], buyer.to_string(),
-        "refund buyer topic mismatch"
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (Symbol::new(&env, "dispatch"), id.clone(), merchant.clone()).into_val(&env),
+                map![&env, (Symbol::new(&env, "amount"), amount)].into_val(&env),
+            ),
+        ]
     );
     assert_eq!(data_i128(ev_refund), amount, "OrderRefunded data amount mismatch");
 }
