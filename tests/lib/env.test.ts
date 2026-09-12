@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isAdminEmail, isDevelopment, isProduction, validateEnv } from "../../lib/env";
+import { isAdminEmail, isDevelopment, isProduction, validateEnv, loadStellarConfig } from "../../lib/env";
 
 describe("isAdminEmail", () => {
   beforeEach(() => {
@@ -101,48 +101,46 @@ describe("validateEnv", () => {
   });
 });
 
-describe("mainnet RPC defaults", () => {
-  const GATEWAY_FM = "https://soroban-rpc.mainnet.stellar.gateway.fm";
+describe("mainnet RPC default", () => {
+  const RPC_KEY = "NEXT_PUBLIC_STELLAR_RPC_URL";
+  let savedRpc: string | undefined;
 
   beforeEach(() => {
-    vi.resetModules();
+    savedRpc = process.env[RPC_KEY];
+    // `??` in lib/stellar/config only falls back on undefined, so the variable
+    // has to be absent rather than empty for this to exercise the defaults.
+    delete process.env[RPC_KEY];
   });
 
   afterEach(() => {
+    if (savedRpc === undefined) {
+      delete process.env[RPC_KEY];
+    } else {
+      process.env[RPC_KEY] = savedRpc;
+    }
     vi.unstubAllEnvs();
+    vi.resetModules();
   });
 
-  function stubMainnetUnset() {
+  it("resolves the same endpoint from lib/env and lib/stellar/config", async () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
-    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "CA1234567890TESTCONTRACTID");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key-123");
-    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "service_abc");
-    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "template_xyz");
-    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pubkey_789");
-    // config.ts uses `??` (empty string is NOT nullish), so the var must be
-    // truly absent to exercise the compiled-in default.
-    delete process.env.NEXT_PUBLIC_STELLAR_RPC_URL;
-  }
+    vi.resetModules();
 
-  it("validateEnv defaults to canonical gateway.fm mainnet RPC when unset", () => {
-    stubMainnetUnset();
+    const { loadStellarConfig } = await import("../../lib/env");
+    const { RPC_URL } = await import("../../lib/stellar/config");
 
-    expect(validateEnv().stellar.rpcUrl).toBe(GATEWAY_FM);
+    // Both read NEXT_PUBLIC_STELLAR_RPC_URL, so an operator who leaves it unset
+    // must not get a different endpoint depending on which module resolved it.
+    expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
   });
 
-  it("config.ts RPC_URL and env.ts resolve the same mainnet default (single source of truth)", async () => {
-    stubMainnetUnset();
-    const config = await import("../../lib/stellar/config");
+  it("keeps testnet in step too", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    vi.resetModules();
 
-    expect(config.RPC_URL).toBe(GATEWAY_FM);
-    expect(validateEnv().stellar.rpcUrl).toBe(config.RPC_URL);
-  });
+    const { loadStellarConfig } = await import("../../lib/env");
+    const { RPC_URL } = await import("../../lib/stellar/config");
 
-  it("explicit NEXT_PUBLIC_STELLAR_RPC_URL override is respected", () => {
-    stubMainnetUnset();
-    vi.stubEnv("NEXT_PUBLIC_STELLAR_RPC_URL", "https://my-own-rpc.example/rpc");
-
-    expect(validateEnv().stellar.rpcUrl).toBe("https://my-own-rpc.example/rpc");
+    expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
   });
 });

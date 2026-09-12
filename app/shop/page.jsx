@@ -21,12 +21,15 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchProducts = async () => {
       setLoading(true);
       setError(null);
       try {
         const data = await listProducts();
-        setProducts(data);
+        if (isMounted) {
+          setProducts(data);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -35,6 +38,9 @@ export default function Products() {
     };
 
     fetchProducts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleCheckout = (e) => {
@@ -91,8 +97,13 @@ export default function Products() {
               ))}
             </div>
           ) : (
+            // Only when the fetch resolved empty. On rejection the error above
+            // is the whole story, and showing "no products yet" beside it would
+            // read as an empty catalogue rather than a failed request.
             !error && (
-              <p className="text-center py-16 text-mova-ink/70">No products yet</p>
+              <p className="text-center py-16 text-mova-ink/70">
+                No products yet.
+              </p>
             )
           )}
         </section>

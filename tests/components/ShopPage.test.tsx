@@ -7,6 +7,7 @@ import { listProducts } from "../../lib/products";
 
 vi.mock("../../lib/products", () => ({ listProducts: vi.fn() }));
 
+// Toast rendering and timers have their own component tests.
 vi.mock("../../components/Toast", () => ({
   default: ({ message, show }: { message: string; show: boolean }) =>
     show ? <p role="status">{message}</p> : null,
@@ -48,34 +49,28 @@ describe("Shop product loading states", () => {
     localStorage.clear();
   });
 
-  it("shows ProductGridSkeleton while listProducts is pending", async () => {
+  it("shows skeletons while the request is pending, then shows an empty catalogue", async () => {
     const request = pendingProducts();
     renderShop();
 
     expect(listProducts).toHaveBeenCalledTimes(1);
     expect(skeletons().length).toBeGreaterThan(0);
-    expect(screen.queryByText("No products yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
 
     await act(async () => request.resolve([]));
-  });
 
-  it("shows an explicit empty message when the catalogue resolves empty", async () => {
-    const request = pendingProducts();
-    renderShop();
-
-    await act(async () => request.resolve([]));
-
-    expect(screen.getByText("No products yet")).toBeInTheDocument();
+    expect(screen.getByText("No products yet.")).toBeInTheDocument();
     expect(skeletons()).toHaveLength(0);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("renders product cards after a successful fetch", async () => {
+  it("replaces skeletons with product cards that still add products to the cart", async () => {
     const request = pendingProducts();
     renderShop();
 
     expect(skeletons().length).toBeGreaterThan(0);
+    expect(screen.queryByText(product.name)).not.toBeInTheDocument();
 
     await act(async () => request.resolve([product]));
 
@@ -85,23 +80,29 @@ describe("Shop product loading states", () => {
       "src",
       product.img
     );
+    expect(within(productLink).getByText("$75")).toBeInTheDocument();
     expect(skeletons()).toHaveLength(0);
-    expect(screen.queryByText("No products yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
 
     fireEvent.click(within(productLink.parentElement!).getByRole("button"));
+
+    expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Item added to cart");
+    expect(JSON.parse(localStorage.getItem("cartItems")!)).toEqual([product]);
   });
 
-  it("keeps the existing error state and hides the empty message on rejection", async () => {
+  it("replaces skeletons with the request error without claiming the catalogue is empty", async () => {
     const request = pendingProducts();
     renderShop();
 
     expect(skeletons().length).toBeGreaterThan(0);
+    expect(screen.queryByText("Catalogue unavailable")).not.toBeInTheDocument();
 
     await act(async () => request.reject(new Error("Catalogue unavailable")));
 
     expect(screen.getByText("Catalogue unavailable")).toBeInTheDocument();
     expect(skeletons()).toHaveLength(0);
-    expect(screen.queryByText("No products yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 });
