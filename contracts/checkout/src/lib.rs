@@ -163,7 +163,7 @@ impl Checkout {
         // transfer is derived from this invocation (it holds the funds).
         token_client.transfer(
             &buyer,
-            &MuxedAddress::from(&env.current_contract_address()),
+            MuxedAddress::from(&env.current_contract_address()),
             &amount,
         );
 
@@ -207,7 +207,7 @@ impl Checkout {
         // Release: contract -> merchant.
         token_client.transfer(
             &env.current_contract_address(),
-            &MuxedAddress::from(&merchant),
+            MuxedAddress::from(&merchant),
             &order.amount,
         );
 
@@ -249,7 +249,7 @@ impl Checkout {
         // Refund: contract -> buyer.
         token_client.transfer(
             &env.current_contract_address(),
-            &MuxedAddress::from(&order.buyer),
+            MuxedAddress::from(&order.buyer),
             &order.amount,
         );
 
