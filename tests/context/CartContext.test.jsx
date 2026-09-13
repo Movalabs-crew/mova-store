@@ -3,6 +3,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, renderHook, act } from "@testing-library/react";
 import { CartProvider, useCart } from "../../context/CartContext";
 
+const shirt = { id: "prod_1", name: "Shirt", price: 25.5 };
+const hat = { id: "prod_2", name: "Hat", price: 10 };
+const ghost = { id: "prod_999", name: "Ghost", price: 999 };
+
 function TestConsumer() {
   const { cartItems, itemCount, totalPrice } = useCart();
   return (
@@ -14,13 +18,11 @@ function TestConsumer() {
   );
 }
 
-const wrapper = ({ children }) => <CartProvider>{children}</CartProvider>;
+function wrapper({ children }) {
+  return <CartProvider>{children}</CartProvider>;
+}
 
-const prod1 = { id: "prod_1", name: "Classic Runner", price: 25.5 };
-const prod2 = { id: "prod_2", name: "Trail Trekker", price: 10 };
-const missingProd = { id: "prod_missing", name: "Ghost Item", price: 99 };
-
-function assertCartState(result, { items, count, total }) {
+function expectCartState(result, { items, count, total }) {
   expect(result.current.cartItems).toEqual(items);
   expect(result.current.itemCount).toBe(count);
   expect(result.current.totalPrice).toBe(total);
@@ -28,7 +30,7 @@ function assertCartState(result, { items, count, total }) {
   expect(result.current.totalPrice).toBeGreaterThanOrEqual(0);
 }
 
-function assertLocalStorage({ items, count, total, cleared = false }) {
+function expectStored({ items, count, total, cleared = false }) {
   if (cleared) {
     expect(localStorage.getItem("cartItems")).toBeNull();
     expect(localStorage.getItem("itemCount")).toBeNull();
@@ -104,96 +106,96 @@ describe("CartProvider count and total transitions", () => {
     localStorage.clear();
   });
 
-  it("adds an item and asserts React state and localStorage writes", () => {
+  it("adds an item and persists cartItems, itemCount, and totalPrice", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
+      result.current.addToCart(shirt);
     });
 
-    assertCartState(result, { items: [prod1], count: 1, total: 25.5 });
-    assertLocalStorage({ items: [prod1], count: 1, total: 25.5 });
+    expectCartState(result, { items: [shirt], count: 1, total: 25.5 });
+    expectStored({ items: [shirt], count: 1, total: 25.5 });
   });
 
-  it("handles duplicate add of the same item and increments count and total", () => {
+  it("duplicate add of the same id appends another line and increases count and total", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
+      result.current.addToCart(shirt);
     });
-    assertCartState(result, { items: [prod1], count: 1, total: 25.5 });
-    assertLocalStorage({ items: [prod1], count: 1, total: 25.5 });
+    expectCartState(result, { items: [shirt], count: 1, total: 25.5 });
+    expectStored({ items: [shirt], count: 1, total: 25.5 });
 
     act(() => {
-      result.current.addToCart(prod1);
+      result.current.addToCart(shirt);
     });
-    assertCartState(result, { items: [prod1, prod1], count: 2, total: 51 });
-    assertLocalStorage({ items: [prod1, prod1], count: 2, total: 51 });
+    expectCartState(result, { items: [shirt, shirt], count: 2, total: 51 });
+    expectStored({ items: [shirt, shirt], count: 2, total: 51 });
   });
 
   it("removes an existing item and updates count, total, and localStorage", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
-      result.current.addToCart(prod2);
+      result.current.addToCart(shirt);
+      result.current.addToCart(hat);
     });
-    assertCartState(result, { items: [prod1, prod2], count: 2, total: 35.5 });
-    assertLocalStorage({ items: [prod1, prod2], count: 2, total: 35.5 });
+    expectCartState(result, { items: [shirt, hat], count: 2, total: 35.5 });
+    expectStored({ items: [shirt, hat], count: 2, total: 35.5 });
 
     act(() => {
-      result.current.removeFromCart(prod1);
+      result.current.removeFromCart(shirt);
     });
-    assertCartState(result, { items: [prod2], count: 1, total: 10 });
-    assertLocalStorage({ items: [prod2], count: 1, total: 10 });
+    expectCartState(result, { items: [hat], count: 1, total: 10 });
+    expectStored({ items: [hat], count: 1, total: 10 });
   });
 
-  it("locks negative-itemCount bug: removing a missing item leaves count and total unchanged", () => {
+  it("leaves count and total unchanged when removing an item that is not in the cart", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
+      result.current.addToCart(shirt);
     });
-    assertCartState(result, { items: [prod1], count: 1, total: 25.5 });
-    assertLocalStorage({ items: [prod1], count: 1, total: 25.5 });
+    expectCartState(result, { items: [shirt], count: 1, total: 25.5 });
+    expectStored({ items: [shirt], count: 1, total: 25.5 });
 
     act(() => {
-      result.current.removeFromCart(missingProd);
+      result.current.removeFromCart(ghost);
     });
-    assertCartState(result, { items: [prod1], count: 1, total: 25.5 });
-    assertLocalStorage({ items: [prod1], count: 1, total: 25.5 });
+    expectCartState(result, { items: [shirt], count: 1, total: 25.5 });
+    expectStored({ items: [shirt], count: 1, total: 25.5 });
   });
 
-  it("locks negative-itemCount bug: repeat remove on empty cart never produces negative count or total", () => {
+  it("repeat-remove after the item is gone never produces a negative itemCount or totalPrice", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
+      result.current.addToCart(shirt);
     });
-    assertLocalStorage({ items: [prod1], count: 1, total: 25.5 });
+    expectStored({ items: [shirt], count: 1, total: 25.5 });
 
     act(() => {
-      result.current.removeFromCart(prod1);
+      result.current.removeFromCart(shirt);
     });
-    assertCartState(result, { items: [], count: 0, total: 0 });
-    assertLocalStorage({ items: [], count: 0, total: 0 });
+    expectCartState(result, { items: [], count: 0, total: 0 });
+    expectStored({ items: [], count: 0, total: 0 });
 
     act(() => {
-      result.current.removeFromCart(prod1);
+      result.current.removeFromCart(shirt);
     });
-    assertCartState(result, { items: [], count: 0, total: 0 });
-    assertLocalStorage({ items: [], count: 0, total: 0 });
+    expectCartState(result, { items: [], count: 0, total: 0 });
+    expectStored({ items: [], count: 0, total: 0 });
   });
 
-  it("double remove on an empty cart never writes negative count or total to localStorage", () => {
+  it("double remove on an empty cart never writes a negative count or total", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.removeFromCart(prod1);
-      result.current.removeFromCart(prod1);
+      result.current.removeFromCart(shirt);
+      result.current.removeFromCart(shirt);
     });
 
-    assertCartState(result, { items: [], count: 0, total: 0 });
+    expectCartState(result, { items: [], count: 0, total: 0 });
     const storedCount = localStorage.getItem("itemCount");
     const storedTotal = localStorage.getItem("totalPrice");
     if (storedCount !== null) {
@@ -204,31 +206,31 @@ describe("CartProvider count and total transitions", () => {
     }
   });
 
-  it("clearCart empties state and removes persisted cart keys from localStorage", () => {
+  it("clearCart empties state and removes persisted cart keys", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
-      result.current.addToCart(prod2);
+      result.current.addToCart(shirt);
+      result.current.addToCart(hat);
     });
-    assertLocalStorage({ items: [prod1, prod2], count: 2, total: 35.5 });
+    expectStored({ items: [shirt, hat], count: 2, total: 35.5 });
 
     act(() => {
       result.current.clearCart();
     });
-    assertCartState(result, { items: [], count: 0, total: 0 });
-    assertLocalStorage({ items: [], count: 0, total: 0, cleared: true });
+    expectCartState(result, { items: [], count: 0, total: 0 });
+    expectStored({ items: [], count: 0, total: 0, cleared: true });
   });
 
-  it("hydrates an empty cart from corrupt localStorage payloads without throwing", async () => {
+  it("hydrates an empty cart from corrupt localStorage without throwing", async () => {
     localStorage.setItem("cartItems", "{broken");
-    localStorage.setItem("itemCount", "-99");
-    localStorage.setItem("totalPrice", "invalid_number");
+    localStorage.setItem("itemCount", "invalid");
+    localStorage.setItem("totalPrice", "NaN");
 
     const { result } = renderHook(() => useCart(), { wrapper });
 
     await waitFor(() => {
-      assertCartState(result, { items: [], count: 0, total: 0 });
+      expectCartState(result, { items: [], count: 0, total: 0 });
     });
   });
 
@@ -236,18 +238,18 @@ describe("CartProvider count and total transitions", () => {
     const { result, unmount } = renderHook(() => useCart(), { wrapper });
 
     act(() => {
-      result.current.addToCart(prod1);
-      result.current.addToCart(prod2);
+      result.current.addToCart(shirt);
+      result.current.addToCart(hat);
     });
-    assertLocalStorage({ items: [prod1, prod2], count: 2, total: 35.5 });
+    expectStored({ items: [shirt, hat], count: 2, total: 35.5 });
 
     unmount();
 
     const { result: remounted } = renderHook(() => useCart(), { wrapper });
 
     await waitFor(() => {
-      assertCartState(remounted, { items: [prod1, prod2], count: 2, total: 35.5 });
+      expectCartState(remounted, { items: [shirt, hat], count: 2, total: 35.5 });
     });
-    assertLocalStorage({ items: [prod1, prod2], count: 2, total: 35.5 });
+    expectStored({ items: [shirt, hat], count: 2, total: 35.5 });
   });
 });
