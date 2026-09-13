@@ -9,6 +9,7 @@ import {
   OrderEvent,
   eventToOrder,
   OrderStatus,
+  mergeOrderEvent,
 } from "../../../lib/stellar/orders";
 import { NETWORK, CHECKOUT_CONTRACT_ID } from "../../../lib/stellar/config";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -201,7 +202,7 @@ const OrdersManagementContent = () => {
             if (existing) {
               // Update status if the new event is more recent
               if (event.ledger > (existing.ledger || 0)) {
-                newMap.set(order.orderId, { ...existing, ...order });
+                newMap.set(order.orderId, mergeOrderEvent(existing, order));
               }
             } else {
               newMap.set(order.orderId, order);

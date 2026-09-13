@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useState, useEffect } from "react";
 import { FaAngleDoubleUp } from "react-icons/fa";
 const ScrollToTop = () => {
@@ -25,7 +25,7 @@ const ScrollToTop = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4">
+    <div className="fixed bottom-4 right-4 z-40">
       {isVisible && (
         <button
           type="button"
