@@ -107,7 +107,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
         networkPassphrase: NETWORK_PASSPHRASE,
       }
     )
-      .addOperation(contract.call("order", xdr.ScVal.scvBytes(hexToBytes(orderIdHash) as any)))
+      .addOperation(contract.call("order", xdr.ScVal.scvBytes(Buffer.from(orderIdHash, "hex"))))
       .setTimeout(30)
       .build();
 
@@ -214,7 +214,7 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(orderIdHashBytes as any)))
+      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -287,7 +287,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(orderIdHashBytes as any)))
+      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -469,54 +469,28 @@ export function eventToOrder(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Order Merge (admin dashboard reducer)
-// ---------------------------------------------------------------------------
-
-const STATUS_RANK: Record<OrderStatus, number> = {
-  Unknown: 0,
-  Pending: 1,
-  Paid: 2,
-  Shipped: 3,
-  Refunded: 3,
-};
-
 /**
- * Merges a newer event-derived order (e.g. dispatch or refund) into an existing row.
- *
- * Only lifecycle fields carry forward: status, ledger, txHash, and timestamp.
- * Dispatch and refund events carry [order_id, merchant] in their topics, so eventToOrder
- * derives the merchant address as "buyer" and defaults amount and token.
- * Merging preserves the original payment identity: buyer, amount, amountRaw, token, tokenSymbol.
- * Also prevents status regression if out-of-order older events are indexed.
+ * Merges an incoming OrderEvent into an existing OrderEvent.
+ * When a newer lifecycle event (e.g. dispatch or refund) arrives for an existing order,
+ * it updates lifecycle fields (status, ledger, txHash, timestamp) while preserving
+ * the original payment and buyer fields (buyer, token, tokenSymbol, amount, amountRaw).
  */
-export function mergeOrderEvent(existing: OrderEvent, incoming: OrderEvent): OrderEvent {
-  const existingRank = STATUS_RANK[existing.status] ?? 0;
-  const incomingRank = STATUS_RANK[incoming.status] ?? 0;
-  const status =
-    incomingRank >= existingRank && incoming.status !== "Unknown"
-      ? incoming.status
-      : existing.status;
+export function mergeOrderEvents(existing: OrderEvent, incoming: OrderEvent): OrderEvent {
+  // Only update if the incoming event is from a newer or equal ledger
+  if (incoming.ledger < existing.ledger) {
+    return existing;
+  }
 
   return {
     ...existing,
-    status,
-    ledger: Math.max(existing.ledger || 0, incoming.ledger || 0),
+    status: incoming.status !== "Unknown" ? incoming.status : existing.status,
+    ledger: incoming.ledger,
     txHash: incoming.txHash || existing.txHash,
     timestamp: incoming.timestamp || existing.timestamp,
     buyer: existing.buyer || incoming.buyer,
     token: existing.token || incoming.token,
-    tokenSymbol:
-      existing.tokenSymbol && existing.tokenSymbol !== "TOKEN"
-        ? existing.tokenSymbol
-        : incoming.tokenSymbol,
-    amount:
-      existing.amount && existing.amount !== "0" && existing.amount !== "0.00"
-        ? existing.amount
-        : incoming.amount,
-    amountRaw:
-      existing.amountRaw && existing.amountRaw > 0n ? existing.amountRaw : incoming.amountRaw,
+    tokenSymbol: existing.tokenSymbol || incoming.tokenSymbol,
+    amount: existing.amount || incoming.amount,
+    amountRaw: existing.amountRaw || incoming.amountRaw,
   };
 }
-
-export const mergeOrderEvents = mergeOrderEvent;
