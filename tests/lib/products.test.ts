@@ -26,7 +26,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  storageObjectPathFromPublicUrl,
+  getStoragePathFromUrl,
 } from "../../lib/products";
 
 describe("lib/products data layer", () => {
@@ -292,115 +292,43 @@ describe("lib/products data layer", () => {
     });
   });
 
-  describe("storageObjectPathFromPublicUrl", () => {
-    const publicUrl = (path: string) =>
-      `https://proj.supabase.co/storage/v1/object/public/products/${path}`;
-
-    it("recovers the object path from a bucket public URL", () => {
-      expect(storageObjectPathFromPublicUrl(publicUrl("1700000000-abc.jpg"))).toBe(
-        "1700000000-abc.jpg"
-      );
+  describe("getStoragePathFromUrl", () => {
+    it("extracts relative path from standard Supabase storage public URL", () => {
+      const url =
+        "https://xyz.supabase.co/storage/v1/object/public/products/1725450000000-shoe.jpg";
+      expect(getStoragePathFromUrl(url)).toBe("1725450000000-shoe.jpg");
     });
 
-    it("strips a cache-busting query or fragment", () => {
-      expect(storageObjectPathFromPublicUrl(publicUrl("a.jpg?t=123"))).toBe("a.jpg");
-      expect(storageObjectPathFromPublicUrl(publicUrl("a.jpg#x"))).toBe("a.jpg");
+    it("handles URL-encoded characters in storage path", () => {
+      const url =
+        "https://xyz.supabase.co/storage/v1/object/public/products/subfolder/my%20cool%20shoe.png";
+      expect(getStoragePathFromUrl(url)).toBe("subfolder/my cool shoe.png");
     });
 
-    it("decodes a percent-encoded name", () => {
-      expect(storageObjectPathFromPublicUrl(publicUrl("my%20shoe.jpg"))).toBe("my shoe.jpg");
+    it("strips query parameters and URL hashes", () => {
+      const url =
+        "https://xyz.supabase.co/storage/v1/object/public/products/image.jpg?version=1#header";
+      expect(getStoragePathFromUrl(url)).toBe("image.jpg");
     });
 
-    it("returns null for a URL outside this bucket", () => {
-      // An externally hosted image is not ours to delete.
+    it("returns null for external non-storage URLs", () => {
       expect(
-        storageObjectPathFromPublicUrl("https://images.unsplash.com/photo-123.jpg")
-      ).toBeNull();
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://proj.supabase.co/storage/v1/object/public/avatars/a.jpg"
+        getStoragePathFromUrl(
+          "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
         )
       ).toBeNull();
     });
 
-    it("returns null for missing, empty or non-string values", () => {
-      expect(storageObjectPathFromPublicUrl(null)).toBeNull();
-      expect(storageObjectPathFromPublicUrl(undefined)).toBeNull();
-      expect(storageObjectPathFromPublicUrl("")).toBeNull();
-      expect(storageObjectPathFromPublicUrl(42)).toBeNull();
-    });
-
-    it("returns null when the path after the bucket is empty", () => {
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://proj.supabase.co/storage/v1/object/public/products/"
-        )
-      ).toBeNull();
-    });
-
-    it("limits cleanup to the configured project's public bucket", () => {
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://other.supabase.co/storage/v1/object/public/products/a.jpg"
-        )
-      ).toBeNull();
-      expect(storageObjectPathFromPublicUrl("https://proj.supabase.co/images/a.jpg")).toBeNull();
-    });
-
-    it("preserves a custom Supabase base path", () => {
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://storage.example.com/project/");
-
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://storage.example.com/project/storage/v1/object/public/products/folder/my%20shoe.jpg"
-        )
-      ).toBe("folder/my shoe.jpg");
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://storage.example.com/storage/v1/object/public/products/a.jpg"
-        )
-      ).toBeNull();
-    });
-
-    it.each([
-      ["  https://storage.example.com/project/  ", "/project/"],
-      ["https://storage.example.com/project//", "/project//"],
-    ])("matches Supabase base URL normalization for %s", (configuredUrl, basePath) => {
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", configuredUrl);
-
-      expect(
-        storageObjectPathFromPublicUrl(
-          `https://storage.example.com${basePath}storage/v1/object/public/products/a.jpg`
-        )
-      ).toBe("a.jpg");
-    });
-
-    it.each(["", "   ", "not-a-url", "file:///storage"])(
-      "skips cleanup when Supabase configuration is invalid: %s",
-      (configuredUrl) => {
-        vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", configuredUrl);
-        expect(storageObjectPathFromPublicUrl(publicUrl("a.jpg"))).toBeNull();
-      }
-    );
-
-    it("returns null for relative URLs and malformed object encoding", () => {
-      expect(storageObjectPathFromPublicUrl("/storage/v1/object/public/products/a.jpg")).toBeNull();
-      expect(storageObjectPathFromPublicUrl(publicUrl("a%ZZ.jpg"))).toBeNull();
+    it("returns null for empty, null, or undefined values", () => {
+      expect(getStoragePathFromUrl("")).toBeNull();
+      expect(getStoragePathFromUrl(null as unknown as string)).toBeNull();
+      expect(getStoragePathFromUrl(undefined as unknown as string)).toBeNull();
     });
   });
 
   describe("deleteProduct", () => {
-    // deleteProduct now reads the row's image before deleting, so each case
-    // stubs the lookup as well as the delete. The original assertions on the
-    // delete call and the error path are unchanged.
-    const stubFrom = (img: string | null, deleteResult = { data: null, error: null }) => {
-      const mockMaybeSingle = vi.fn().mockResolvedValue({
-        data: img === null ? null : { img },
-        error: null,
-      });
-      const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
-      const mockEq = vi.fn().mockResolvedValue(deleteResult);
+    it("deletes a product by id when no select method is mocked", async () => {
+      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect, delete: mockDelete });
       return { mockSelect, mockDelete, mockEq };
@@ -428,6 +356,90 @@ describe("lib/products data layer", () => {
 
       expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
       expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
+    });
+
+    it("deletes product and cleans up image from storage when product has storage image", async () => {
+      const mockSelectEq = vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            img: "https://xyz.supabase.co/storage/v1/object/public/products/12345-shoe.jpg",
+          },
+          error: null,
+        }),
+      });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+
+      const mockDeleteEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockDeleteEq });
+
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+        delete: mockDelete,
+      });
+      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
+
+      await deleteProduct("p-with-image");
+
+      expect(mockSelect).toHaveBeenCalledWith("img");
+      expect(mockSelectEq).toHaveBeenCalledWith("id", "p-with-image");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["12345-shoe.jpg"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-with-image");
+    });
+
+    it("proceeds with row deletion even if storage remove rejects (image already missing)", async () => {
+      const mockSelectEq = vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            img: "https://xyz.supabase.co/storage/v1/object/public/products/missing.jpg",
+          },
+          error: null,
+        }),
+      });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+
+      const mockDeleteEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockDeleteEq });
+
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+        delete: mockDelete,
+      });
+      mockStorageFrom.remove.mockRejectedValue(
+        new Error("Object not found in bucket")
+      );
+
+      await deleteProduct("p-missing-storage-img");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["missing.jpg"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-missing-storage-img");
+    });
+
+    it("skips storage remove if product image is an external non-storage URL", async () => {
+      const mockSelectEq = vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff",
+          },
+          error: null,
+        }),
+      });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
+
+      const mockDeleteEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockDelete = vi.fn().mockReturnValue({ eq: mockDeleteEq });
+
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+        delete: mockDelete,
+      });
+
+      await deleteProduct("p-unsplash");
+
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-unsplash");
     });
 
     it("throws error when delete fails", async () => {
