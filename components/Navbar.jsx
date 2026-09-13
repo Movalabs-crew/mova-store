@@ -6,6 +6,7 @@ import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { useAuth } from "../lib/AuthContext";
 import { logout } from "../lib/auth";
 import Toast from "../components/Toast";
+import useToast from "../hooks/useToast";
 import { useRouter } from "next/navigation";
 import { TfiAngleRight } from "react-icons/tfi";
 
@@ -47,22 +48,26 @@ function Navbar() {
     links.forEach((link) => link.addEventListener("click", handleLinkClick));
 
     return () => {
-      links.forEach((link) =>
-        link.removeEventListener("click", handleLinkClick)
-      );
+      links.forEach((link) => link.removeEventListener("click", handleLinkClick));
     };
   }, [router]);
-  const [toast, setToast] = useState({ show: false, message: "" });
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 3000);
-  };
+  const { toast, showToast, hideToast } = useToast(3000);
 
   const [showNav, setShowNav] = useState(false);
   const { user } = useAuth();
 
   const toggleNav = () => setShowNav(!showNav);
   const closeNavOnClick = () => setShowNav(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && showNav) {
+        setShowNav(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showNav]);
 
   const handleLogout = async () => {
     try {
@@ -122,6 +127,11 @@ function Navbar() {
             <Link href="#contact" className={navLinkClass}>
               Contact Us
             </Link>
+            {user && (
+              <Link href="/orders" className={navLinkClass}>
+                Orders
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {user ? (
@@ -130,17 +140,15 @@ function Navbar() {
                   {user.photoURL ? (
                     <Image
                       src={user.photoURL}
-                      alt={user.displayName}
+                      alt={user.displayName || "User profile photo"}
                       width={32}
                       height={32}
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-mova-mist" />
+                    <div className="h-8 w-8 rounded-full bg-mova-mist" aria-hidden="true" />
                   )}
-                  <span className="text-md font-medium text-mova-ink">
-                    {user.displayName}
-                  </span>
+                  <span className="text-md font-medium text-mova-ink">{user.displayName}</span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -168,16 +176,36 @@ function Navbar() {
 
         <div className="flex items-center justify-between px-3 sm:px-6 md:hidden">
           <BrandMark />
-          {showNav ? (
-            <AiOutlineClose className="h-9 w-10 pr-2 text-mova-ink" onClick={toggleNav} />
-          ) : (
-            <AiOutlineMenu className="h-9 w-10 pr-2 text-mova-ink" onClick={toggleNav} />
-          )}
+          <button
+            type="button"
+            aria-label={showNav ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={showNav}
+            aria-controls="mobile-nav-drawer"
+            onClick={toggleNav}
+            className="p-2 rounded-lg text-mova-ink hover:text-purple-700 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+          >
+            {showNav ? (
+              <AiOutlineClose className="h-7 w-7" aria-hidden="true" />
+            ) : (
+              <AiOutlineMenu className="h-7 w-7" aria-hidden="true" />
+            )}
+          </button>
         </div>
         {showNav && (
-          <div className="fixed inset-y-0 right-0 z-50 flex h-screen w-1/2 flex-col items-center bg-white py-6 shadow-mova">
-            <button className="mb-4 mr-4 self-end" onClick={toggleNav}>
-              <AiOutlineClose className="h-10 w-8" />
+          <div
+            id="mobile-nav-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile Navigation"
+            className="fixed inset-y-0 right-0 z-50 flex h-screen w-1/2 flex-col items-center bg-white py-6 shadow-mova"
+          >
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              className="mb-4 mr-4 self-end p-2 rounded-lg text-gray-500 hover:text-purple-700 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+              onClick={toggleNav}
+            >
+              <AiOutlineClose className="h-7 w-7" aria-hidden="true" />
             </button>
             <div className="w-full divide-y-2 divide-dashed divide-purple-200">
               {[
@@ -195,6 +223,9 @@ function Navbar() {
                 { href: "#aboutus", label: "About Us", onClick: closeNavOnClick },
                 { href: "/blog", label: "Blog", onClick: closeNavOnClick },
                 { href: "#contact", label: "Contact Us", onClick: closeNavOnClick },
+                ...(user
+                  ? [{ href: "/orders", label: "My Orders", onClick: closeNavOnClick }]
+                  : []),
               ].map((item) => (
                 <Link
                   key={item.label}
@@ -214,17 +245,15 @@ function Navbar() {
                     {user.photoURL ? (
                       <Image
                         src={user.photoURL}
-                        alt={user.displayName}
+                        alt={user.displayName || "User profile photo"}
                         width={32}
                         height={32}
                         className="rounded-full"
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-mova-mist" />
+                      <div className="h-8 w-8 rounded-full bg-mova-mist" aria-hidden="true" />
                     )}
-                    <span className="text-sm font-medium text-mova-ink">
-                      {user.displayName}
-                    </span>
+                    <span className="text-sm font-medium text-mova-ink">{user.displayName}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -254,11 +283,7 @@ function Navbar() {
           </div>
         )}
 
-        <Toast
-          message={toast.message}
-          show={toast.show}
-          onClose={() => setToast({ show: false, message: "" })}
-        />
+        <Toast message={toast.message} show={toast.show} onClose={hideToast} />
       </nav>
     </>
   );
