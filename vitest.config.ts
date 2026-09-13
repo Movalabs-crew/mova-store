@@ -22,6 +22,11 @@ export default defineConfig({
     env: {
       NODE_ENV: "development",
     },
+    server: {
+      deps: {
+        inline: [/@stellar/],
+      },
+    },
     setupFiles: ["./tests/setup.ts"],
     include: ["**/*.{test,spec}.{js,jsx,ts,tsx}"],
     exclude: ["node_modules", "contracts", ".next", "out"],
