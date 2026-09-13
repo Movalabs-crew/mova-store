@@ -26,25 +26,7 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex, hexToBytes, toSdkBytes } from "./scval";
-
-/**
- * Resolves an order ID string to its 32-byte contract representation.
- *
- * If the input is already a 64-character hex string (e.g. emitted in event topics
- * and presented in the admin dashboard), it is converted directly to bytes
- * without re-hashing.
- *
- * If the input is a short pre-image order ID (e.g. "SS-101"), it is hashed
- * via SHA-256 to generate the 32-byte contract key.
- */
-export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
-  const clean = orderId.replace(/^0x/i, "");
-  if (/^[0-9a-fA-F]{64}$/.test(clean)) {
-    return hexToBytes(clean);
-  }
-  return hashOrderId(orderId);
-}
+import { hashOrderId, bytesToHex, hexToBytes } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,7 +107,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
         networkPassphrase: NETWORK_PASSPHRASE,
       }
     )
-      .addOperation(contract.call("order", xdr.ScVal.scvBytes(toSdkBytes(hexToBytes(orderIdHash)))))
+      .addOperation(contract.call("order", xdr.ScVal.scvBytes(hexToBytes(orderIdHash) as any)))
       .setTimeout(30)
       .build();
 
@@ -181,9 +163,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
             break;
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.token = StrKey.encodeContract(
-                toSdkBytes(val.address().contractId() as unknown as Uint8Array)
-              );
+              order.token = StrKey.encodeContract(val.address().contractId() as any);
             }
             break;
           case "timestamp":
@@ -234,7 +214,7 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(toSdkBytes(orderIdHashBytes))))
+      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(orderIdHashBytes as any)))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -307,7 +287,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(toSdkBytes(orderIdHashBytes))))
+      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(orderIdHashBytes as any)))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 

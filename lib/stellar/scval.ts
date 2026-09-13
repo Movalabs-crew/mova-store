@@ -35,11 +35,11 @@ export function toSdkBytes(bytes: Uint8Array): SdkBytes {
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const raw = typeof bytes === "string" ? hexToBytes(bytes) : Uint8Array.from(bytes);
-  if (raw.length !== 32) {
-    throw new Error(`order_id must be exactly 32 bytes (got ${raw.length})`);
+  const arr = typeof bytes === "string" ? hexToBytes(bytes) : bytes;
+  if (arr.length !== 32) {
+    throw new Error(`order_id must be exactly 32 bytes (got ${arr.length})`);
   }
-  return xdr.ScVal.scvBytes(toSdkBytes(raw));
+  return xdr.ScVal.scvBytes(arr as any);
 }
 
 /**

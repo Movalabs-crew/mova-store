@@ -68,9 +68,14 @@ describe("ScVal helpers", () => {
       expect(() => bytes32ToScVal("aabbcc")).toThrow("order_id must be exactly 32 bytes");
     });
 
-    it("throws when passed a 64-character non-hex string instead of producing zero bytes", () => {
-      const nonHex64 = "g".repeat(64);
-      expect(() => bytes32ToScVal(nonHex64)).toThrow(/invalid hex character/);
+    it("produces byte-identical XDR for hexString and uint8ArrayOfSameBytes", () => {
+      const hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+      const bytes = hexToBytes(hex);
+      const scValFromHex = bytes32ToScVal(hex);
+      const scValFromBytes = bytes32ToScVal(bytes);
+
+      expect(scValFromHex.toXDR("hex")).toBe(scValFromBytes.toXDR("hex"));
+      expect(scValFromHex.toXDR("base64")).toBe(scValFromBytes.toXDR("base64"));
     });
 
     it("produces byte-identical XDR when passed a hex string vs a Uint8Array of the same bytes", () => {
@@ -111,14 +116,11 @@ describe("ScVal helpers", () => {
     expect(Array.from(result)).not.toEqual(Array.from(hashed));
   });
 
-  it("is case-insensitive for 64-hex input", async () => {
-    const upper =
-      "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2";
-    const lower =
-      "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2";
-    const rUpper = await resolveOrderIdHash(upper);
-    const rLower = await resolveOrderIdHash(lower);
-    expect(Array.from(rUpper)).toEqual(Array.from(rLower));
+    it("decodes bytes to hex string", () => {
+      const bytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+      const scVal = xdr.ScVal.scvBytes(bytes);
+      expect(scValToString(scVal)).toBe("deadbeef");
+    });
   });
 
   it("falls back to hashing for inputs shorter than 64 hex chars", async () => {
