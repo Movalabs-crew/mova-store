@@ -29,6 +29,13 @@ import { SiStellar } from "react-icons/si";
 import { SUPPORTED_TOKENS, defaultToken, TokenConfig } from "../../lib/stellar/config";
 import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
 import {
+  SUPPORTED_TOKENS,
+  defaultToken,
+  TokenConfig,
+  NETWORK,
+} from "../../lib/stellar/config";
+import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
+import {
   validateEmail,
   validateName,
   validateAddress,

@@ -246,7 +246,9 @@ export async function assertPaymentReady(
     );
   }
 
-  const minNativeRequired = token.isNative ? requiredRaw + MIN_NATIVE_RESERVE : MIN_NATIVE_RESERVE;
+  const minNativeRequired = token.isNative
+    ? requiredRaw + MIN_NATIVE_RESERVE
+    : MIN_NATIVE_RESERVE;
 
   if (nativeBalanceRaw < minNativeRequired) {
     issues.push(

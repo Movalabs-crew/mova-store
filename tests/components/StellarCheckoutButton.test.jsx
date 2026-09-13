@@ -184,14 +184,20 @@ describe("StellarCheckoutButton", () => {
       simulation: null,
     });
 
-    render(<StellarCheckoutButton amountUsd={12} orderId="SS-XLM-1" token={xlmToken} />);
+    render(
+      <StellarCheckoutButton
+        amountUsd={12}
+        orderId="SS-XLM-1"
+        token={xlmToken}
+      />
+    );
 
     // 12 USD / 0.12 = 100 XLM
-    expect(screen.getByText(/Pay with XLM/i)).toBeTruthy();
-    expect(screen.getByText(/~100\.00 XLM/i)).toBeTruthy();
+    expect(screen.getByText(/Pay with XLM/i)).toBeInTheDocument();
+    expect(screen.getByText(/~100\.00 XLM/i)).toBeInTheDocument();
 
     await act(async () => {
-      // let mount-time currentAddress() resolve
+      // let the mount-time currentAddress() resolve and state settle
       await Promise.resolve();
     });
 
@@ -210,7 +216,7 @@ describe("StellarCheckoutButton", () => {
       })
     );
 
-    expect(screen.getByText("Payment confirmed ✓")).toBeTruthy();
-    expect(screen.getByText(/~100\.00 XLM/i)).toBeTruthy();
+    expect(screen.getByText("Payment confirmed ✓")).toBeInTheDocument();
+    expect(screen.getByText(/~100\.00 XLM/i)).toBeInTheDocument();
   });
 });

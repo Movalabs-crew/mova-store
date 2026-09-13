@@ -37,8 +37,8 @@ export interface PayResult {
   status: string;
   receipt: PaymentReceipt | null;
   amountUsd: number;
-  tokenAmount?: number;
-  tokenSymbol?: string;
+  tokenAmount: number;
+  tokenSymbol: string;
   amountRaw: bigint;
   /** Pre-flight simulation details (see lib/stellar/simulate.ts). */
   simulation: {

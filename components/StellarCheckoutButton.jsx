@@ -113,7 +113,9 @@ const StellarCheckoutButton = ({
                 ? `Pay with XLM · ~${effectiveXlmAmount?.toFixed(2)} XLM ($${Number(amountUsd).toFixed(2)})`
                 : `Pay with USDC${amountUsd ? ` · $${Number(amountUsd).toFixed(2)}` : ""}`}
             </span>
-            <span className="text-xs text-white/80">From your Stellar wallet (Freighter)</span>
+            <span className="text-xs text-white/80">
+              From your Stellar wallet (Freighter)
+            </span>
           </>
         )}
       </button>

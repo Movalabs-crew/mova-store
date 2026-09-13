@@ -18,7 +18,10 @@ export const DEFAULT_XLM_USD_PRICE = 0.12;
  * @param xlmPriceUsd Price of 1 XLM in USD (defaults to DEFAULT_XLM_USD_PRICE).
  * @returns Amount in XLM rounded to 4 decimal places.
  */
-export function convertUsdToXlm(amountUsd: number, xlmPriceUsd = DEFAULT_XLM_USD_PRICE): number {
+export function convertUsdToXlm(
+  amountUsd: number,
+  xlmPriceUsd = DEFAULT_XLM_USD_PRICE
+): number {
   if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
     return 0;
   }
@@ -34,7 +37,10 @@ export function convertUsdToXlm(amountUsd: number, xlmPriceUsd = DEFAULT_XLM_USD
  * @param xlmPriceUsd Price of 1 XLM in USD (defaults to DEFAULT_XLM_USD_PRICE).
  * @returns Amount in USD rounded to 2 decimal places.
  */
-export function convertXlmToUsd(amountXlm: number, xlmPriceUsd = DEFAULT_XLM_USD_PRICE): number {
+export function convertXlmToUsd(
+  amountXlm: number,
+  xlmPriceUsd = DEFAULT_XLM_USD_PRICE
+): number {
   if (!Number.isFinite(amountXlm) || amountXlm <= 0) {
     return 0;
   }
