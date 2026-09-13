@@ -103,63 +103,66 @@ const ContactUs = () => {
 
           {/* Contact Form */}
           <div className="bg-white shadow-lg rounded-xl p-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Send us a message</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 gap-4 mb-4">
-                <div>
-                  <label htmlFor="contact-name" className="sr-only">
-                    Your Name
-                  </label>
-                  <input
-                    id="contact-name"
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Your Name"
-                    aria-label="Your Name"
-                    className="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="contact-email" className="sr-only">
-                    Your Email
-                  </label>
-                  <input
-                    id="contact-email"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Your Email"
-                    aria-label="Your Email"
-                    className="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="contact-message" className="sr-only">
-                    Your Message
-                  </label>
-                  <textarea
-                    id="contact-message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    placeholder="Your Message"
-                    aria-label="Your Message"
-                    rows="4"
-                    className="w-full border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                  />
-                </div>
-              </div>
-              {error && (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              Send us a message
+            </h3>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            <input
+              id="contact-name"
+              type="text"
+              name="name"
+              aria-label="Your Name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Your Name"
+              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              required
+            />
+            <input
+              id="contact-email"
+              type="email"
+              name="email"
+              aria-label="Your Email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Your Email"
+              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              required
+            />
+            <textarea
+              id="contact-message"
+              name="message"
+              aria-label="Your Message"
+              value={formData.message}
+              onChange={handleChange}
+              placeholder="Your Message"
+              rows="4"
+              className="border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              required
+            />
+          </div>
+          {error && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"
+            >
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 mr-3 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
                 >
                   {error}
                 </div>

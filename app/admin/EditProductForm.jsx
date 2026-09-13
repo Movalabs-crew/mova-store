@@ -98,7 +98,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
         </div>
         <div className="mb-6">
           <label htmlFor="edit-product-price" className="block text-gray-700 text-lg font-semibold">
-            Product Price (USD)
+            Product Price
           </label>
           <input
             id="edit-product-price"
@@ -124,7 +124,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           {existingImageUrl && (
             <img
               src={existingImageUrl}
-              alt={productName ? `Preview of ${productName}` : "Current product image preview"}
+              alt={productName ? `${productName} current image` : "Current product image preview"}
               className="mt-4 max-w-full h-auto rounded-md"
             />
           )}

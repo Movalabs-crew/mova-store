@@ -115,4 +115,55 @@ describe("Accessibility - DOM and ARIA Helpers", () => {
     expect(prefersReducedMotion()).toBe(true);
     expect(getAnimationDuration(300)).toBe(0);
   });
+
+  it("isVisible checks element dimensions", () => {
+    const el = document.createElement("div");
+    expect(isVisible(el)).toBe(false);
+
+    Object.defineProperty(el, "offsetWidth", { value: 100, configurable: true });
+    expect(isVisible(el)).toBe(true);
+  });
+
+  it("saveFocus stores and restores previous active element", () => {
+    const btn = document.createElement("button");
+    document.body.appendChild(btn);
+    btn.focus();
+    expect(document.activeElement).toBe(btn);
+
+    const restore = saveFocus();
+    const otherBtn = document.createElement("button");
+    document.body.appendChild(otherBtn);
+    otherBtn.focus();
+    expect(document.activeElement).toBe(otherBtn);
+
+    restore();
+    expect(document.activeElement).toBe(btn);
+  });
+
+  it("focusFirstError focuses the first element marked with aria-invalid=true", () => {
+    const form = document.createElement("form");
+    const input1 = document.createElement("input");
+    const input2 = document.createElement("input");
+    input2.setAttribute("aria-invalid", "true");
+    form.appendChild(input1);
+    form.appendChild(input2);
+    document.body.appendChild(form);
+
+    focusFirstError(form);
+    expect(document.activeElement).toBe(input2);
+  });
+
+  it("announceToScreenReader creates a live assertive/polite region and cleans up", () => {
+    vi.useFakeTimers();
+    announceToScreenReader("Order placed successfully", "assertive");
+
+    const liveEl = document.querySelector('[role="status"]');
+    expect(liveEl).not.toBeNull();
+    expect(liveEl?.getAttribute("aria-live")).toBe("assertive");
+    expect(liveEl?.textContent).toBe("Order placed successfully");
+
+    vi.advanceTimersByTime(1100);
+    expect(document.querySelector('[role="status"]')).toBeNull();
+    vi.useRealTimers();
+  });
 });

@@ -5,7 +5,6 @@ import Navbar from "../components/Navbar";
 import ScrollToTop from "../components/ScrollToTop";
 import Whatsapp from "../components/Whatsapp";
 import Footer from "../components/Footer";
-import ErrorBoundary from "../components/ErrorBoundary";
 import SkipLink from "../components/SkipLink";
 import { AuthProvider } from "../lib/AuthContext";
 import Head from "next/head";
@@ -71,15 +70,14 @@ const RootLayout = ({ children }) => {
         <SkipLink />
 
         <AuthProvider>
-          <ErrorBoundary>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main id="main-content" className="app flex-grow pt-10">{children}</main>
-              <Whatsapp />
-              <ScrollToTop />
-              <Footer />
-            </div>
-          </ErrorBoundary>
+          <SkipLink />
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main id="main-content" className="app flex-grow pt-10">{children}</main>
+            <Whatsapp />
+            <ScrollToTop />
+            <Footer />
+          </div>
         </AuthProvider>
       </body>
     </html>

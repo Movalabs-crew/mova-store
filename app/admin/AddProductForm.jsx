@@ -60,7 +60,7 @@ const AddProductForm = ({ onProductAdded }) => {
         </div>
         <div className="mb-6">
           <label htmlFor="add-product-price" className="block text-gray-700 text-lg font-semibold">
-            Product Price (USD)
+            Product Price
           </label>
           <input
             id="add-product-price"

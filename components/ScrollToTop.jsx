@@ -31,9 +31,9 @@ const ScrollToTop = () => {
           type="button"
           onClick={scrollToTop}
           aria-label="Scroll to top of page"
-          className="p-3 rounded-full bg-purple-600 text-white shadow-lg hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 transition-all duration-300"
+          className="p-2 rounded-full bg-purple-600 text-white shadow-md hover:bg-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 transition-all duration-300"
         >
-          <FaAngleDoubleUp size={22} className="hover:animate-bounce" aria-hidden="true" />
+          <FaAngleDoubleUp size={24} className="hover:animate-bounce" />
         </button>
       )}
     </div>

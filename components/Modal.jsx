@@ -33,26 +33,17 @@ function Modal({ show, onClose, title = "Dialog", children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Modal dialog"
     >
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 relative max-h-[85vh] overflow-y-auto focus-visible:outline-none"
-        tabIndex={-1}
-      >
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 relative mx-2 max-h-[80vh] overflow-y-auto">
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close modal dialog"
-          className="absolute top-5 right-4 p-1.5 rounded-lg text-gray-500 hover:text-purple-700 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 transition-colors"
+          aria-label="Close modal"
+          className="absolute top-6 right-4 text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 rounded p-1"
         >
           <ImCancelCircle size={24} className="text-purple-700" aria-hidden="true" />
         </button>
