@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FaHome, FaInfoCircle, FaShoppingCart } from "react-icons/fa";
+import { FaHome, FaInfoCircle, FaList, FaShoppingCart } from "react-icons/fa";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
 
