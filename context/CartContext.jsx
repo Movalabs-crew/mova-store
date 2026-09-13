@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const CartContext = createContext();
@@ -53,16 +53,17 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [itemCount, setItemCount] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
-  const isHydrated = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
+  const isHydratedRef = useRef(false);
 
   useEffect(() => {
     isHydratedRef.current = true;
+    setHydrated(true);
     const { storedCartItems, storedItemCount, storedTotalPrice } = readStoredCart();
 
     setCartItems(storedCartItems);
     setItemCount(storedItemCount);
     setTotalPrice(storedTotalPrice);
-    isHydrated.current = true;
   }, []);
 
   const addToCart = (product) => {
@@ -85,7 +86,7 @@ export const CartProvider = ({ children }) => {
     }
 
     setCartItems((prevCartItems) => {
-      const merged = isHydrated.current
+      const merged = isHydratedRef.current
         ? [...prevCartItems, product]
         : [...JSON.parse(localStorage.getItem("cartItems") || "[]"), product];
       localStorage.setItem("cartItems", JSON.stringify(merged));
@@ -93,7 +94,7 @@ export const CartProvider = ({ children }) => {
     });
 
     setItemCount((prevItemCount) => {
-      const newItemCount = isHydrated.current
+      const newItemCount = isHydratedRef.current
         ? prevItemCount + 1
         : (JSON.parse(localStorage.getItem("itemCount") || "0") || 0) + 1;
       localStorage.setItem("itemCount", newItemCount.toString());
@@ -101,7 +102,7 @@ export const CartProvider = ({ children }) => {
     });
 
     setTotalPrice((prevTotalPrice) => {
-      const newTotalPrice = isHydrated.current
+      const newTotalPrice = isHydratedRef.current
         ? prevTotalPrice + product.price
         : (parseFloat(localStorage.getItem("totalPrice") || "0") || 0) + product.price;
       localStorage.setItem("totalPrice", newTotalPrice.toString());
@@ -134,7 +135,7 @@ export const CartProvider = ({ children }) => {
     }
 
     setCartItems((prevCartItems) => {
-      const merged = isHydrated.current
+      const merged = isHydratedRef.current
         ? [...prevCartItems]
         : [...JSON.parse(localStorage.getItem("cartItems") || "[]")];
       const index = merged.findIndex((item) => item.id === product.id);
@@ -146,7 +147,7 @@ export const CartProvider = ({ children }) => {
     });
 
     setItemCount((prevItemCount) => {
-      const newCount = isHydrated.current
+      const newCount = isHydratedRef.current
         ? prevItemCount - 1
         : Math.max(0, (JSON.parse(localStorage.getItem("itemCount") || "0") || 0) - 1);
       localStorage.setItem("itemCount", newCount.toString());
@@ -154,12 +155,17 @@ export const CartProvider = ({ children }) => {
     });
 
     setTotalPrice((prevTotalPrice) => {
-      const items = isHydrated.current ? cartItems : JSON.parse(localStorage.getItem("cartItems") || "[]");
+      const items = isHydratedRef.current
+        ? cartItems
+        : JSON.parse(localStorage.getItem("cartItems") || "[]");
       const removedItem = items.find((item) => item.id === product.id);
       if (!removedItem) return prevTotalPrice;
-      const newPrice = isHydrated.current
+      const newPrice = isHydratedRef.current
         ? prevTotalPrice - removedItem.price
-        : Math.max(0, (parseFloat(localStorage.getItem("totalPrice") || "0") || 0) - removedItem.price);
+        : Math.max(
+            0,
+            (parseFloat(localStorage.getItem("totalPrice") || "0") || 0) - removedItem.price
+          );
       localStorage.setItem("totalPrice", newPrice.toString());
       return newPrice;
     });
