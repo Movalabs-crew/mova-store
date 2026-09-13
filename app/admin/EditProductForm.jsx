@@ -14,8 +14,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   useEffect(() => {
     setSuccessMessage("");
     setErrorMessage("");
-    setProductImage(null);
-
+ 
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -84,9 +83,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           </div>
         )}
         <div className="mb-6">
-          <label htmlFor="edit-product-name" className="block text-gray-700 text-lg font-semibold">
-            Product Name
-          </label>
+          <label className="block text-gray-700 text-lg font-semibold">Product Name</label>
           <input
             id="edit-product-name"
             type="text"
@@ -97,9 +94,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           />
         </div>
         <div className="mb-6">
-          <label htmlFor="edit-product-price" className="block text-gray-700 text-lg font-semibold">
-            Product Price
-          </label>
+          <label className="block text-gray-700 text-lg font-semibold">Product Price</label>
           <input
             id="edit-product-price"
             type="number"
@@ -111,9 +106,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           />
         </div>
         <div className="mb-6">
-          <label htmlFor="edit-product-image" className="block text-gray-700 text-lg font-semibold">
-            Product Image
-          </label>
+          <label className="block text-gray-700 text-lg font-semibold">Product Image</label>
           <input
             id="edit-product-image"
             type="file"
