@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock supabase before importing lib/products
 const mockStorageFrom = {
@@ -32,6 +32,16 @@ import {
 describe("lib/products data layer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://proj.supabase.co");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe("mapProduct", () => {
@@ -47,6 +57,7 @@ describe("lib/products data layer", () => {
         price: "49.99",
         img: "https://example.com/shoe.jpg",
         created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-01T00:00:00Z",
       };
 
       const mapped = mapProduct(raw);
@@ -56,6 +67,7 @@ describe("lib/products data layer", () => {
         price: 49.99,
         img: "https://example.com/shoe.jpg",
         created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-01T00:00:00Z",
       });
       expect(typeof mapped?.price).toBe("number");
     });
@@ -161,7 +173,9 @@ describe("lib/products data layer", () => {
         error: null,
       });
       mockStorageFrom.getPublicUrl.mockReturnValue({
-        data: { publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png" },
+        data: {
+          publicUrl: "https://dummy.supabase.co/storage/v1/object/public/products/12345.png",
+        },
       });
 
       const url = await uploadProductImage(mockFile);
@@ -229,8 +243,16 @@ describe("lib/products data layer", () => {
 
   describe("updateProduct", () => {
     it("updates product fields by id and returns mapped product", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-01T00:00:00Z"));
       const updates = { name: "Updated Shoe", price: 130 };
-      const returnedRow = { id: "p-1", img: "/shoe.png", ...updates, price: "130" };
+      const returnedRow = {
+        id: "p-1",
+        img: "/shoe.png",
+        ...updates,
+        price: "130",
+        updated_at: "2026-09-01T00:00:00Z",
+      };
 
       const mockSingle = vi.fn().mockResolvedValue({ data: returnedRow, error: null });
       const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
@@ -241,13 +263,18 @@ describe("lib/products data layer", () => {
       const res = await updateProduct("p-1", updates);
 
       expect(mockFrom).toHaveBeenCalledWith("products");
-      expect(mockUpdate).toHaveBeenCalledWith(updates);
+      expect(mockUpdate).toHaveBeenCalledWith({
+        ...updates,
+        img: undefined,
+        updated_at: "2026-09-01T00:00:00.000Z",
+      });
       expect(mockEq).toHaveBeenCalledWith("id", "p-1");
       expect(res).toEqual({
         id: "p-1",
         img: "/shoe.png",
         name: "Updated Shoe",
         price: 130,
+        updated_at: "2026-09-01T00:00:00Z",
       });
     });
 
@@ -303,13 +330,32 @@ describe("lib/products data layer", () => {
     it("deletes a product by id when no select method is mocked", async () => {
       const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+      mockFrom.mockReturnValue({ select: mockSelect, delete: mockDelete });
+      return { mockSelect, mockDelete, mockEq };
+    };
+
+    it("deletes a product by id", async () => {
+      const { mockDelete, mockEq } = stubFrom(null);
 
       await deleteProduct("p-del");
 
-      expect(mockFrom).toHaveBeenCalledWith("products");
-      expect(mockDelete).toHaveBeenCalledTimes(1);
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mocks.mockSelect).toHaveBeenCalledWith("img");
+      expect(mocks.mockSelectEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
+      expect(mocks.mockDeleteEq.mock.invocationCallOrder[0]).toBeLessThan(
+        mockStorageFrom.remove.mock.invocationCallOrder[0]
+      );
+    });
+
+    it("still deletes the row when storage removal rejects", async () => {
+      const mocks = mockProductDeletion();
+      mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
+
+      await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
     });
 
     it("deletes product and cleans up image from storage when product has storage image", async () => {
@@ -397,16 +443,65 @@ describe("lib/products data layer", () => {
     });
 
     it("throws error when delete fails", async () => {
-      const mockEq = vi.fn().mockResolvedValue({
+      stubFrom(null, {
         data: null,
-        error: new Error("Foreign key constraint violation"),
+        error: new Error("Object not found"),
       });
-      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
 
-      await expect(deleteProduct("p-del")).rejects.toThrow(
-        "Foreign key constraint violation"
+      await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
+    });
+
+    it("removes the stored image after deleting the row", async () => {
+      const { mockDelete } = stubFrom(
+        "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
       );
+      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["1700-a.jpg"]);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("still deletes the row when the image is already gone", async () => {
+      const { mockDelete, mockEq } = stubFrom(
+        "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
+      );
+      mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).toHaveBeenCalledTimes(1);
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+    });
+
+    it("does not call storage remove when the row has no image", async () => {
+      stubFrom(null);
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
+    });
+
+    it("does not remove an externally hosted image", async () => {
+      const { mockDelete } = stubFrom("https://images.unsplash.com/photo-123.jpg");
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("deletes the row without cleanup for an image in another project", async () => {
+      const { mockDelete } = stubFrom(
+        "https://other.supabase.co/storage/v1/object/public/products/1700-a.jpg"
+      );
+
+      await deleteProduct("p-del");
+
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledTimes(1);
     });
   });
 });
