@@ -89,8 +89,11 @@ const ProductPage = ({ params }) => {
           <p>Your cart is empty.</p>
         ) : (
           <div>
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-center mb-2">
+            {cartItems.map((item, index) => (
+              <div
+                key={item.cartItemId || item.lineId || `${item.id}-${index}`}
+                className="flex justify-between items-center mb-2"
+              >
                 <div className="w-16 h-16 flex-shrink-0">
                   <Image
                     src={item.img}

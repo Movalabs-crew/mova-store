@@ -4,9 +4,48 @@ import React from "react";
 import FAQ from "../../app/(landingpage)/FAQ";
 import Newsletter from "../../app/(landingpage)/newsletter";
 import ContactUs from "../../app/(landingpage)/ContactUs";
+import Slider from "../../app/(landingpage)/Slider";
 import * as sendMailModule from "../../lib/sendmail";
 
 describe("Landing Page Components", () => {
+  describe("Slider Component", () => {
+    it("renders each image once without duplicating DOM elements (5 images, not 10)", () => {
+      render(<Slider />);
+
+      const images = screen.getAllByRole("img");
+      expect(images).toHaveLength(5);
+
+      const sources = images.map((img) => img.getAttribute("src"));
+      expect(new Set(sources).size).toBe(5);
+    });
+
+    it("renders images with stable unique keys without duplicate key console warnings", () => {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      render(<Slider />);
+
+      const duplicateKeyWarnings = consoleErrorSpy.mock.calls
+        .map((call) => call[0])
+        .filter(
+          (msg) =>
+            typeof msg === "string" &&
+            (msg.includes("two children with the same key") ||
+              msg.includes("duplicate key") ||
+              msg.includes("Encountered two children with the same key"))
+        );
+
+      expect(duplicateKeyWarnings).toHaveLength(0);
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("renders exactly 5 image children in the horizontal scroll container", () => {
+      const { container } = render(<Slider />);
+      const scrollContainer = container.querySelector(".overflow-x-auto");
+      expect(scrollContainer).toBeInTheDocument();
+      expect(scrollContainer?.children).toHaveLength(5);
+    });
+  });
+
   describe("FAQ Component", () => {
     it("asserts exactly one panel is open and aria-expanded toggles", () => {
       render(<FAQ />);
@@ -34,6 +73,34 @@ describe("Landing Page Components", () => {
       // Click the second FAQ item again - should collapse
       fireEvent.click(buttons[1]);
       expect(buttons[1].getAttribute("aria-expanded")).toBe("false");
+    });
+  });
+
+  describe("Slider Component", () => {
+    it("renders each image once instead of a duplicated strip", () => {
+      render(<Slider />);
+
+      const imgs = screen.getAllByRole("img");
+      expect(imgs).toHaveLength(5);
+
+      const sources = imgs.map((img) => img.getAttribute("src"));
+      expect(new Set(sources).size).toBe(sources.length);
+    });
+
+    it("keys the strip without colliding, so keying by src stays safe", () => {
+      // Guards the plausible half-fix: switching key={index} to key={src} while
+      // still rendering [...images, ...images] turns unique index keys into
+      // genuinely duplicated ones.
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      render(<Slider />);
+
+      const duplicateKeyWarnings = consoleError.mock.calls
+        .map((call) => String(call[0]))
+        .filter((message) => message.includes("two children with the same key"));
+      expect(duplicateKeyWarnings).toHaveLength(0);
+
+      consoleError.mockRestore();
     });
   });
 
