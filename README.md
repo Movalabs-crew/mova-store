@@ -182,6 +182,8 @@ mova-store/
 │   ├── admin/                      #   admin product management
 │   └── profile/login/              #   authentication
 ├── components/                     # Shared UI (Stellar checkout/wallet buttons, Toast…)
+├── context/                        # React context providers
+│   └── CartContext.jsx             #   shopping cart state and local persistence
 ├── lib/                            # Client-side libraries
 │   ├── stellar/                    #   Soroban payment library
 │   │   ├── config.ts               #     network / contract / token config
@@ -192,7 +194,7 @@ mova-store/
 │   │   ├── simulate.ts             #     pre-flight resource-fee simulation
 │   │   ├── indexer.ts              #     getEvents cursor listener
 │   │   └── events.ts               #     contract event decoding
-│   └── AuthContext.jsx             #   auth + cart context
+│   └── AuthContext.js              #   user auth session state
 ├── contracts/
 │   └── checkout/                   # Contracts — Rust Soroban smart contract
 │       ├── src/
@@ -204,8 +206,15 @@ mova-store/
 │       │   └── test.rs             #   mock-token + native-asset integration tests
 │       ├── Cargo.toml
 │       └── README.md               #   contract interface + manual CLI examples
+├── supabase/                       # Supabase backend configuration
+│   ├── schema.sql                  #   database schema, indexes, and triggers
+│   ├── seed.sql                    #   initial catalog seed data
+│   └── README.md                   #   database setup & admin setup guide
 ├── docs/
-│   └── ARCHITECTURE.md             # Deep Stellar integration design rationale
+│   ├── ARCHITECTURE.md             # Deep Stellar integration design rationale
+│   ├── MAINNET_DEPLOYMENT.md       # Production mainnet deployment runbook
+│   └── TROUBLESHOOTING.md          # Common setup and runtime issues
+├── tests/                          # Vitest & Testing Library test suites
 ├── scripts/
 │   └── deploy-testnet.sh           # one-command build + deploy + initialize
 ├── public/                         # Static assets (product images)
