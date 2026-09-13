@@ -3,17 +3,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/AuthContext";
 import Toast from "../../components/Toast";
+import useToast from "../../hooks/useToast";
 import Link from "next/link";
 
 export default function Hero() {
   const { user } = useAuth();
   const router = useRouter();
-  const [toast, setToast] = useState({ show: false, message: "" });
-
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
+  const { toast, showToast, hideToast } = useToast(5000);
 
   const handleProtectedLinkClick = (e, path) => {
     if (!user) {
@@ -40,8 +36,8 @@ export default function Hero() {
             Move in style. Pay on Stellar.
           </h1>
           <p className="mova-fade-up-delay-2 mt-4 max-w-xl text-base text-white/85 sm:text-lg">
-            Curated footwear with a checkout that takes cards or USDC — escrowed
-            on-chain until your order ships.
+            Curated footwear with a checkout that takes cards or USDC — escrowed on-chain until your
+            order ships.
           </p>
           <div className="mova-fade-up-delay-2 mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -60,11 +56,7 @@ export default function Hero() {
           </div>
         </div>
       </section>
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        onClose={() => setToast({ show: false, message: "" })}
-      />
+      <Toast message={toast.message} show={toast.show} onClose={hideToast} />
     </>
   );
 }

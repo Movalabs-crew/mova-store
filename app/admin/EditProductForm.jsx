@@ -14,7 +14,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   useEffect(() => {
     setSuccessMessage("");
     setErrorMessage("");
-
+ 
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -85,6 +85,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
         <div className="mb-6">
           <label className="block text-gray-700 text-lg font-semibold">Product Name</label>
           <input
+            id="edit-product-name"
             type="text"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productName}
@@ -95,7 +96,9 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
         <div className="mb-6">
           <label className="block text-gray-700 text-lg font-semibold">Product Price</label>
           <input
+            id="edit-product-price"
             type="number"
+            step="0.01"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={productPrice}
             onChange={(e) => setProductPrice(e.target.value)}
@@ -105,6 +108,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
         <div className="mb-6">
           <label className="block text-gray-700 text-lg font-semibold">Product Image</label>
           <input
+            id="edit-product-image"
             type="file"
             accept="image/*"
             className="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -113,7 +117,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           {existingImageUrl && (
             <img
               src={existingImageUrl}
-              alt="Existing product"
+              alt={productName ? `${productName} current image` : "Current product image preview"}
               className="mt-4 max-w-full h-auto rounded-md"
             />
           )}
