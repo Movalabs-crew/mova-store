@@ -1,57 +1,90 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import Toast from "../../components/Toast";
 
-describe("Toast exit-timer cleanup", () => {
+const advance = (milliseconds) => act(() => vi.advanceTimersByTime(milliseconds));
+
+describe("Toast display and exit timers", () => {
+  beforeEach(() => vi.useFakeTimers());
+
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
   });
 
-  it("does not call onClose for a fresh toast shown within the exit window", () => {
-    vi.useFakeTimers();
-    const onCloseA = vi.fn();
-    const onCloseB = vi.fn();
-
-    const { rerender } = render(<Toast message="A" show={true} onClose={onCloseA} time={3000} />);
-
-    // Re-show with new toast B within 300ms exit window
-    rerender(<Toast message="B" show={true} onClose={onCloseB} time={3000} />);
-
-    // Advance past the 3000ms display + 300ms exit for A
-    vi.advanceTimersByTime(3500);
-
-    // B should still be visible and its onClose should NOT have been called
-    expect(onCloseB).not.toHaveBeenCalled();
-    expect(screen.getByText("B")).toBeInTheDocument();
-  });
-
-  it("does not call onClose after unmounting mid-exit", () => {
-    vi.useFakeTimers();
+  it.each([3000, 1000])("waits %i ms before exiting, then closes after 300 ms", (time) => {
     const onClose = vi.fn();
+    render(<Toast message="Saved" show={true} onClose={onClose} time={time} />);
 
-    const { unmount } = render(<Toast message="test" show={true} onClose={onClose} time={3000} />);
-
-    // Advance to just before the exit timer fires
-    vi.advanceTimersByTime(3100);
-
-    // Unmount while the toast is in its exit phase
-    unmount();
-
-    // Advance past the 300ms exit window
-    vi.advanceTimersByTime(400);
-
+    advance(time - 1);
+    expect(screen.getByText("Saved")).toHaveClass("translate-x-0", "opacity-100");
     expect(onClose).not.toHaveBeenCalled();
+
+    advance(1);
+    expect(screen.getByText("Saved")).toHaveClass("translate-x-full", "opacity-0");
+    expect(onClose).not.toHaveBeenCalled();
+
+    advance(299);
+    expect(onClose).not.toHaveBeenCalled();
+    advance(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    advance(time);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onClose after the full display + exit duration when not interrupted", () => {
-    vi.useFakeTimers();
+  it("cancels the old exit when a new message uses the same close callback", () => {
     const onClose = vi.fn();
+    const { rerender } = render(<Toast message="A" show={true} onClose={onClose} />);
 
-    render(<Toast message="test" show={true} onClose={onClose} time={3000} />);
+    advance(3100);
+    rerender(<Toast message="B" show={true} onClose={onClose} />);
+    advance(200);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("B")).toHaveClass("opacity-100");
 
-    // Advance past display (3000) + exit (300)
-    vi.advanceTimersByTime(3500);
-
+    advance(2800);
+    expect(screen.getByText("B")).toHaveClass("opacity-0");
+    expect(onClose).not.toHaveBeenCalled();
+    advance(300);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the previous callback when the callback changes during exit", () => {
+    const previousClose = vi.fn();
+    const nextClose = vi.fn();
+    const { rerender } = render(<Toast message="Saved" show={true} onClose={previousClose} />);
+
+    advance(3100);
+    rerender(<Toast message="Saved" show={true} onClose={nextClose} />);
+    advance(200);
+    expect(previousClose).not.toHaveBeenCalled();
+    expect(nextClose).not.toHaveBeenCalled();
+
+    advance(3100);
+    expect(previousClose).not.toHaveBeenCalled();
+    expect(nextClose).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([1000, 3100])("cancels pending callbacks when hidden at %i ms", (elapsed) => {
+    const onClose = vi.fn();
+    const { rerender } = render(<Toast message="Saved" show={true} onClose={onClose} />);
+
+    advance(elapsed);
+    rerender(<Toast message="Saved" show={false} onClose={onClose} />);
+    advance(4000);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Saved")).toHaveClass("opacity-0");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([1000, 3100])("cleans up both timers when unmounted at %i ms", (elapsed) => {
+    const onClose = vi.fn();
+    const { unmount } = render(<Toast message="Saved" show={true} onClose={onClose} />);
+
+    advance(elapsed);
+    unmount();
+    advance(4000);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

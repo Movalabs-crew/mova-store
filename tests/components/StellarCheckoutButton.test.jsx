@@ -2,8 +2,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 
-const { mockConnectWallet, mockCurrentAddress, mockPayWithStellar, WalletError } =
-  vi.hoisted(() => {
+const { mockConnectWallet, mockCurrentAddress, mockPayWithStellar, WalletError } = vi.hoisted(
+  () => {
     class WalletError extends Error {
       constructor(message, code = "WALLET_ERROR") {
         super(message);
@@ -17,7 +17,8 @@ const { mockConnectWallet, mockCurrentAddress, mockPayWithStellar, WalletError }
       mockPayWithStellar: vi.fn(),
       WalletError,
     };
-  });
+  }
+);
 
 vi.mock("../../lib/stellar/freighter", () => ({
   connectWallet: (...args) => mockConnectWallet(...args),
@@ -27,6 +28,15 @@ vi.mock("../../lib/stellar/freighter", () => ({
 
 vi.mock("../../lib/stellar/checkout", () => ({
   payWithStellar: (...args) => mockPayWithStellar(...args),
+}));
+
+vi.mock("../../lib/stellar/config", () => ({
+  defaultToken: () => ({
+    contractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    symbol: "USDC",
+    name: "USD Coin",
+    decimals: 7,
+  }),
 }));
 
 const ADDR = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
@@ -42,9 +52,7 @@ function successResult(amountUsd = 12.34) {
 }
 
 function renderButton(props = {}) {
-  return render(
-    <StellarCheckoutButton amountUsd={12.34} orderId="SS-TEST-1" {...props} />
-  );
+  return render(<StellarCheckoutButton amountUsd={12.34} orderId="SS-TEST-1" {...props} />);
 }
 
 afterEach(() => {
@@ -107,9 +115,7 @@ describe("StellarCheckoutButton", () => {
     });
 
     expect(mockConnectWallet).toHaveBeenCalledOnce();
-    expect(mockPayWithStellar).toHaveBeenCalledWith(
-      expect.objectContaining({ publicKey: ADDR })
-    );
+    expect(mockPayWithStellar).toHaveBeenCalledWith(expect.objectContaining({ publicKey: ADDR }));
   });
 
   it("surfaces a WalletError from connectWallet in the alert span and does not pay", async () => {
@@ -123,18 +129,14 @@ describe("StellarCheckoutButton", () => {
       fireEvent.click(screen.getByRole("button"));
     });
 
-    expect(
-      screen.getByRole("alert").textContent
-    ).toBe("Freighter extension not found");
+    expect(screen.getByRole("alert").textContent).toBe("Freighter extension not found");
     expect(mockPayWithStellar).not.toHaveBeenCalled();
     expect(screen.getByRole("button")).toBeEnabled();
   });
 
   it("surfaces a WalletError from payWithStellar in the alert span", async () => {
     mockCurrentAddress.mockResolvedValue(ADDR);
-    mockPayWithStellar.mockRejectedValue(
-      new WalletError("Insufficient balance", "WALLET_ERROR")
-    );
+    mockPayWithStellar.mockRejectedValue(new WalletError("Insufficient balance", "WALLET_ERROR"));
 
     renderButton();
     await act(async () => {
@@ -157,9 +159,7 @@ describe("StellarCheckoutButton", () => {
     expect(screen.getByText("Payment confirmed ✓")).toBeTruthy();
     expect(container.textContent).toContain("Paid on ledger 4242");
     const link = screen.getByRole("link");
-    expect(link.href).toBe(
-      `https://stellar.expert/explorer/testnet/tx/${TX_HASH}`
-    );
+    expect(link.href).toBe(`https://stellar.expert/explorer/testnet/tx/${TX_HASH}`);
     expect(link.textContent).toBe(`${TX_HASH.slice(0, 12)}…`);
     expect(screen.getByText("$12.34 USDC · order SS-TEST-1")).toBeTruthy();
     expect(onSuccess).toHaveBeenCalledTimes(1);

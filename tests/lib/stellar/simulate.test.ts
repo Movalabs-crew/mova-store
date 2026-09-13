@@ -12,7 +12,7 @@ import { FEE_BUFFER_STROOPS, NETWORK_PASSPHRASE } from "../../../lib/stellar/con
 describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts)", () => {
   const buyerAddress = "GC6EQJ4UAFFFJDECLN37G4EWUJJTMKE3WE55NGIL4JXJXNXICUYKVBQ6";
   const dummyAccount = new Account(buyerAddress, "100");
-  const contractId = StrKey.encodeContract(Buffer.alloc(32, 1));
+  const contractId = StrKey.encodeContract(new Uint8Array(32).fill(1));
   const dummyArgs: xdr.ScVal[] = [xdr.ScVal.scvSymbol("test")];
 
   describe("recommendedInclusionFee", () => {

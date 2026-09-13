@@ -23,10 +23,7 @@ const StellarCheckoutButton = ({
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const generatedOrderId = useMemo(
-    () => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-    []
-  );
+  const generatedOrderId = useMemo(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, []);
   const effectiveOrderId = orderId || generatedOrderId;
 
   const effectiveXlmAmount = useMemo(() => {
@@ -142,8 +139,8 @@ const StellarCheckoutButton = ({
           </a>
           {result.simulation && (
             <div className="mt-1 text-[11px] text-green-800/80">
-              Preflight: {result.simulation.instructions.toLocaleString()} CPU instr · min
-              resource fee {result.simulation.minResourceFeeStroops} stroops · total budget{" "}
+              Preflight: {result.simulation.instructions.toLocaleString()} CPU instr · min resource
+              fee {result.simulation.minResourceFeeStroops} stroops · total budget{" "}
               {result.simulation.recommendedInclusionFeeStroops} stroops
             </div>
           )}

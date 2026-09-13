@@ -4,7 +4,7 @@ use soroban_sdk::{contractevent, Address, BytesN};
 ///
 /// Topics: `pay`, token, buyer, merchant, order_id
 /// Data:   `{ amount }` (i128, raw token units)
-#[contractevent]
+#[contractevent(topics = ["pay"])]
 pub struct PaymentReceived {
     /// The SEP-41 token contract used for the payment.
     #[topic]
@@ -26,7 +26,7 @@ pub struct PaymentReceived {
 ///
 /// Topics: `create_order`, token, buyer, order_id
 /// Data:   `{ amount, timestamp }`
-#[contractevent]
+#[contractevent(topics = ["create_order"])]
 pub struct OrderCreated {
     /// The SEP-41 token the buyer intends to pay with.
     #[topic]
@@ -47,7 +47,7 @@ pub struct OrderCreated {
 ///
 /// Topics: `dispatch`, order_id, merchant
 /// Data:   `{ amount }`
-#[contractevent]
+#[contractevent(topics = ["dispatch"])]
 pub struct OrderShipped {
     /// The 32-byte order id that was dispatched.
     #[topic]
@@ -63,7 +63,7 @@ pub struct OrderShipped {
 ///
 /// Topics: `refund`, order_id, buyer
 /// Data:   `{ amount }`
-#[contractevent]
+#[contractevent(topics = ["refund"])]
 pub struct OrderRefunded {
     /// The 32-byte order id that was refunded.
     #[topic]

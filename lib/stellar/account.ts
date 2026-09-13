@@ -1,6 +1,7 @@
-import { Account, Asset, rpc } from "@stellar/stellar-sdk";
+// SPDX-License-Identifier: Apache-2.0
 
-import { FRIENDBOT_URL, IS_MAINNET, TokenConfig } from "./config";
+import { rpc, Account, Asset } from "@stellar/stellar-sdk";
+import { IS_MAINNET, FRIENDBOT_URL, TokenConfig } from "./config";
 import { WalletError } from "./freighter";
 import { readTokenBalance, readTokenDecimals } from "./simulate";
 
@@ -220,8 +221,9 @@ export async function assertPaymentReady(
     readTokenDecimals(server, token.contractId).catch(() => token.decimals),
   ]);
 
-  const tokenBalanceRaw =
-    trustline.hasTrustline && trustline.balanceRaw !== BigInt(0)
+  const tokenBalanceRaw = token.isNative
+    ? nativeBalanceRaw
+    : trustline.hasTrustline && trustline.balanceRaw !== BigInt(0)
       ? trustline.balanceRaw
       : await readTokenBalance(server, token.contractId, publicKey);
 

@@ -11,13 +11,7 @@ import {
 import { convertUsdToXlm } from "./price";
 import { ensureNetwork, signWithFreighter, WalletError } from "./freighter";
 import { decodePaymentEvent, PaymentReceipt, waitForTransaction } from "./events";
-import {
-  addressToScVal,
-  bytes32ToScVal,
-  bytesToHex,
-  hashOrderId,
-  i128ToScVal,
-} from "./scval";
+import { addressToScVal, bytes32ToScVal, bytesToHex, hashOrderId, i128ToScVal } from "./scval";
 import { assertPaymentReady } from "./account";
 import { buildInvocationTransaction, budgetFee, prepareAndReport } from "./simulate";
 
@@ -121,12 +115,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
     bytes32ToScVal(orderBytes),
     i128ToScVal(amountRaw),
   ];
-  const tx = buildInvocationTransaction(
-    readiness.account!,
-    CHECKOUT_CONTRACT_ID,
-    "pay",
-    args
-  );
+  const tx = buildInvocationTransaction(readiness.account!, CHECKOUT_CONTRACT_ID, "pay", args);
 
   // 4. Pre-flight simulation (surfaces errors early) + prepare.
   onStatus("Simulating transaction…");
