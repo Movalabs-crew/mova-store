@@ -1,4 +1,4 @@
-import { xdr, Address, scValToNative } from "@stellar/stellar-sdk";
+import { xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
 
 // ---------------------------------------------------------------------------
 // ScVal construction + decoding helpers for the checkout contract.
@@ -14,20 +14,32 @@ export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
   const v = BigInt(value);
   const mask = BigInt("0xffffffffffffffff");
   const lo = new xdr.Uint64(BigInt.asUintN(64, v & mask));
-  const hi = new xdr.Int64(BigInt.asUintN(64, v >> BigInt(64)));
+  const hi = new xdr.Int64(BigInt.asIntN(64, v >> BigInt(64)));
   return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
+}
+
+/**
+ * The SDK's generated typings still ask for Node's byte type on
+ * `xdr.ScVal.scvBytes` and `StrKey.encodeContract`. Both accept any
+ * `Uint8Array` at runtime, and these modules are bundled for the browser where
+ * that global is not guaranteed, so widen at the call boundary instead of
+ * constructing a Node value.
+ */
+type SdkBytes = Parameters<typeof xdr.ScVal.scvBytes>[0];
+
+export function toSdkBytes(bytes: Uint8Array): SdkBytes {
+  return bytes as unknown as SdkBytes;
 }
 
 /**
  * Build a BytesN<32> ScVal from a Uint8Array (or hex string).
  */
 export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
-  const buf =
-    typeof bytes === "string" ? Buffer.from(hexToBytes(bytes)) : Buffer.from(bytes);
-  if (buf.length !== 32) {
-    throw new Error(`order_id must be exactly 32 bytes (got ${buf.length})`);
+  const raw = typeof bytes === "string" ? hexToBytes(bytes) : Uint8Array.from(bytes);
+  if (raw.length !== 32) {
+    throw new Error(`order_id must be exactly 32 bytes (got ${raw.length})`);
   }
-  return xdr.ScVal.scvBytes(buf);
+  return xdr.ScVal.scvBytes(toSdkBytes(raw));
 }
 
 /**
@@ -61,7 +73,7 @@ export function scValToString(scVal: xdr.ScVal): string {
     return scVal.str().toString();
   }
   if (typeName === xdr.ScValType.scvAddress()) {
-    return scVal.address().toString();
+    return Address.fromScVal(scVal).toString();
   }
   if (
     typeName === xdr.ScValType.scvI128() ||
@@ -107,7 +119,11 @@ export function hexToBytes(hex: string): Uint8Array {
   }
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    const chunk = clean.slice(i * 2, i * 2 + 2);
+    if (!/^[0-9a-fA-F]{2}$/.test(chunk)) {
+      throw new Error(`invalid hex character in "${chunk}"`);
+    }
+    out[i] = parseInt(chunk, 16);
   }
   return out;
 }
@@ -126,20 +142,26 @@ export async function hashOrderId(orderId: string): Promise<Uint8Array> {
   const digest = await crypto.subtle.digest("SHA-256", data);
   return new Uint8Array(digest);
 }
-// ---------------------------------------------------------------------------
-// Order ID Resolution
-// ---------------------------------------------------------------------------
 
 /**
- * Resolves an order ID to its 32-byte hash for contract operations.
- * - If orderId is a 64-character hex string, it is already hashed (from indexer events) -> return as-is
- * - Otherwise, it is a raw pre-image (e.g., SS-...) -> SHA-256 hash it
+ * True when `value` is already a 32-byte order id rendered as hex.
+ */
+export function isOrderIdHashHex(value: string): boolean {
+  return /^(0x)?[0-9a-fA-F]{64}$/.test(value);
+}
+
+/**
+ * Resolve an order id to the raw 32 bytes the contract stores it under.
+ *
+ * Callers hold one of two things. Checkout holds the pre-image ("SS-..."),
+ * which has to be hashed. Admin views build their rows from indexer events,
+ * whose `order_id` topic is already the hashed BytesN<32> rendered as 64 hex
+ * characters. SHA-256 is one-way, so hashing that hex a second time can never
+ * reproduce the stored value and the contract call fails with OrderNotFound.
+ *
+ * A 64-hex id is therefore decoded straight to bytes and passed through
+ * unchanged; anything else is treated as a pre-image and hashed.
  */
 export async function resolveOrderIdHash(orderId: string): Promise<Uint8Array> {
-  // Check if already a 64-hex hash (from indexer events)
-  if (/^[0-9a-fA-F]{64}$/.test(orderId)) {
-    return hexToBytes(orderId);
-  }
-  // Hash the raw pre-image
-  return hashOrderId(orderId);
+  return isOrderIdHashHex(orderId) ? hexToBytes(orderId) : hashOrderId(orderId);
 }

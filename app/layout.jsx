@@ -5,6 +5,8 @@ import Navbar from "../components/Navbar";
 import ScrollToTop from "../components/ScrollToTop";
 import Whatsapp from "../components/Whatsapp";
 import Footer from "../components/Footer";
+import ErrorBoundary from "../components/ErrorBoundary";
+import SkipLink from "../components/SkipLink";
 import { AuthProvider } from "../lib/AuthContext";
 import Head from "next/head";
 import logo from "../public/images/favicon.ico";
@@ -66,6 +68,7 @@ const RootLayout = ({ children }) => {
       <body className="h-full font-body antialiased">
         <SkipLink />
         <NextTopLoader color="#7c3aed" showSpinner={false} />
+        <SkipLink />
 
         <AuthProvider>
           <ErrorBoundary>

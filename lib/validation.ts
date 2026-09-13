@@ -302,6 +302,101 @@ export function validateStellarAddress(address: string): ValidationResult {
 }
 
 // =============================================================================
+// CREDIT CARD VALIDATION
+// =============================================================================
+
+/**
+ * Validates a credit card number using the Luhn algorithm.
+ */
+export function validateCardNumber(cardNumber: string, strictLength = true): ValidationResult {
+  const sanitized = sanitizeText(cardNumber).replace(/\s+/g, "");
+
+  if (!sanitized) {
+    return { isValid: false, error: "Card number is required" };
+  }
+
+  const lengthRegex = strictLength ? /^\d{13,19}$/ : /^\d{8,19}$/;
+  if (!lengthRegex.test(sanitized)) {
+    return { isValid: false, error: "Please enter a valid card number" };
+  }
+
+  // Luhn algorithm check
+  let sum = 0;
+  let shouldDouble = false;
+  for (let i = sanitized.length - 1; i >= 0; i--) {
+    let digit = parseInt(sanitized.charAt(i), 10);
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+
+  if (sum % 10 !== 0) {
+    return { isValid: false, error: "Please enter a valid card number" };
+  }
+
+  return { isValid: true, sanitized };
+}
+
+/**
+ * Validates credit card expiry date in MM/YY or MM/YYYY format.
+ */
+export function validateCardExpiry(expiry: string): ValidationResult {
+  const sanitized = sanitizeText(expiry).trim();
+
+  if (!sanitized) {
+    return { isValid: false, error: "Expiry date is required" };
+  }
+
+  const match = sanitized.match(/^(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/);
+  if (!match) {
+    return { isValid: false, error: "Please enter a valid expiry date (MM/YY)" };
+  }
+
+  const month = parseInt(match[1], 10);
+  let year = parseInt(match[2], 10);
+  if (match[2].length === 2) {
+    year += 2000;
+  }
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  if (year < currentYear || (year === currentYear && month < currentMonth)) {
+    return { isValid: false, error: "Card has expired" };
+  }
+
+  // Cap maximum future expiry (e.g. 20 years)
+  if (year > currentYear + 20) {
+    return { isValid: false, error: "Please enter a valid expiry date" };
+  }
+
+  const formattedMonth = month.toString().padStart(2, "0");
+  const formattedYear = (year % 100).toString().padStart(2, "0");
+  return { isValid: true, sanitized: `${formattedMonth}/${formattedYear}` };
+}
+
+/**
+ * Validates card CVV/CVC code (3 or 4 digits).
+ */
+export function validateCardCVV(cvv: string): ValidationResult {
+  const sanitized = sanitizeText(cvv).trim();
+
+  if (!sanitized) {
+    return { isValid: false, error: "CVV is required" };
+  }
+
+  if (!/^\d{3,4}$/.test(sanitized)) {
+    return { isValid: false, error: "CVV must be 3 or 4 digits" };
+  }
+
+  return { isValid: true, sanitized };
+}
+
+// =============================================================================
 // FORM VALIDATION HELPER
 // =============================================================================
 

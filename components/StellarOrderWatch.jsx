@@ -34,16 +34,22 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
       indexer.start({
         onStatus: (s) => {
           setConnected(s.running);
-          if (s.lastError) setError(s.lastError);
+          if (s.lastError) {
+            setError(s.lastError);
+          } else if (s.running) {
+            setError("");
+          }
         },
         onError: (err) => setError(err.message),
         onEvent: (event) => {
           if (event.symbol !== "pay") return;
           const orderHex = (event.fields.topic4 || "").toLowerCase();
           if (orderHex !== expected) return;
+          setError("");
           setMatched(event);
           if (onEvent) onEvent(event);
-          indexer.stop();        },
+          indexer.stop();
+        },
       });
     };
 

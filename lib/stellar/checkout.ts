@@ -13,6 +13,7 @@ import { decodePaymentEvent, PaymentReceipt, waitForTransaction } from "./events
 import {
   addressToScVal,
   bytes32ToScVal,
+  bytesToHex,
   hashOrderId,
   i128ToScVal,
 } from "./scval";
@@ -69,13 +70,7 @@ export function usdToRawUnits(amountUsd: number): bigint {
  * cross-check on-chain order ids with their own order numbers.
  */
 export async function orderIdHash(orderId: string): Promise<string> {
-  return hexOf(await hashOrderId(orderId));
-}
-
-function hexOf(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return bytesToHex(await hashOrderId(orderId));
 }
 
 /**

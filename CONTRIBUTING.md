@@ -179,9 +179,10 @@ npm run test:ui
 ```
 
 **Test file locations:**
-- Unit tests: `tests/lib/` for library functions
-- Component tests: `tests/components/` for React components
+- Unit tests: `tests/lib/` for library functions (for example `tests/lib/env.test.ts` and `tests/lib/validation.test.ts`)
+- Shared Vitest setup: `tests/setup.ts`
 - Tests should be named `*.test.ts` or `*.test.tsx`
+- Put new component tests under `tests/` only when you add them; do not assume a `tests/components/` directory exists yet
 
 **What to test:**
 - Utility functions (validation, formatting, etc.)
@@ -218,7 +219,7 @@ npm run build        # Production build must succeed
 
 If your PR touches the Stellar payment flow, describe in the PR how you tested
 it against testnet (Freighter + USDC faucet account). Follow the flow in the
-root [README](README.md#paying-with-usdc-testnet).
+root [README](README.md#paying-with-stellar-testnet).
 
 ## Commit Message Style
 
