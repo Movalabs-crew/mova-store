@@ -13,6 +13,7 @@ import {
   xdr,
   Keypair,
   StrKey,
+  Address,
 } from "@stellar/stellar-sdk";
 
 import {
@@ -25,7 +26,7 @@ import {
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
-import { hashOrderId, bytesToHex } from "./scval";
+import { hashOrderId, bytesToHex, hexToBytes } from "./scval";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,7 +86,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
   const server = new rpc.Server(RPC_URL);
   const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-  const orderIdHashBytes = await hashOrderId(orderId);
+  const orderIdHashBytes = await resolveOrderIdHash(orderId);
   const orderIdHash = bytesToHex(orderIdHashBytes);
 
   const account = await server
@@ -162,9 +163,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
             break;
           case "token":
             if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.token = StrKey.encodeContract(
-                Buffer.from(val.address().contractId() as unknown as Uint8Array)
-              );
+              order.token = StrKey.encodeContract(val.address().contractId() as any);
             }
             break;
           case "timestamp":
@@ -207,7 +206,7 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 
@@ -280,7 +279,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
     const server = new rpc.Server(RPC_URL);
     const contract = new Contract(CHECKOUT_CONTRACT_ID);
 
-    const orderIdHashBytes = await hashOrderId(orderId);
+    const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
     const account = await server.getAccount(publicKey);
 

@@ -48,11 +48,7 @@ export default function SkipLink({
  *
  * Multiple skip links for complex pages with multiple sections.
  */
-export function SkipLinks({
-  links,
-}: {
-  links: Array<{ href: string; label: string }>;
-}) {
+export function SkipLinks({ links }: { links: Array<{ href: string; label: string }> }) {
   return (
     <nav aria-label="Skip links" className="sr-only focus-within:not-sr-only">
       <ul className="fixed top-4 left-4 z-[100] flex flex-col gap-2">

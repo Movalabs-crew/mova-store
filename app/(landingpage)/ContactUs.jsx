@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import useToast from "../../hooks/useToast";
 import { FaGithub, FaTwitter, FaDiscord } from "react-icons/fa";
 import sendMail from "../../lib/sendmail";
 
@@ -30,7 +31,7 @@ const ContactUs = () => {
     email: "",
     message: "",
   });
-  const [toast, setToast] = useState({ show: false, message: "" });
+  const { toast, showToast, hideToast } = useToast(5000);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,11 +57,6 @@ const ContactUs = () => {
     setIsLoading(false);
   };
 
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => setToast({ show: false, message: "" }), 5000);
-  };
-
   return (
     <div
       id="contact"
@@ -68,21 +64,16 @@ const ContactUs = () => {
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Get in Touch
-          </h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Get in Touch</h2>
           <p className="text-white/90 max-w-xl mx-auto">
-            Questions, feedback, or want to contribute? Reach out through
-            any channel below.
+            Questions, feedback, or want to contribute? Reach out through any channel below.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Social Links */}
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8">
-            <h3 className="text-xl font-semibold text-white mb-6">
-              Connect with us
-            </h3>
+            <h3 className="text-xl font-semibold text-white mb-6">Connect with us</h3>
             <div className="space-y-4">
               {socialLinks.map((link) => (
                 <a
@@ -96,9 +87,7 @@ const ContactUs = () => {
                     <link.icon size={24} />
                   </span>
                   <div>
-                    <p className="font-semibold text-white group-hover:underline">
-                      {link.name}
-                    </p>
+                    <p className="font-semibold text-white group-hover:underline">{link.name}</p>
                     <p className="text-sm text-white/70">{link.description}</p>
                   </div>
                 </a>
@@ -120,8 +109,10 @@ const ContactUs = () => {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 mb-4">
             <input
+              id="contact-name"
               type="text"
               name="name"
+              aria-label="Your Name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Your Name"
@@ -129,8 +120,10 @@ const ContactUs = () => {
               required
             />
             <input
+              id="contact-email"
               type="email"
               name="email"
+              aria-label="Your Email"
               value={formData.email}
               onChange={handleChange}
               placeholder="Your Email"
@@ -138,7 +131,9 @@ const ContactUs = () => {
               required
             />
             <textarea
+              id="contact-message"
               name="message"
+              aria-label="Your Message"
               value={formData.message}
               onChange={handleChange}
               placeholder="Your Message"
@@ -169,36 +164,52 @@ const ContactUs = () => {
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                Sending...
-              </>
-            ) : (
-              "Send Message"
-            )}
-          </button>
-          {error && (
-            <p
-              role="alert"
-              aria-live="polite"
-              className="mt-4 text-center text-sm font-medium text-red-600"
-            >
-              {error}
-            </p>
-          )}
-        </form>
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 mr-3 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  "Send Message"
+                )}
+              </button>
+              {error && (
+                <p
+                  role="alert"
+                  aria-live="polite"
+                  className="mt-4 text-center text-sm font-medium text-red-600"
+                >
+                  {error}
+                </p>
+              )}
+            </form>
           </div>
         </div>
       </div>
@@ -206,10 +217,7 @@ const ContactUs = () => {
       {toast.show && (
         <div className="fixed bottom-5 right-5 bg-gray-800 text-white p-3 rounded shadow-lg transition-transform transform translate-y-0 ease-in-out duration-300">
           {toast.message}
-          <button
-            onClick={() => setToast({ show: false, message: "" })}
-            className="ml-4 text-purple-500"
-          >
+          <button onClick={hideToast} className="ml-4 text-purple-500">
             ✕
           </button>
         </div>
