@@ -1,6 +1,7 @@
-import { Account, Asset, rpc } from "@stellar/stellar-sdk";
+// SPDX-License-Identifier: Apache-2.0
 
-import { FRIENDBOT_URL, IS_MAINNET, TokenConfig } from "./config";
+import { rpc, Account, Asset } from "@stellar/stellar-sdk";
+import { IS_MAINNET, FRIENDBOT_URL, TokenConfig } from "./config";
 import { WalletError } from "./freighter";
 import { readTokenBalance, readTokenDecimals } from "./simulate";
 
@@ -220,8 +221,9 @@ export async function assertPaymentReady(
     readTokenDecimals(server, token.contractId).catch(() => token.decimals),
   ]);
 
-  const tokenBalanceRaw =
-    trustline.hasTrustline && trustline.balanceRaw !== BigInt(0)
+  const tokenBalanceRaw = token.isNative
+    ? nativeBalanceRaw
+    : trustline.hasTrustline && trustline.balanceRaw !== BigInt(0)
       ? trustline.balanceRaw
       : await readTokenBalance(server, token.contractId, publicKey);
 
@@ -244,9 +246,12 @@ export async function assertPaymentReady(
     );
   }
 
-  if (nativeBalanceRaw < MIN_NATIVE_RESERVE) {
+  const minNativeRequired = token.isNative ? requiredRaw + MIN_NATIVE_RESERVE : MIN_NATIVE_RESERVE;
+
+  if (nativeBalanceRaw < minNativeRequired) {
     issues.push(
-      `Your account needs at least ${formatAmount(MIN_NATIVE_RESERVE, 7)} XLM to cover ` +
+      `Your account needs at least ${formatAmount(minNativeRequired, 7)} XLM to cover ` +
+        (token.isNative ? "payment and " : "") +
         `network fees and the contract footprint.`
     );
   }
@@ -261,7 +266,7 @@ export async function assertPaymentReady(
     trustlineAuthorized: token.isNative || trustline.authorized,
     requiredRaw,
     sufficientBalance: tokenBalanceRaw >= requiredRaw,
-    sufficientReserve: nativeBalanceRaw >= MIN_NATIVE_RESERVE,
+    sufficientReserve: nativeBalanceRaw >= minNativeRequired,
     issues,
   };
 

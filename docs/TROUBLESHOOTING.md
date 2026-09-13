@@ -193,6 +193,21 @@ Common issues and solutions for Mova Store development and production.
 3. Check browser console for Supabase errors
 4. Ensure the `products` storage bucket is public
 
+### "Permission denied" or RLS error when creating/updating products or uploading images
+
+**Symptoms:** Admin panel actions fail with row-level security error
+
+**Solutions:**
+
+1. Ensure `supabase/schema.sql` has been executed in the Supabase SQL editor.
+2. Verify the user's admin authorization in Supabase:
+   - Add the administrator's email to `public.admin_users`:
+     ```sql
+     insert into public.admin_users (email) values ('admin@example.com') on conflict (email) do nothing;
+     ```
+   - Or set `is_admin: true` in the user's `app_metadata` in Supabase Auth.
+3. Verify that the user is logged in before attempting write operations.
+
 ### Can't dispatch/refund orders
 
 **Symptoms:** Action buttons fail with error

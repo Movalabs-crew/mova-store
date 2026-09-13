@@ -26,6 +26,8 @@ import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
 import { SiStellar } from "react-icons/si";
+import { SUPPORTED_TOKENS, defaultToken, TokenConfig } from "../../lib/stellar/config";
+import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
 import {
   validateEmail,
   validateName,
@@ -43,6 +45,7 @@ const Checkout = () => {
     String(Math.floor(Math.random() * 1000000)).padStart(6, "0")
   );
   const [totalPrice, setTotalPrice] = useState(0);
+  const [selectedToken, setSelectedToken] = useState<TokenConfig>(defaultToken());
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast, showToast, hideToast } = useToast(5000);
@@ -63,8 +66,11 @@ const Checkout = () => {
 
   const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
-  const handleStellarSuccess = (result: { amountUsd: number | string }) => {
-    showToast(`USDC payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`);
+  const handleStellarSuccess = (result: { amountUsd: number | string; tokenSymbol?: string }) => {
+    const symbol = result.tokenSymbol || selectedToken.symbol;
+    showToast(
+      `${symbol} payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
+    );
     setStage(3);
     localStorage.removeItem("cartItems");
     localStorage.removeItem("itemCount");
@@ -225,53 +231,68 @@ const Checkout = () => {
                 <h2 className="text-2xl mb-4 text-center">Checkout</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="mb-4">
-                    <label className="block text-gray-700">First Name</label>
+                    <label htmlFor="checkout-firstName" className="block text-gray-700">
+                      First Name
+                    </label>
                     <input
+                      id="checkout-firstName"
                       type="text"
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Last Name</label>
+                    <label htmlFor="checkout-lastName" className="block text-gray-700">
+                      Last Name
+                    </label>
                     <input
+                      id="checkout-lastName"
                       type="text"
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Email</label>
+                    <label htmlFor="checkout-email" className="block text-gray-700">
+                      Email
+                    </label>
                     <input
+                      id="checkout-email"
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Address</label>
+                    <label htmlFor="checkout-address" className="block text-gray-700">
+                      Address
+                    </label>
                     <input
+                      id="checkout-address"
                       type="text"
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
                       required
-                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                      className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Card Number</label>
+                    <label htmlFor="checkout-cardNumber" className="block text-gray-700">
+                      Card Number
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
+                        id="checkout-cardNumber"
                         type="text"
                         name="cardNumber"
                         value={formData.cardNumber}
@@ -289,15 +310,21 @@ const Checkout = () => {
                         maxLength={19}
                         placeholder="16-digit card number"
                         required
-                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                       />
-                      <FaCreditCard className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500" />
+                      <FaCreditCard
+                        className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700">Expiry Date</label>
+                    <label htmlFor="checkout-expiryDate" className="block text-gray-700">
+                      Expiry Date
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
+                        id="checkout-expiryDate"
                         type="text"
                         name="expiryDate"
                         value={formData.expiryDate}
@@ -321,17 +348,23 @@ const Checkout = () => {
                         }}
                         placeholder="MM/YY"
                         maxLength={5}
-                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
+                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
                       />
-                      <BsCalendarDate className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500" />
+                      <BsCalendarDate
+                        className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-gray-700">Cvv</label>
+                    <label htmlFor="checkout-cvv" className="block text-gray-700">
+                      Cvv
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
+                        id="checkout-cvv"
                         type="text"
                         name="cvv"
                         value={formData.cvv}
@@ -346,12 +379,15 @@ const Checkout = () => {
                             cvv: value,
                           }));
                         }}
-                        placeholder="3 or 4 digits"
+                        placeholder="CVV"
                         maxLength={4}
+                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
-                        className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded"
                       />
-                      <FaCreditCard className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500" />
+                      <FaCreditCard
+                        className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
                 </div>
@@ -377,22 +413,66 @@ const Checkout = () => {
                   <span className="h-px flex-1 bg-gray-300" />
                   <span className="text-xs uppercase tracking-wider text-gray-500 flex items-center gap-2">
                     <SiStellar size={16} className="text-purple-600" />
-                    or pay with Stellar (USDC)
+                    or pay with Stellar ({selectedToken.symbol})
                   </span>
                   <span className="h-px flex-1 bg-gray-300" />
                 </div>
+
+                {/* Token Selector */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-700">Select Payment Token:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SUPPORTED_TOKENS.map((tok) => {
+                      const isSelected = selectedToken.symbol === tok.symbol;
+                      return (
+                        <button
+                          key={tok.symbol}
+                          type="button"
+                          onClick={() => setSelectedToken(tok)}
+                          className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                            isSelected
+                              ? "border-purple-600 bg-purple-50 text-purple-700 font-semibold shadow-sm"
+                              : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {tok.isNative ? (
+                            <SiStellar size={15} className="text-purple-600" />
+                          ) : (
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                              $
+                            </span>
+                          )}
+                          <span>{tok.symbol}</span>
+                          {tok.isNative && (
+                            <span className="text-[10px] text-purple-600 font-normal">
+                              (Native)
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedToken.isNative && totalPrice > 0 && (
+                    <div className="mt-1 flex items-center justify-between text-xs bg-purple-50 border border-purple-100 rounded px-2.5 py-1.5 text-purple-800">
+                      <span>Rate: 1 XLM ≈ ${DEFAULT_XLM_USD_PRICE} USD</span>
+                      <span className="font-semibold">≈ {convertUsdToXlm(totalPrice)} XLM</span>
+                    </div>
+                  )}
+                </div>
+
                 <StellarWalletButton />
                 <StellarCheckoutButton
                   amountUsd={totalPrice}
                   orderId={orderId}
+                  token={selectedToken}
                   disabled={isSubmitting || totalPrice <= 0}
                   onSuccess={handleStellarSuccess}
                 />
                 <StellarOrderWatch orderId={orderId} enabled={stage === 1} />
                 <p className="text-[11px] text-gray-400 text-center">
-                  Order #{orderId} · USDC (testnet) is escrowed by a Soroban smart contract until we
-                  ship, then released to our merchant wallet. Refunds go straight back on-chain. No
-                  card needed.
+                  Order #{orderId} · {selectedToken.symbol} (testnet) is escrowed by a Soroban smart
+                  contract until we ship, then released to our merchant wallet. Refunds go straight
+                  back on-chain. No card needed.
                 </p>
               </div>
             )}
