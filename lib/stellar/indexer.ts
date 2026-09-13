@@ -38,6 +38,7 @@ export interface IndexerStatus {
   lastCursor?: string;
   eventsSeen: number;
   lastError?: string;
+  retrying?: boolean;
 }
 
 export interface IndexerCallbacks {
@@ -64,6 +65,8 @@ export class PaymentEventIndexer {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
   private started = false;
+  private initializing = false;
+  private initialized = false;
 
   constructor(
     opts: {
@@ -76,8 +79,7 @@ export class PaymentEventIndexer {
     this.server = new rpc.Server(opts.rpcUrl ?? RPC_URL);
     this.contractId = opts.contractId ?? CHECKOUT_CONTRACT_ID;
     this.pollMs = opts.pollMs ?? EVENT_POLL_INTERVAL_MS;
-    this.watchedSymbols =
-      opts.watchedSymbols ?? ["pay", "create_order", "dispatch", "refund"];
+    this.watchedSymbols = opts.watchedSymbols ?? ["pay", "create_order", "dispatch", "refund"];
   }
 
   get status(): IndexerStatus {
@@ -87,6 +89,7 @@ export class PaymentEventIndexer {
       lastCursor: this.cursor,
       eventsSeen: this.eventsSeen,
       lastError: this.lastError,
+      retrying: this.running && !this.initialized,
     };
   }
 
@@ -96,7 +99,8 @@ export class PaymentEventIndexer {
     this.running = true;
     this.started = true;
 
-    void this.initialize(callbacks);
+    this.timer = setInterval(() => void this.tick(callbacks), this.pollMs);
+    void this.tick(callbacks);
   }
 
   stop(): void {
@@ -107,26 +111,43 @@ export class PaymentEventIndexer {
     }
   }
 
-  private async initialize(callbacks: IndexerCallbacks): Promise<void> {
+  private async tick(callbacks: IndexerCallbacks): Promise<void> {
+    if (!this.running) return;
+
+    if (!this.initialized) {
+      await this.ensureInitialized(callbacks);
+      if (!this.initialized) {
+        return;
+      }
+    }
+
+    await this.poll(callbacks);
+  }
+
+  private async ensureInitialized(callbacks: IndexerCallbacks): Promise<void> {
+    if (this.initializing) return;
+    this.initializing = true;
+
     try {
       const latest = await this.server.getLatestLedger();
       this.latestLedger = latest.sequence;
-      this.startLedger = Math.max(
-        1,
-        this.latestLedger - EVENT_START_LEDGER_BACKFILL
-      );
+      this.startLedger = Math.max(1, this.latestLedger - EVENT_START_LEDGER_BACKFILL);
+      this.initialized = true;
+      this.lastError = undefined;
       callbacks.onStatus?.(this.status);
     } catch (err) {
       this.lastError = String(err instanceof Error ? err.message : err);
-      callbacks.onError?.(new Error(`Could not reach the Stellar RPC: ${this.lastError}`));
+      callbacks.onError?.(
+        new Error(`Could not reach the Stellar RPC (retrying): ${this.lastError}`)
+      );
+      callbacks.onStatus?.(this.status);
+    } finally {
+      this.initializing = false;
     }
-
-    this.timer = setInterval(() => void this.poll(callbacks), this.pollMs);
-    void this.poll(callbacks);
   }
 
   private async poll(callbacks: IndexerCallbacks): Promise<void> {
-    if (!this.running) return;
+    if (!this.running || !this.initialized) return;
 
     try {
       const res = await this.fetchEvents();
@@ -166,9 +187,7 @@ export class PaymentEventIndexer {
   }
 
   private async fetchEvents(): Promise<rpc.Api.GetEventsResponse> {
-    const filters: rpc.Api.EventFilter[] = [
-      { type: "contract", contractIds: [this.contractId] },
-    ];
+    const filters: rpc.Api.EventFilter[] = [{ type: "contract", contractIds: [this.contractId] }];
     if (this.startLedger !== undefined) {
       return this.server.getEvents({ filters, startLedger: this.startLedger });
     }
