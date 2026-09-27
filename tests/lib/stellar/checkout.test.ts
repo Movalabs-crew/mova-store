@@ -9,8 +9,8 @@ vi.mock("@stellar/freighter-api", () => ({
   signTransaction: vi.fn(),
 }));
 
-import { WalletError } from "../../../lib/stellar/freighter";
 import * as freighterMod from "../../../lib/stellar/freighter";
+const { WalletError } = freighterMod;
 import * as accountMod from "../../../lib/stellar/account";
 import * as simulateMod from "../../../lib/stellar/simulate";
 import * as eventsMod from "../../../lib/stellar/events";

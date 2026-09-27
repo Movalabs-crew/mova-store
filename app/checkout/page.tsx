@@ -19,15 +19,12 @@ import {
   FaCreditCard,
 } from "react-icons/fa";
 import { BsBank, BsCalendarDate } from "react-icons/bs";
-import { SiKlarna } from "react-icons/si";
+import { SiKlarna, SiStellar } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
 import { validateOTP } from "../../lib/validation";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
-import { SiStellar } from "react-icons/si";
-import { SUPPORTED_TOKENS, defaultToken, TokenConfig } from "../../lib/stellar/config";
-import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
 import {
   SUPPORTED_TOKENS,
   defaultToken,
@@ -43,7 +40,6 @@ import {
   validateCardExpiry,
   validateCardCVV,
 } from "../../lib/validation";
-
 const Checkout = () => {
   // OTP is stored as a zero-padded 6-digit string so it always matches the format
   // shown in the email (e.g. "000042") and can be compared with exact string
