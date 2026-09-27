@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({
     get: vi.fn(),
   }),
   usePathname: () => "/",
+  useParams: () => ({}),
 }));
 
 // Mock Next.js Image component

@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useToast } from '../hooks/useToast';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useToast } from "../hooks/useToast";
 
-describe('useToast hook', () => {
+describe("useToast hook", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -11,21 +11,21 @@ describe('useToast hook', () => {
     vi.restoreAllMocks();
   });
 
-  it('should initialize with default closed toast state', () => {
+  it("should initialize with default closed toast state", () => {
     const { result } = renderHook(() => useToast());
-    expect(result.current.toast).toEqual({ show: false, message: '' });
+    expect(result.current.toast).toEqual({ show: false, message: "" });
   });
 
-  it('should show toast message and auto-dismiss after default 3000ms', () => {
+  it("should show toast message and auto-dismiss after default 3000ms", () => {
     const { result } = renderHook(() => useToast());
 
     act(() => {
-      result.current.showToast('Product added to cart');
+      result.current.showToast("Product added to cart");
     });
 
     expect(result.current.toast).toEqual({
       show: true,
-      message: 'Product added to cart',
+      message: "Product added to cart",
     });
 
     act(() => {
@@ -34,15 +34,15 @@ describe('useToast hook', () => {
 
     expect(result.current.toast).toEqual({
       show: false,
-      message: '',
+      message: "",
     });
   });
 
-  it('should support custom duration', () => {
+  it("should support custom duration", () => {
     const { result } = renderHook(() => useToast(5000));
 
     act(() => {
-      result.current.showToast('Custom duration alert', 1500);
+      result.current.showToast("Custom duration alert", 1500);
     });
 
     expect(result.current.toast.show).toBe(true);
@@ -58,11 +58,11 @@ describe('useToast hook', () => {
     expect(result.current.toast.show).toBe(false);
   });
 
-  it('should immediately dismiss when hideToast is called', () => {
+  it("should immediately dismiss when hideToast is called", () => {
     const { result } = renderHook(() => useToast());
 
     act(() => {
-      result.current.showToast('Temporary alert');
+      result.current.showToast("Temporary alert");
     });
 
     expect(result.current.toast.show).toBe(true);
@@ -73,15 +73,15 @@ describe('useToast hook', () => {
 
     expect(result.current.toast).toEqual({
       show: false,
-      message: '',
+      message: "",
     });
   });
 
-  it('should clean up timer on unmount without throwing warnings', () => {
+  it("should clean up timer on unmount without throwing warnings", () => {
     const { result, unmount } = renderHook(() => useToast());
 
     act(() => {
-      result.current.showToast('Unmount test');
+      result.current.showToast("Unmount test");
     });
 
     expect(result.current.toast.show).toBe(true);

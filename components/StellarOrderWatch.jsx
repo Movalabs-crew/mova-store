@@ -101,11 +101,7 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
         </div>
       )}
 
-      {error && (
-        <div className="mt-2 text-amber-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="mt-2 text-amber-700">{error}</div>}
     </div>
   );
 };

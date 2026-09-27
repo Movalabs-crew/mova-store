@@ -53,7 +53,7 @@ const STELLAR_DEFAULTS = {
     nativeAssetContractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
   },
   mainnet: {
-    rpcUrl: "https://soroban-rpc.stellar.org",
+    rpcUrl: "https://soroban-rpc.mainnet.stellar.gateway.fm",
     networkPassphrase: "Public Global Stellar Network ; September 2015",
     usdcContractId: "", // Must be configured for mainnet
     nativeAssetContractId: "", // Must be configured for mainnet
@@ -128,23 +128,10 @@ export function loadStellarConfig(errors: ValidationError[] = []): StellarConfig
  */
 export function loadEmailJSConfig(errors: ValidationError[] = []): EmailJSConfig {
   return {
-    serviceId: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_SERVICE_ID",
-      errors,
-      "email notifications"
-    ),
-    templateId: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID",
-      errors,
-      "email notifications"
-    ),
-    publicKey: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY",
-      errors,
-      "email notifications"
-    ),
-    defaultRecipientEmail:
-      getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
+    serviceId: requireEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", errors, "email notifications"),
+    templateId: requireEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", errors, "email notifications"),
+    publicKey: requireEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", errors, "email notifications"),
+    defaultRecipientEmail: getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
   };
 }
 

@@ -23,16 +23,11 @@ describe("Error Classification and Helpers (lib/errors.ts)", () => {
     });
 
     it("creates an AppError with custom options", () => {
-      const err = createError(
-        "FATAL_ERR",
-        "Unrecoverable failure",
-        "Please contact support.",
-        {
-          severity: "warning",
-          recoverable: false,
-          action: "Contact Support",
-        }
-      );
+      const err = createError("FATAL_ERR", "Unrecoverable failure", "Please contact support.", {
+        severity: "warning",
+        recoverable: false,
+        action: "Contact Support",
+      });
       expect(err).toEqual({
         code: "FATAL_ERR",
         message: "Unrecoverable failure",

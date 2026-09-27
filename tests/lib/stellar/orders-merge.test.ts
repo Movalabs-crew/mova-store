@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  mergeOrderEvent,
-  mergeOrderEvents,
-  OrderEvent,
-} from "../../../lib/stellar/orders";
+import { mergeOrderEvent, mergeOrderEvents, OrderEvent } from "../../../lib/stellar/orders";
 
 function createMockOrder(overrides: Partial<OrderEvent> = {}): OrderEvent {
   return {

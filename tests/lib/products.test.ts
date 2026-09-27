@@ -411,23 +411,19 @@ describe("lib/products data layer", () => {
 
       await deleteProduct("p-del");
 
-      expect(mocks.mockSelect).toHaveBeenCalledWith("img");
-      expect(mocks.mockSelectEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
-      expect(mocks.mockDeleteEq.mock.invocationCallOrder[0]).toBeLessThan(
-        mockStorageFrom.remove.mock.invocationCallOrder[0]
-      );
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      // No image on the row → no best-effort storage cleanup is attempted.
+      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
     });
 
     it("still deletes the row when storage removal rejects", async () => {
-      const mocks = mockProductDeletion();
+      stubFrom("https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg");
       mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
 
       await expect(deleteProduct("p-del")).resolves.toBeUndefined();
 
-      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["1700-a.jpg"]);
     });
 
     it("throws error when delete fails", async () => {
@@ -436,7 +432,7 @@ describe("lib/products data layer", () => {
         error: new Error("Object not found"),
       });
 
-      await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
+      await expect(deleteProduct("p-del")).rejects.toThrow("Object not found");
     });
 
     it("removes the stored image after deleting the row", async () => {

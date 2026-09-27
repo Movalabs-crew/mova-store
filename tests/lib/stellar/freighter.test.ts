@@ -45,11 +45,7 @@ describe("WalletError", () => {
   });
 
   it("preserves custom codes used by the UI", () => {
-    expect(
-      new WalletError("nope", "FREIGHTER_NOT_FOUND").code
-    ).toBe("FREIGHTER_NOT_FOUND");
-    expect(new WalletError("bad", "INVALID_AMOUNT").code).toBe(
-      "INVALID_AMOUNT"
-    );
+    expect(new WalletError("nope", "FREIGHTER_NOT_FOUND").code).toBe("FREIGHTER_NOT_FOUND");
+    expect(new WalletError("bad", "INVALID_AMOUNT").code).toBe("INVALID_AMOUNT");
   });
 });

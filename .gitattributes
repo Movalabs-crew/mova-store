@@ -1,1 +1,21 @@
-* text eol=lf
+# Normalize all text files to LF.
+* text=auto eol=lf
+
+# NEVER normalize binary assets — treating them as text rewrites their
+# bytes (CRLF -> LF) and corrupts them (e.g. the PNG signature's 0x0D
+# is stripped, making every image undecodable).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.wasm binary
+*.wasm.br binary

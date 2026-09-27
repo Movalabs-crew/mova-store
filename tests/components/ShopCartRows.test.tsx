@@ -59,7 +59,7 @@ describe.each([
         setCartRows(rows);
         const view = render(page);
         await act(async () => {});
-        fireEvent.click(screen.getByRole("button", { name: "2" }));
+        fireEvent.click(screen.getByRole("button", { name: "Shopping cart with 2 items" }));
 
         const buttons = screen.getAllByRole("button", { name: "Remove" });
         expect(buttons).toHaveLength(2);
@@ -90,7 +90,7 @@ describe.each([
     setCartRows(rows);
     render(page);
     await act(async () => {});
-    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Shopping cart with 2 items" }));
 
     const buttons = screen.getAllByRole("button", { name: "Remove" });
     expect(buttons).toHaveLength(2);

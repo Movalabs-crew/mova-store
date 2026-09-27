@@ -38,19 +38,16 @@ describe("usdToRawUnits", () => {
     ["Infinity", Number.POSITIVE_INFINITY],
   ];
 
-  it.each(cases)(
-    "throws WalletError with code INVALID_AMOUNT for %s",
-    (_label, value) => {
-      let caught: unknown;
-      try {
-        usdToRawUnits(value);
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBeInstanceOf(WalletError);
-      expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  it.each(cases)("throws WalletError with code INVALID_AMOUNT for %s", (_label, value) => {
+    let caught: unknown;
+    try {
+      usdToRawUnits(value);
+    } catch (err) {
+      caught = err;
     }
-  );
+    expect(caught).toBeInstanceOf(WalletError);
+    expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  });
 });
 
 describe("orderIdHash", () => {
@@ -79,7 +76,9 @@ describe("payWithStellar", () => {
   it("throws CONTRACT_NOT_CONFIGURED if CHECKOUT_CONTRACT_ID is empty", async () => {
     vi.resetModules();
     vi.doMock("../../../lib/stellar/config", async () => {
-      const actual = await vi.importActual<typeof import("../../../lib/stellar/config")>("../../../lib/stellar/config");
+      const actual = await vi.importActual<typeof import("../../../lib/stellar/config")>(
+        "../../../lib/stellar/config"
+      );
       return {
         ...actual,
         CHECKOUT_CONTRACT_ID: "",

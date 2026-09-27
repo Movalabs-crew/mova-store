@@ -14,7 +14,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   useEffect(() => {
     setSuccessMessage("");
     setErrorMessage("");
- 
+
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -117,7 +117,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
           {existingImageUrl && (
             <img
               src={existingImageUrl}
-              alt={productName ? `${productName} current image` : "Current product image preview"}
+              alt="Existing product"
               className="mt-4 max-w-full h-auto rounded-md"
             />
           )}

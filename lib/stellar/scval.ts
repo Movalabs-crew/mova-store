@@ -124,9 +124,7 @@ export function hexToBytes(hex: string): Uint8Array {
   }
   const invalidIndex = clean.search(/[^0-9a-f]/i);
   if (invalidIndex !== -1) {
-    throw new Error(
-      `invalid hex character "${clean[invalidIndex]}" at index ${invalidIndex}`
-    );
+    throw new Error(`invalid hex character "${clean[invalidIndex]}" at index ${invalidIndex}`);
   }
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useParams } from "next/navigation";
 import { FaShoppingCart } from "react-icons/fa";
 import { useCart } from "../../../context/CartContext";
 import Modal from "../../../components/Modal";
@@ -11,13 +12,19 @@ import { getProductById } from "../../../lib/products";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const ProductPage = ({ params }) => {
+  const routeParams = useParams();
+  // Next 15 passes `params` to client pages as a Promise; prefer the
+  // synchronous useParams() hook at runtime and fall back to the prop
+  // (used by tests and by servers rendering a plain object).
+  const resolvedParams =
+    routeParams && Object.keys(routeParams).length > 0 ? routeParams : params || {};
+  const { id } = resolvedParams;
   const { itemCount, cartItems, addToCart, removeFromCart, totalPrice } = useCart();
   const { toast, showToast, hideToast } = useToast(3000);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const { id } = params;
 
   useEffect(() => {
     const fetchProduct = async () => {

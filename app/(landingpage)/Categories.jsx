@@ -64,9 +64,7 @@ export default function ShopByCategory() {
                 />
               </div>
               <div className="p-4 text-center">
-                <h2 className="font-semibold text-gray-900">
-                  {category.name}
-                </h2>
+                <h2 className="font-semibold text-gray-900">{category.name}</h2>
                 <p className="text-sm text-gray-500">From {`$${category.price}`}</p>
               </div>
             </div>

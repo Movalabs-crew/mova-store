@@ -36,7 +36,7 @@ function Modal({ show, onClose, title = "Dialog", children }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
       role="dialog"
       aria-modal="true"
-      aria-label="Modal dialog"
+      aria-label={title}
     >
       <div className="bg-white rounded-lg shadow-lg w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 relative mx-2 max-h-[80vh] overflow-y-auto">
         <button

@@ -265,7 +265,7 @@ export const GENERAL_ERRORS: Record<string, AppError> = {
   Unknown: {
     code: "UNKNOWN_ERROR",
     message: "Unknown error",
-    userMessage: "Something unexpected happened. Please try again.",
+    userMessage: "An unexpected error occurred. Please try again.",
     severity: "error",
     recoverable: true,
     action: "Retry",

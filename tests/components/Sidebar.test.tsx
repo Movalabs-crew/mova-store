@@ -161,9 +161,7 @@ describe("Sidebar component", () => {
     });
 
     const { container } = render(<Sidebar />);
-    const links = Array.from(container.querySelectorAll("a")).map((a) =>
-      a.getAttribute("href")
-    );
+    const links = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
 
     expect(links.length).toBeGreaterThan(0);
 

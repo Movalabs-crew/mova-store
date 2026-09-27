@@ -101,7 +101,7 @@ export default function Products() {
             // is the whole story, and showing "no products yet" beside it would
             // read as an empty catalogue rather than a failed request.
             !error && (
-              <p className="text-center py-16 text-mova-ink/70">
+              <p data-testid="products-empty" className="text-center py-16 text-mova-ink/70">
                 No products yet.
               </p>
             )

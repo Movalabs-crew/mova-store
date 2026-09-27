@@ -21,9 +21,7 @@ describe("Newsletter component", () => {
     fireEvent.change(input, { target: { value: "invalid-email" } });
     fireEvent.click(submitBtn);
 
-    expect(
-      screen.getByText("Please enter a valid email address")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
   });
 
   it("shows success toast and resets email state on valid submission", () => {

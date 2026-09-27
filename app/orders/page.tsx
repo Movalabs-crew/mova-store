@@ -75,7 +75,8 @@ export default function BuyerOrdersPage() {
           <div className="flex items-center gap-2">
             <MdLockOutline size={20} className="text-purple-600 flex-shrink-0" />
             <span>
-              You are viewing guest orders stored on this device. Sign in to view your complete multi-device history.
+              You are viewing guest orders stored on this device. Sign in to view your complete
+              multi-device history.
             </span>
           </div>
           <Link
@@ -125,7 +126,8 @@ export default function BuyerOrdersPage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">No orders found</h2>
           <p className="text-gray-500 max-w-sm mx-auto text-sm mb-6">
-            You haven&apos;t placed any orders yet. Browse our curated footwear collection and pay with card or Stellar.
+            You haven&apos;t placed any orders yet. Browse our curated footwear collection and pay
+            with card or Stellar.
           </p>
           <Link
             href="/shop"

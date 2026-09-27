@@ -22,8 +22,14 @@ function wrapper({ children }) {
   return <CartProvider>{children}</CartProvider>;
 }
 
+// Each cart line now carries a generated `cartItemId` (used for unique row
+// keys when the same product is added more than once). These helpers ignore
+// that field so the transition assertions stay focused on counts/totals and
+// persisted snapshots.
+const stripCartItemId = (items) => (items || []).map(({ cartItemId, ...rest }) => rest);
+
 function expectCartState(result, { items, count, total }) {
-  expect(result.current.cartItems).toEqual(items);
+  expect(stripCartItemId(result.current.cartItems)).toEqual(items);
   expect(result.current.itemCount).toBe(count);
   expect(result.current.totalPrice).toBe(total);
   expect(result.current.itemCount).toBeGreaterThanOrEqual(0);
@@ -37,7 +43,7 @@ function expectStored({ items, count, total, cleared = false }) {
     expect(localStorage.getItem("totalPrice")).toBeNull();
     return;
   }
-  expect(JSON.parse(localStorage.getItem("cartItems") || "[]")).toEqual(items);
+  expect(stripCartItemId(JSON.parse(localStorage.getItem("cartItems") || "[]"))).toEqual(items);
   expect(localStorage.getItem("itemCount")).toBe(String(count));
   expect(localStorage.getItem("totalPrice")).toBe(String(total));
   expect(Number(localStorage.getItem("itemCount"))).toBeGreaterThanOrEqual(0);

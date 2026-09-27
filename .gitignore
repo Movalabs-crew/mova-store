@@ -36,3 +36,6 @@ pnpm-lock.yaml
 target/
 tsconfig.tsbuildinfo
 contracts/checkout/test_snapshots/
+
+# Test coverage output
+coverage/

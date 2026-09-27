@@ -35,6 +35,15 @@ describe("Checkout page button disabled states", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // The checkout page reads the cart from localStorage (not useCart) and
+    // short-circuits to an "empty cart" screen without a <form> when the cart
+    // is empty, so seed a cart before rendering.
+    localStorage.setItem(
+      "cartItems",
+      JSON.stringify([{ id: "shoe-1", name: "Test Shoe", price: 100, img: "/images/shoe1.png" }])
+    );
+    localStorage.setItem("totalPrice", "100");
+    localStorage.setItem("itemCount", "1");
   });
 
   it("disables the stage-1 submit button while sendMail request is in flight", async () => {

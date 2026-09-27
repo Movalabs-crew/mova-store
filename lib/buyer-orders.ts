@@ -107,10 +107,7 @@ export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrd
   try {
     if (supabase && userEmailOrId) {
       const isEmail = userEmailOrId.includes("@");
-      const query = supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const query = supabase.from("orders").select("*").order("created_at", { ascending: false });
 
       const res = isEmail
         ? await query.eq("user_email", userEmailOrId)
@@ -144,10 +141,7 @@ export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrd
     if (userEmailOrId) {
       orders = cached.filter(
         (o) =>
-          !o.userEmail ||
-          !o.userId ||
-          o.userEmail === userEmailOrId ||
-          o.userId === userEmailOrId
+          !o.userEmail || !o.userId || o.userEmail === userEmailOrId || o.userId === userEmailOrId
       );
     } else {
       orders = cached;

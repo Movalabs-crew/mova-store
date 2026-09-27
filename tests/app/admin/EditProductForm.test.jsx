@@ -61,9 +61,7 @@ describe("EditProductForm status banners reset and error styling (#27)", () => {
     });
     mockUpdateProduct.mockResolvedValue({});
 
-    const { rerender } = render(
-      <EditProductForm productId="prod-1" onProductUpdated={vi.fn()} />
-    );
+    const { rerender } = render(<EditProductForm productId="prod-1" onProductUpdated={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Alpha Sneakers")).toBeInTheDocument();

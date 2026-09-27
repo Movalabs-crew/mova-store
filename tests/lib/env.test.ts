@@ -253,7 +253,10 @@ describe("loadAdminConfig", () => {
   });
 
   it("parses, normalizes to lowercase, and trims whitespace from comma-separated emails", () => {
-    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", " User1@Example.com ,  USER2@DOMAIN.ORG  , admin@mova.store ");
+    vi.stubEnv(
+      "NEXT_PUBLIC_ADMIN_EMAILS",
+      " User1@Example.com ,  USER2@DOMAIN.ORG  , admin@mova.store "
+    );
     const config = loadAdminConfig();
     expect(config.adminEmails).toEqual([
       "user1@example.com",
@@ -265,10 +268,7 @@ describe("loadAdminConfig", () => {
   it("filters out empty segments resulting from consecutive or trailing commas", () => {
     vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", ",admin@test.com,,other@test.com,   ,");
     const config = loadAdminConfig();
-    expect(config.adminEmails).toEqual([
-      "admin@test.com",
-      "other@test.com",
-    ]);
+    expect(config.adminEmails).toEqual(["admin@test.com", "other@test.com"]);
   });
 });
 

@@ -86,9 +86,11 @@ describe("Shop product loading states", () => {
 
     fireEvent.click(within(productLink.parentElement!).getByRole("button"));
 
-    expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Shopping cart with 1 item" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Item added to cart");
-    expect(JSON.parse(localStorage.getItem("cartItems")!)).toEqual([product]);
+    expect(JSON.parse(localStorage.getItem("cartItems")!)).toEqual([
+      expect.objectContaining(product),
+    ]);
   });
 
   it("replaces skeletons with the request error without claiming the catalogue is empty", async () => {

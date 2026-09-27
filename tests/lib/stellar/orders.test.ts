@@ -15,8 +15,7 @@ vi.mock("../../../lib/stellar/freighter", () => ({
 }));
 
 describe("resolveOrderIdHash (Issue #67)", () => {
-  const SAMPLE_64_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
   it("passes 64-hex order IDs through unchanged as raw 32-byte Uint8Array", async () => {
     const resolved = await resolveOrderIdHash(SAMPLE_64_HEX);
@@ -77,8 +76,7 @@ describe("resolveOrderIdHash (Issue #67)", () => {
 });
 
 describe("dispatchOrder and refundOrder order ID resolution", () => {
-  const SAMPLE_64_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
   const DUMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
   beforeEach(() => {
@@ -101,8 +99,7 @@ describe("dispatchOrder and refundOrder order ID resolution", () => {
 
 describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteria)", () => {
   it("derives the 64-hex order ID from indexed event topics and preserves it unmodified", () => {
-    const SAMPLE_64_HEX =
-      "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+    const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
     const indexedPayEvent = {
       symbol: "pay",
@@ -124,8 +121,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
   });
 
   it("handles event when order_id is in topic1 fallback", () => {
-    const SAMPLE_64_HEX =
-      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+    const SAMPLE_64_HEX = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     const indexedDispatchEvent = {
       symbol: "dispatch",

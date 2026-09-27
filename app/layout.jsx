@@ -50,12 +50,7 @@ const RootLayout = ({ children }) => {
       <Head>
         <link rel="icon" href={logo} width="300px" type="image/x-icon" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link
-          rel="icon"
-          href="/icon?<generated>"
-          type="image/<generated>"
-          sizes="<generated>"
-        />
+        <link rel="icon" href="/icon?<generated>" type="image/<generated>" sizes="<generated>" />
         <link
           rel="apple-touch-icon"
           href="/apple-icon?<generated>"
@@ -72,7 +67,9 @@ const RootLayout = ({ children }) => {
           <div className="flex flex-col min-h-screen">
             <Navbar />
             <ErrorBoundary>
-              <main id="main-content" className="app flex-grow pt-10">{children}</main>
+              <main id="main-content" className="app flex-grow pt-10">
+                {children}
+              </main>
             </ErrorBoundary>
             <Whatsapp />
             <ScrollToTop />

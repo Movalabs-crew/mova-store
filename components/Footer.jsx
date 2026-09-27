@@ -17,7 +17,7 @@ export default function Footer() {
             About Us
           </Link>
           <Link href="/contact" className="transition hover:underline hover:underline-offset-1">
-            Contact Us
+            24/7 Customer Service
           </Link>
         </span>
         <span className="my-10 sm:my-0 sm:pl-10">

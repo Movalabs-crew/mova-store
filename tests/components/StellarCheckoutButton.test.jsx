@@ -184,13 +184,7 @@ describe("StellarCheckoutButton", () => {
       simulation: null,
     });
 
-    render(
-      <StellarCheckoutButton
-        amountUsd={12}
-        orderId="SS-XLM-1"
-        token={xlmToken}
-      />
-    );
+    render(<StellarCheckoutButton amountUsd={12} orderId="SS-XLM-1" token={xlmToken} />);
 
     // 12 USD / 0.12 = 100 XLM
     expect(screen.getByText(/Pay with XLM/i)).toBeInTheDocument();
