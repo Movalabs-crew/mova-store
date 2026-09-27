@@ -13,10 +13,6 @@ concurrency:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   NODE_VERSION: "20"
   RUST_VERSION: "1.91.0"
