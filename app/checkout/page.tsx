@@ -21,6 +21,7 @@ import {
 import { BsBank, BsCalendarDate } from "react-icons/bs";
 import { SiKlarna, SiStellar } from "react-icons/si";
 import sendMail from "../../lib/sendmail";
+import { requestOtp, verifyOtp } from "../../lib/otp-client";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
@@ -103,12 +104,6 @@ const FIELD_ERROR_IDS = {
 type CheckoutField = keyof typeof FIELD_ERROR_IDS;
 
 const Checkout = () => {
-  // OTP is stored as a zero-padded 6-digit string so it always matches the format
-  // shown in the email (e.g. "000042") and can be compared with exact string
-  // equality instead of a loose numeric parse.
-  const [otp, setOtp] = useState<string>(() =>
-    String(Math.floor(Math.random() * 1000000)).padStart(6, "0")
-  );
   const [totalPrice, setTotalPrice] = useState(0);
   const [selectedToken, setSelectedToken] = useState<TokenConfig>(defaultToken());
   const [cartItems, setCartItems] = useState<any[]>([]);
@@ -218,14 +213,18 @@ const Checkout = () => {
 
     setIsSubmitting(true);
     try {
-      await sendMail({
-        name: `${formData.firstName} ${formData.lastName}`,
-        // The recipient is pinned to this validated address inside sendMail;
-        // callers can no longer choose an arbitrary recipient.
-        email: formData.email,
-        message: `You are about to checkout your cart on Mova Store. Your OTP is: ${otp}`,
-        subject: formData.subject,
-      });
+      // The recipient is pinned to this validated address server-side inside
+      // requestOtp; callers can no longer choose an arbitrary recipient.
+      const otpResult = await requestOtp(formData.email);
+      if (!otpResult.ok) {
+        setIsSubmitting(false);
+        showToast(
+          otpResult.error === "rate_limited"
+            ? `Too many code requests. Try again in ${otpResult.retryAfterSeconds ?? 60}s.`
+            : "Failed to send OTP. Please try again."
+        );
+        return;
+      }
 
       setStage(2);
       showToast("Form submitted successfully. OTP has been sent to your email.");
@@ -235,18 +234,25 @@ const Checkout = () => {
     }
   };
 
-  const handleEmailConfirmationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailConfirmationSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isOtpSending) return;
     setIsOtpSending(true);
-    // Validate the raw trimmed input as a 6-digit code, then compare it against the
-    // zero-padded OTP with exact string equality. We deliberately compare the raw
-    // input rather than validateOTP's sanitized value, because the validator strips
-    // non-digits ("000042abc" -> "000042") and would otherwise let digits-followed-
-    // by-junk through.
+    // Shape-check the raw trimmed input as a 6-digit code before spending a
+    // verification attempt. We deliberately check the raw input rather than
+    // validateOTP's sanitized value, because the validator strips non-digits
+    // ("000042abc" -> "000042") and would otherwise let digits-followed-by-junk
+    // through. Correctness is decided by the server, never here.
     const entered = enteredOtp.trim();
     const { isValid } = validateOTP(entered);
-    if (isValid && entered === otp) {
+    if (!isValid) {
+      setIsOtpSending(false);
+      showToast("Incorrect OTP. Please try again.");
+      return;
+    }
+
+    const verification = await verifyOtp(formData.email, entered);
+    if (verification.ok) {
       setStage(3);
       localStorage.removeItem(CART_STORAGE_KEY);
       localStorage.removeItem("itemCount");
