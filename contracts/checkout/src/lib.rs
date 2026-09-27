@@ -130,6 +130,14 @@ impl Checkout {
     /// records the order as `Paid`. Funds are released to the merchant by
     /// calling `dispatch`, or returned to the buyer by calling `refund`.
     ///
+    /// Binding: when a `Pending` order already exists for `order_id` (i.e.
+    /// `create_order` was called), `pay` must match the recorded buyer, token,
+    /// and amount. A mismatch fails with `OrderBuyerMismatch`,
+    /// `OrderTokenMismatch`, or `OrderAmountMismatch` instead of overwriting the
+    /// recorded intent. `create_order` is therefore an authoritative
+    /// reservation, not an advisory hint. Without a prior `create_order`, the
+    /// `pay` arguments are authoritative.
+    ///
     /// Emits `pay` (aliased `payment_received`). An order can only be paid
     /// once; duplicate payments are rejected with `OrderAlreadyPaid`.
     pub fn pay(
@@ -151,9 +159,22 @@ impl Checkout {
         let merchant = get_admin(&env)?;
 
         // A previous pay/refund cannot be superseded; a pending order can.
+        // A pending order is a reservation: it is bound to the buyer/token/
+        // amount it was created with, so paying it with anything else is a
+        // distinct, asserted error rather than a silent overwrite of another
+        // party's recorded intent.
         if let Some(existing) = get_order(&env, &order_id) {
             if existing.status != Status::Pending {
                 return Err(Error::OrderAlreadyPaid);
+            }
+            if existing.buyer != buyer {
+                return Err(Error::OrderBuyerMismatch);
+            }
+            if existing.token != token {
+                return Err(Error::OrderTokenMismatch);
+            }
+            if existing.amount != amount {
+                return Err(Error::OrderAmountMismatch);
             }
         }
 
