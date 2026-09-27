@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Movalabs-crew/mova-store/blob/main/SECURITY.md
+    about: Do not open a public issue for a vulnerability. Follow the process in SECURITY.md and email security@movalabs.dev.
+  - name: Contributing guide
+    url: https://github.com/Movalabs-crew/mova-store/blob/main/CONTRIBUTING.md
+    about: Local setup, testing conventions and the pull request checklist.
+  - name: Troubleshooting
+    url: https://github.com/Movalabs-crew/mova-store/blob/main/docs/TROUBLESHOOTING.md
+    about: Common setup, build, contract and wallet problems and their fixes.
