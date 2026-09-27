@@ -147,30 +147,15 @@ export class BuyerOrderPersistenceError extends Error {
 /**
  * Saves an order to Supabase and syncs to local storage cache.
  *
- * The local cache is the continuity mechanism and is written first. The
- * Supabase insert result is inspected: a duplicate id, a constraint violation,
- * or an RLS denial resolves with ``{ error }`` and is surfaced as a
- * :class:`BuyerOrderPersistenceError` rather than being reported as a
- * successful write.
- *
- * @throws {BuyerOrderPersistenceError} when the row was not persisted (the
- *   order is still available on the error as ``error.order`` and in the cache).
- */
-export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
-  // 1. Cache to localStorage first so the order survives even if persistence fails.
-  try {
-    const cached = getCachedBuyerOrders();
-    const existingIndex = cached.findIndex((o) => o.orderId === order.orderId);
-    if (existingIndex >= 0) {
-      cached[existingIndex] = order;
-    } else {
-      cached.unshift(order);
-    }
-    if (typeof window !== "undefined") {
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
+    } catch (err) {
+      throw new Error(
+        `Failed to cache buyer order ${order.orderId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
     }
-  } catch (err) {
-    console.warn("Failed to cache order to localStorage:", err);
   }
 
   // 2. Persist to Supabase, inspecting the resolved result (see the docstring).

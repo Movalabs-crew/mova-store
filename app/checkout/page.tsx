@@ -31,6 +31,8 @@ import {
   NETWORK,
 } from "../../lib/stellar/config";
 import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
+import type { PayResult } from "../../lib/stellar/checkout";
+import { saveBuyerOrder, BuyerOrder, OrderItem } from "../../lib/buyer-orders";
 import {
   validateOTP,
   validateEmail,
@@ -133,8 +135,51 @@ const Checkout = () => {
 
   const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
-  const handleStellarSuccess = (result: { amountUsd: number | string; tokenSymbol?: string }) => {
+  const handleStellarSuccess = async (result: PayResult) => {
     const symbol = result.tokenSymbol || selectedToken.symbol;
+    const txHash = result.receipt?.txHash || result.hash;
+    const ledger = result.receipt?.ledger;
+
+    // Persist the buyer order BEFORE clearing the cart so a paid order is never
+    // lost: /orders reads back through fetchBuyerOrders (Supabase + the
+    // `mova_buyer_orders` cache that saveBuyerOrder writes here). The order id
+    // is the same one that was hashed into the on-chain payment, so the stored
+    // order can be cross-referenced with the transaction.
+    const items: OrderItem[] = cartItems.map((item) => ({
+      id: item?.id,
+      name: item?.name || "Item",
+      price: Number(item?.price) || 0,
+      quantity: Number(item?.quantity) || 1,
+      img: item?.img,
+    }));
+
+    const order: BuyerOrder = {
+      id: orderId,
+      orderId,
+      userEmail: formData.email || undefined,
+      createdAt: new Date().toISOString(),
+      total: Number(result.amountUsd) || totalPrice,
+      status: "Paid",
+      paymentMethod: "stellar",
+      tokenSymbol: symbol,
+      tokenAmount: result.tokenAmount,
+      txHash,
+      ledger,
+      items,
+    };
+
+    try {
+      await saveBuyerOrder(order);
+    } catch (error) {
+      // Surface the failure instead of silently dropping the order, and keep
+      // the cart intact so the write can be retried (support has the order id).
+      console.error("Failed to save buyer order after Stellar payment:", error);
+      showToast(
+        `Payment received for order ${orderId}, but we could not save it. Please contact support.`
+      );
+      return;
+    }
+
     showToast(
       `${symbol} payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
     );
