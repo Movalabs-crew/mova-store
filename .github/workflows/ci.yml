@@ -1,5 +1,11 @@
 name: CI
 
+# Supply-chain policy: every third-party `uses:` below is pinned to a full
+# 40-character commit SHA with a `# vX.Y.Z` comment, so moving an upstream tag
+# cannot change what runs here without review. The `github-actions` Dependabot
+# entry in .github/dependabot.yml proposes the SHA bumps; the `action-pins` job
+# (scripts/check-pinned-actions.mjs) fails if a mutable ref is reintroduced.
+
 on:
   push:
     branches: [main, develop]
@@ -32,10 +38,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -102,10 +108,23 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Enforce test file naming convention
         run: node scripts/check-test-names.mjs
+
+  # Workflow supply-chain pins
+  action-pins:
+    name: Workflow Action Pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Enforce pinned third-party actions
+        run: node scripts/check-pinned-actions.mjs
 
   # Soroban contract checks
   contracts:
@@ -115,17 +134,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: wasm32v1-none
           components: rustfmt, clippy
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/bin/
@@ -163,14 +182,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # trufflehog walks the full history; the default shallow checkout only
           # exposes the tip, so a secret committed and later removed would pass.
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -179,7 +198,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.97.4
+        uses: trufflesecurity/trufflehog@363923b901c911a9164f50b6c423f47c15372b1c # v3.97.4
         with:
           extra_args: --only-verified
 
@@ -191,15 +210,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
       - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-audit
 
@@ -238,7 +257,7 @@ jobs:
   # Summary job that requires all checks to pass
   ci-success:
     name: CI Success
-    needs: [frontend, contracts, security, rust-security, test-naming, workflow-lint]
+    needs: [frontend, contracts, security, rust-security, test-naming, workflow-lint, action-pins]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -268,6 +287,12 @@ jobs:
           fi
           if [[ "${{ needs.workflow-lint.result }}" != "success" ]]; then
             echo "Workflow lint job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.action-pins.result }}" != "success" ]]; then
+            echo "Workflow action pins job failed"
+            exit 1
+          fi
             exit 1
           fi
           echo "All required checks passed!"
