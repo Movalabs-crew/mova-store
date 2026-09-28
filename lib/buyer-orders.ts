@@ -306,16 +306,19 @@ export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrd
 }
 
 /**
- * Cross-references an order with the Soroban smart contract to verify on-chain status.
+ * Cross-references an order with the Soroban smart contract to verify on-chain
+ * status **and ownership**.
  *
- * Verification binds to the claimant: the on-chain buyer must match the
- * caller's address before the order is reported as verified. Without this
- * comparison the function cannot distinguish the wallet's own order from
- * another wallet's.
+ * Verification binds to the claimant: `expectedAddress` is the connected
+ * wallet's public key. The order is only reported as `verified` when the
+ * on-chain buyer equals it, so an order that belongs to another wallet can
+ * never be presented as this wallet's. A caller that cannot supply the
+ * connected address (empty string) gets `verified: false` rather than a
+ * status-only success.
  */
 export async function verifyOrderOnChain(
   orderId: string,
-  claimant?: string,
+  expectedAddress: string
 ): Promise<{
   verified: boolean;
   onChainStatus?: string;
@@ -329,13 +332,7 @@ export async function verifyOrderOnChain(
       return { verified: false };
     }
 
-    // An order whose buyer is not the claimant belongs to someone else and
-    // must not be reported as verified for this caller.
-    const ownershipMatches =
-      claimant === undefined || onChain.buyer === claimant;
 
-    return {
-      verified: ownershipMatches && onChain.status !== "Unknown",
       onChainStatus: onChain.status,
       buyer: onChain.buyer,
       amountDisplay: onChain.amountDisplay,

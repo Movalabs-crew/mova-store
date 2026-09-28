@@ -7,6 +7,7 @@ import { SiStellar } from "react-icons/si";
 import { FaCreditCard, FaExternalLinkAlt, FaCheckCircle, FaCopy, FaCheck } from "react-icons/fa";
 import { MdLocalShipping, MdPayment, MdPending, MdCancel } from "react-icons/md";
 import { BuyerOrder, verifyOrderOnChain } from "../lib/buyer-orders";
+import { currentAddress } from "../lib/stellar/freighter";
 import { NETWORK } from "../lib/stellar/config";
 
 interface OrderCardProps {
@@ -34,7 +35,11 @@ export default function OrderCard({ order }: OrderCardProps) {
   const handleVerify = async () => {
     setVerifying(true);
     try {
-      const res = await verifyOrderOnChain(order.orderId);
+      // Ownership is part of verification: hand the contract check the
+      // connected wallet so another wallet's order is never reported as ours.
+      // A disconnected wallet yields an empty address, which fails closed.
+      const connectedAddress = (await currentAddress()) ?? "";
+      const res = await verifyOrderOnChain(order.orderId, connectedAddress);
       setOnChainResult(res);
     } catch {
       setOnChainResult({ verified: false });
