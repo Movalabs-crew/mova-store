@@ -11,6 +11,7 @@ import { SiStellar } from "react-icons/si";
 export default function BuyerOrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<BuyerOrder[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   // A failed read must not be rendered as "you have no orders": keep the failure
   // in its own state so the empty and error states stay distinct.
@@ -21,8 +22,11 @@ export default function BuyerOrdersPage() {
     setError(null);
     try {
       const userIdentifier = user?.email || user?.uid;
-      const data = await fetchBuyerOrders(userIdentifier);
-      setOrders(data);
+      const result = await fetchBuyerOrders(userIdentifier);
+      setOrders(result.orders);
+      // A failed query is served from the cache; `error` is set so the page can
+      // say the list may be incomplete instead of presenting it as current.
+      setLoadError(result.error);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setOrders([]);
@@ -31,6 +35,7 @@ export default function BuyerOrdersPage() {
           ? err.message
           : "Something went wrong while loading your orders."
       );
+      setLoadError(err instanceof Error ? err.message : "Orders could not be loaded");
     } finally {
       setLoading(false);
     }
@@ -106,6 +111,17 @@ export default function BuyerOrdersPage() {
         </div>
       </div>
 
+      {/* Stale Cache Notice if the query failed */}
+      {!loading && loadError && (
+        <div
+          role="status"
+          className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900"
+        >
+          We couldn&apos;t load your orders from the server ({loadError}). Showing orders cached on
+          this device, which may be incomplete.
+        </div>
+      )}
+
       {/* Guest Notice if unauthenticated */}
       {!authLoading && !user && (
         <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-200 flex flex-wrap items-center justify-between gap-3 text-sm text-purple-900">
@@ -178,6 +194,26 @@ export default function BuyerOrdersPage() {
           {orders.map((order) => (
             <OrderCard key={order.orderId || order.id} order={order} />
           ))}
+        </div>
+      ) : loadError ? (
+        /* Failed Load State — the list is unknown, not empty */
+        <div className="text-center py-16 px-4 bg-white rounded-2xl border border-purple-100 shadow-sm">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 mb-4">
+            <MdShoppingBag size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Orders unavailable right now</h2>
+          <p className="text-gray-500 max-w-sm mx-auto text-sm mb-6">
+            We couldn&apos;t reach the order service, and no orders are cached on this device. This
+            is not the same as having no orders — try again in a moment.
+          </p>
+          <button
+            type="button"
+            onClick={loadOrders}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-mova transition-transform hover:-translate-y-0.5"
+          >
+            <MdRefresh size={18} />
+            <span>Try again</span>
+          </button>
         </div>
       ) : (
         /* Empty State */
