@@ -392,7 +392,9 @@ describe("lib/products data layer", () => {
   describe("deleteProduct", () => {
     // deleteProduct now reads the row's image before deleting, so each case
     // stubs the lookup as well as the delete. The original assertions on the
-    // delete call and the error path are unchanged.
+    // The lookup resolves a product URL whose object path is "shoe photo.jpg"
+    // (storageObjectPathFromPublicUrl decodes it) so the storage cleanup call
+    // can be asserted deterministically.
     const stubFrom = (img: string | null, deleteResult = { data: null, error: null }) => {
       const mockMaybeSingle = vi.fn().mockResolvedValue({
         data: img === null ? null : { img },
@@ -403,37 +405,41 @@ describe("lib/products data layer", () => {
       const mockEq = vi.fn().mockResolvedValue(deleteResult);
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect, delete: mockDelete });
-      return { mockSelect, mockDelete, mockEq };
+      return { mockSelect, mockSelectEq, mockDelete, mockEq };
     };
 
     it("deletes a product by id", async () => {
-      const { mockDelete, mockEq } = stubFrom(null);
+      const { mockSelect, mockSelectEq, mockEq } = stubFrom(
+        "https://proj.supabase.co/storage/v1/object/public/products/shoe%20photo.jpg"
+      );
 
       await deleteProduct("p-del");
 
-      expect(mocks.mockSelect).toHaveBeenCalledWith("img");
-      expect(mocks.mockSelectEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
-      expect(mocks.mockDeleteEq.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(mockSelect).toHaveBeenCalledWith("img");
+      expect(mockSelectEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["shoe photo.jpg"]);
+      expect(mockEq.mock.invocationCallOrder[0]).toBeLessThan(
         mockStorageFrom.remove.mock.invocationCallOrder[0]
       );
     });
 
     it("still deletes the row when storage removal rejects", async () => {
-      const mocks = mockProductDeletion();
+      const { mockEq } = stubFrom(
+        "https://proj.supabase.co/storage/v1/object/public/products/shoe%20photo.jpg"
+      );
       mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
 
       await expect(deleteProduct("p-del")).resolves.toBeUndefined();
 
-      expect(mocks.mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
+      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["shoe photo.jpg"]);
     });
 
     it("throws error when delete fails", async () => {
       stubFrom(null, {
         data: null,
-        error: new Error("Object not found"),
+        error: new Error("Foreign key constraint violation"),
       });
 
       await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");

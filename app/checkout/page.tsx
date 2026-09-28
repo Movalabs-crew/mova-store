@@ -230,7 +230,9 @@ const Checkout = () => {
                 <h2 className="text-2xl mb-4 text-center">Checkout</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="mb-4">
-                    <label htmlFor="checkout-first-name" className="block text-gray-700">First Name</label>
+                    <label htmlFor="checkout-first-name" className="block text-gray-700">
+                      First Name
+                    </label>
                     <input
                       id="checkout-first-name"
                       type="text"
@@ -242,7 +244,9 @@ const Checkout = () => {
                     />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-last-name" className="block text-gray-700">Last Name</label>
+                    <label htmlFor="checkout-last-name" className="block text-gray-700">
+                      Last Name
+                    </label>
                     <input
                       id="checkout-last-name"
                       type="text"
@@ -254,7 +258,9 @@ const Checkout = () => {
                     />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-email" className="block text-gray-700">Email</label>
+                    <label htmlFor="checkout-email" className="block text-gray-700">
+                      Email
+                    </label>
                     <input
                       id="checkout-email"
                       type="email"
@@ -266,7 +272,9 @@ const Checkout = () => {
                     />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-address" className="block text-gray-700">Address</label>
+                    <label htmlFor="checkout-address" className="block text-gray-700">
+                      Address
+                    </label>
                     <input
                       id="checkout-address"
                       type="text"
@@ -278,7 +286,9 @@ const Checkout = () => {
                     />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-card-number" className="block text-gray-700">Card Number</label>
+                    <label htmlFor="checkout-card-number" className="block text-gray-700">
+                      Card Number
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
                         id="checkout-card-number"
@@ -308,7 +318,9 @@ const Checkout = () => {
                     </div>
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-expiry-date" className="block text-gray-700">Expiry Date</label>
+                    <label htmlFor="checkout-expiry-date" className="block text-gray-700">
+                      Expiry Date
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
                         id="checkout-expiry-date"
@@ -346,7 +358,9 @@ const Checkout = () => {
                   </div>
 
                   <div className="mb-4">
-                    <label htmlFor="checkout-cvv" className="block text-gray-700">Cvv</label>
+                    <label htmlFor="checkout-cvv" className="block text-gray-700">
+                      Cvv
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
                         id="checkout-cvv"

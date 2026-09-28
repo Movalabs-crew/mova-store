@@ -97,7 +97,10 @@ function Navbar() {
 
   return (
     <>
-      <nav aria-label="Main navigation" className="fixed z-10 w-full border-b border-purple-100/80 bg-white/85 backdrop-blur-md">
+      <nav
+        aria-label="Main navigation"
+        className="fixed z-10 w-full border-b border-purple-100/80 bg-white/85 backdrop-blur-md"
+      >
         <div className="hidden items-center justify-between px-3 py-2 sm:px-6 md:flex">
           <BrandMark />
           <div className="hidden md:flex md:gap-6">

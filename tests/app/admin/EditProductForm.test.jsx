@@ -34,7 +34,8 @@ describe("EditProductForm status banners reset and error styling (#27)", () => {
 
     expect(await screen.findByDisplayValue("Alpha Sneakers")).toBeInTheDocument();
     expect(screen.getByDisplayValue("120")).toBeInTheDocument();
-    expect(screen.getByAltText("Existing product")).toHaveAttribute(
+    // The a11y pass gave the preview an alt describing the product, not a static label.
+    expect(screen.getByAltText("Alpha Sneakers current image")).toHaveAttribute(
       "src",
       "https://example.com/alpha.jpg"
     );
@@ -61,9 +62,7 @@ describe("EditProductForm status banners reset and error styling (#27)", () => {
     });
     mockUpdateProduct.mockResolvedValue({});
 
-    const { rerender } = render(
-      <EditProductForm productId="prod-1" onProductUpdated={vi.fn()} />
-    );
+    const { rerender } = render(<EditProductForm productId="prod-1" onProductUpdated={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Alpha Sneakers")).toBeInTheDocument();

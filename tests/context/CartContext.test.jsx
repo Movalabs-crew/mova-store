@@ -22,8 +22,15 @@ function wrapper({ children }) {
   return <CartProvider>{children}</CartProvider>;
 }
 
+// Cart rows carry a runtime `cartItemId` line identity so duplicate products
+// stay independently removable. It is not part of the product payload, so the
+// comparisons below ignore it while still asserting contents, count, and total.
+function withoutLineIds(items) {
+  return items.map(({ cartItemId: _cartItemId, ...rest }) => rest);
+}
+
 function expectCartState(result, { items, count, total }) {
-  expect(result.current.cartItems).toEqual(items);
+  expect(withoutLineIds(result.current.cartItems)).toEqual(items);
   expect(result.current.itemCount).toBe(count);
   expect(result.current.totalPrice).toBe(total);
   expect(result.current.itemCount).toBeGreaterThanOrEqual(0);
@@ -37,7 +44,7 @@ function expectStored({ items, count, total, cleared = false }) {
     expect(localStorage.getItem("totalPrice")).toBeNull();
     return;
   }
-  expect(JSON.parse(localStorage.getItem("cartItems") || "[]")).toEqual(items);
+  expect(withoutLineIds(JSON.parse(localStorage.getItem("cartItems") || "[]"))).toEqual(items);
   expect(localStorage.getItem("itemCount")).toBe(String(count));
   expect(localStorage.getItem("totalPrice")).toBe(String(total));
   expect(Number(localStorage.getItem("itemCount"))).toBeGreaterThanOrEqual(0);

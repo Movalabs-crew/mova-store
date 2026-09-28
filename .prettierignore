@@ -5,6 +5,7 @@ node_modules/
 .next/
 out/
 target/
+coverage/
 
 # Lock files
 package-lock.json

@@ -14,10 +14,14 @@ const mockStop = vi.fn();
 
 vi.mock("../../lib/stellar/indexer", () => {
   return {
-    PaymentEventIndexer: vi.fn().mockImplementation(() => ({
-      start: mockStart,
-      stop: mockStop,
-    })),
+    // A `function` (not an arrow) so the component can `new` the mock:
+    // arrow functions are not constructors and vitest 4 enforces that.
+    PaymentEventIndexer: vi.fn().mockImplementation(function () {
+      return {
+        start: mockStart,
+        stop: mockStop,
+      };
+    }),
   };
 });
 

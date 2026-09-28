@@ -31,6 +31,20 @@ vi.mock("../../components/StellarOrderWatch", () => ({
   default: () => <div data-testid="stellar-order-watch" />,
 }));
 
+// The checkout page reads the cart from localStorage directly (not useCart) and
+// bails to an empty-cart screen before rendering any form when the cart is
+// empty, so every test seeds a cart first.
+const SEED_CART = () => {
+  localStorage.setItem(
+    "cartItems",
+    JSON.stringify([
+      { id: "prod-1", name: "Mova Runner", price: 100, img: "/runner.png", cartItemId: "seed-1" },
+    ])
+  );
+  localStorage.setItem("itemCount", "1");
+  localStorage.setItem("totalPrice", "100");
+};
+
 describe("Checkout page button disabled states", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,6 +58,7 @@ describe("Checkout page button disabled states", () => {
     });
 
     vi.mocked(sendMail).mockImplementation(() => sendMailPromise as any);
+    SEED_CART();
 
     const { container } = render(<Checkout />);
 
@@ -76,6 +91,7 @@ describe("Checkout page button disabled states", () => {
 
   it("disables stage-2 OTP confirm button while OTP verification is processed", async () => {
     vi.mocked(sendMail).mockResolvedValueOnce({ status: 200, text: "OK" } as any);
+    SEED_CART();
 
     const { container } = render(<Checkout />);
 

@@ -1,19 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { Account, StrKey, xdr, scValToNative } from "@stellar/stellar-sdk";
 
-import {
-  usdToRawUnits,
-  orderIdHash,
-} from "../../lib/stellar/checkout";
-import {
-  buildInvocationTransaction,
-} from "../../lib/stellar/simulate";
-import {
-  addressToScVal,
-  bytes32ToScVal,
-  hashOrderId,
-  i128ToScVal,
-} from "../../lib/stellar/scval";
+import { usdToRawUnits, orderIdHash } from "../../lib/stellar/checkout";
+import { buildInvocationTransaction } from "../../lib/stellar/simulate";
+import { addressToScVal, bytes32ToScVal, hashOrderId, i128ToScVal } from "../../lib/stellar/scval";
 
 describe("Pay Invocation Argument Construction & Simulate Tests", () => {
   const buyerAddress = "GC6EQJ4UAFFFJDECLN37G4EWUJJTMKE3WE55NGIL4JXJXNXICUYKVBQ6";
@@ -56,12 +46,7 @@ describe("Pay Invocation Argument Construction & Simulate Tests", () => {
       i128ToScVal(amountRaw),
     ];
 
-    const tx = buildInvocationTransaction(
-      dummyAccount,
-      contractId,
-      "pay",
-      args
-    );
+    const tx = buildInvocationTransaction(dummyAccount, contractId, "pay", args);
 
     expect(tx.operations).toHaveLength(1);
     const op = tx.operations[0];

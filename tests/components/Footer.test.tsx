@@ -19,7 +19,7 @@ describe("Footer component", () => {
     expect(aboutLink).toBeInTheDocument();
     expect(aboutLink).toHaveAttribute("href", "/about");
 
-    const contactLink = screen.getByRole("link", { name: /24\/7 customer service/i });
+    const contactLink = screen.getByRole("link", { name: /contact us/i });
     expect(contactLink).toBeInTheDocument();
     expect(contactLink).toHaveAttribute("href", "/contact");
   });

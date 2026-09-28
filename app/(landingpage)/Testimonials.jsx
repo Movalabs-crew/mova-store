@@ -44,8 +44,7 @@ export default function Testimonials() {
             What our customers say
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Real feedback from real customers who've experienced the future of
-            e-commerce payments.
+            Real feedback from real customers who've experienced the future of e-commerce payments.
           </p>
         </div>
 
@@ -58,18 +57,12 @@ export default function Testimonials() {
               <div className="flex items-start gap-4">
                 <FaQuoteLeft className="text-purple-200 text-2xl flex-shrink-0 mt-1" />
                 <div className="flex-1">
-                  <p className="text-gray-700 leading-relaxed mb-4">
-                    "{testimonial.text}"
-                  </p>
+                  <p className="text-gray-700 leading-relaxed mb-4">"{testimonial.text}"</p>
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">
-                        {testimonial.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {testimonial.location}
-                      </p>
+                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                      <p className="text-sm text-gray-500">{testimonial.location}</p>
                     </div>
 
                     <div className="flex flex-col items-end gap-1">

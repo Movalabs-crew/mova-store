@@ -68,7 +68,9 @@ export default function Products() {
           {error && <p className="text-red-500 text-center">{error}</p>}
 
           {loading ? (
-            <ProductGridSkeleton />
+            <div data-testid="products-loading">
+              <ProductGridSkeleton />
+            </div>
           ) : products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {products.map((prod) => (
@@ -101,9 +103,9 @@ export default function Products() {
             // is the whole story, and showing "no products yet" beside it would
             // read as an empty catalogue rather than a failed request.
             !error && (
-              <p className="text-center py-16 text-mova-ink/70">
-                No products yet.
-              </p>
+              <div data-testid="products-empty">
+                <p className="text-center py-16 text-mova-ink/70">No products yet.</p>
+              </div>
             )
           )}
         </section>

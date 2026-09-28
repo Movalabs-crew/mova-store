@@ -44,12 +44,8 @@ const Catalogue2 = () => {
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-700 text-white mb-4">
                 <feature.icon size={22} />
               </span>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {feature.text}
-              </p>
+              <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{feature.text}</p>
             </div>
           ))}
         </div>

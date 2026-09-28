@@ -9,7 +9,7 @@ describe("Footer", () => {
     const terms = screen.getByRole("link", { name: /terms of use/i });
     const privacy = screen.getByRole("link", { name: /privacy policy/i });
     const about = screen.getByRole("link", { name: /about us/i });
-    const support = screen.getByRole("link", { name: /24\/7 customer service/i });
+    const support = screen.getByRole("link", { name: /contact us/i });
 
     expect(terms).toHaveAttribute("href", "/terms");
     expect(privacy).toHaveAttribute("href", "/privacy");

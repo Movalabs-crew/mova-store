@@ -65,11 +65,7 @@ export function getFocusableElements(container: HTMLElement): HTMLElement[] {
  * Checks if an element is visible.
  */
 export function isVisible(element: HTMLElement): boolean {
-  return !!(
-    element.offsetWidth ||
-    element.offsetHeight ||
-    element.getClientRects().length
-  );
+  return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
 }
 
 /**
@@ -266,9 +262,7 @@ function parseHexColor(hex: string): [number, number, number] | null {
 
 function getChannelLuminance(val: number): number {
   const sRGB = val / 255;
-  return sRGB <= 0.04045
-    ? sRGB / 12.92
-    : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+  return sRGB <= 0.04045 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
 }
 
 /**

@@ -90,7 +90,8 @@ describe("Environment Configuration Loaders (lib/env.ts)", () => {
 
   describe("loadAdminConfig", () => {
     it("parses comma-separated admin emails and trims/lowercases them", () => {
-      process.env.NEXT_PUBLIC_ADMIN_EMAILS = " Admin@Mova.Store , OWNER@Mova.Store ,dev@mova.store ";
+      process.env.NEXT_PUBLIC_ADMIN_EMAILS =
+        " Admin@Mova.Store , OWNER@Mova.Store ,dev@mova.store ";
 
       const config = loadAdminConfig();
       expect(config.adminEmails).toEqual([

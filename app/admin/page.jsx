@@ -4,6 +4,7 @@ import { listProducts, deleteProduct } from "../../lib/products";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
 import AdminGuard from "../../components/AdminGuard";
+import Modal from "../../components/Modal";
 import Link from "next/link";
 import { SiStellar } from "react-icons/si";
 import { MdInventory } from "react-icons/md";
@@ -11,6 +12,8 @@ import { MdInventory } from "react-icons/md";
 const ProductsAdminContent = () => {
   const [products, setProducts] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -35,12 +38,27 @@ const ProductsAdminContent = () => {
     fetchProducts();
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+  };
+
+  const handleDeleteCancel = () => {
+    if (isDeleting) return;
+    setProductToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete || isDeleting) return;
+
+    setIsDeleting(true);
     try {
-      await deleteProduct(id);
-      setProducts(products.filter((product) => product.id !== id));
+      await deleteProduct(productToDelete.id);
+      setProducts(products.filter((product) => product.id !== productToDelete.id));
+      setProductToDelete(null);
     } catch (error) {
       console.error("Error deleting product: ", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -105,7 +123,7 @@ const ProductsAdminContent = () => {
                       type="button"
                       aria-label={`Delete ${product.name}`}
                       className="text-red-600 hover:text-red-800 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 rounded px-1"
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => handleDeleteClick(product)}
                     >
                       Delete
                     </button>
@@ -116,6 +134,34 @@ const ProductsAdminContent = () => {
           </table>
         </div>
       </div>
+
+      <Modal show={Boolean(productToDelete)} onClose={handleDeleteCancel}>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Delete product</h2>
+        <p className="text-gray-600 mb-2">
+          Are you sure you want to delete{" "}
+          <span className="font-semibold">{productToDelete?.name}</span>? This action cannot be
+          undone.
+        </p>
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={handleDeleteCancel}
+            disabled={isDeleting}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteConfirm}
+            disabled={isDeleting}
+            aria-label={`Confirm deleting ${productToDelete?.name ?? "product"}`}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

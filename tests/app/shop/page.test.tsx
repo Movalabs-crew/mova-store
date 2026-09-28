@@ -73,7 +73,7 @@ describe("Shop Products Grid - Loading, Empty, and Error States", () => {
     });
 
     expect(screen.getByTestId("products-empty")).toBeInTheDocument();
-    expect(screen.getByText("No products yet")).toBeInTheDocument();
+    expect(screen.getByText("No products yet.")).toBeInTheDocument();
   });
 
   it("renders error message and removes skeleton when listProducts rejects", async () => {

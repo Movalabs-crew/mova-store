@@ -23,16 +23,11 @@ describe("Error Classification and Helpers (lib/errors.ts)", () => {
     });
 
     it("creates an AppError with custom options", () => {
-      const err = createError(
-        "FATAL_ERR",
-        "Unrecoverable failure",
-        "Please contact support.",
-        {
-          severity: "warning",
-          recoverable: false,
-          action: "Contact Support",
-        }
-      );
+      const err = createError("FATAL_ERR", "Unrecoverable failure", "Please contact support.", {
+        severity: "warning",
+        recoverable: false,
+        action: "Contact Support",
+      });
       expect(err).toEqual({
         code: "FATAL_ERR",
         message: "Unrecoverable failure",
@@ -48,7 +43,7 @@ describe("Error Classification and Helpers (lib/errors.ts)", () => {
     it("handles null and undefined gracefully", () => {
       const nullErr = parseError(null);
       expect(nullErr.code).toBe("UNKNOWN_ERROR");
-      expect(nullErr.userMessage).toContain("An unexpected error occurred");
+      expect(nullErr.userMessage).toContain("Something unexpected happened");
 
       const undefErr = parseError(undefined);
       expect(undefErr.code).toBe("UNKNOWN_ERROR");
@@ -101,7 +96,7 @@ describe("Error Classification and Helpers (lib/errors.ts)", () => {
 
     it("returns fallback message for null input", () => {
       const msg = getUserMessage(null);
-      expect(msg).toContain("An unexpected error occurred");
+      expect(msg).toContain("Something unexpected happened");
     });
   });
 

@@ -75,7 +75,7 @@ describe("WCAG 2.1 AA Accessibility Tests for Storefront Components (#4)", () =>
   describe("Whatsapp & External Link Accessibility", () => {
     it("renders valid anchor without nested buttons and provides accessible label", () => {
       render(<Whatsapp />);
-      const link = screen.getByRole("link", { name: /chat with mova store on whatsapp/i });
+      const link = screen.getByRole("link", { name: /contact us on whatsapp/i });
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");

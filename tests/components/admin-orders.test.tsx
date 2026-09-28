@@ -2,8 +2,7 @@ import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-const SAMPLE_64_HEX =
-  "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
 const mockDispatchOrder = vi.fn().mockResolvedValue({ success: true });
 const mockRefundOrder = vi.fn().mockResolvedValue({ success: true });

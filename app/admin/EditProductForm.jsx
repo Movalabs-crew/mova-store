@@ -14,7 +14,7 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
   useEffect(() => {
     setSuccessMessage("");
     setErrorMessage("");
- 
+
     const fetchProduct = async () => {
       setLoading(true);
       try {

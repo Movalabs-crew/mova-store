@@ -9,21 +9,21 @@ until the merchant dispatches the order — or refunded on-chain back to the buy
 
 ## Interface
 
-| Function         | Params                                                                     | Returns                | Description                                                        |
-| ---------------- | -------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------ |
-| `initialize`     | `merchant: Address`                                                        | `Result<(), Error>`    | Set the merchant wallet (one-time, deployer signs)                 |
-| `set_merchant`   | `new_merchant: Address`                                                    | `Result<(), Error>`    | Change the merchant wallet (current merchant signs)                |
-| `merchant`       | —                                                                          | `Result<Address, Error>` | Read the merchant wallet                                         |
-| `add_token`      | `token: Address`                                                           | `Result<(), Error>`    | Whitelist a SEP-41 token for payments (merchant signs)             |
-| `remove_token`   | `token: Address`                                                           | `Result<(), Error>`    | Remove a token from the whitelist (merchant signs)                 |
-| `is_token_allowed` | `token: Address`                                                         | `bool`                 | Query whether a token is accepted                                   |
-| `create_order`   | `buyer`, `order_id: BytesN<32>`, `token`, `amount: i128`                   | `Result<(), Error>`    | Register order intent as `Pending` (buyer signs; no funds move)    |
-| `pay`            | `token`, `buyer`, `order_id: BytesN<32>`, `amount: i128`                   | `Result<(), Error>`    | **Escrow** `amount` from `buyer` into the contract; order → `Paid` |
-| `dispatch`       | `order_id: BytesN<32>`                                                     | `Result<(), Error>`    | Release escrow to the merchant; order → `Shipped` (merchant signs) |
-| `refund`         | `order_id: BytesN<32>`                                                     | `Result<(), Error>`    | Return escrow to the buyer; order → `Refunded` (merchant signs)    |
-| `order`          | `order_id: BytesN<32>`                                                     | `Option<Order>`        | Read the full order record (`buyer`, `amount`, `token`, `timestamp`, `status`) |
-| `status`         | `order_id: BytesN<32>`                                                     | `Option<Status>`       | Read the order lifecycle status                                    |
-| `is_paid`        | `order_id: BytesN<32>`                                                     | `bool`                 | True when funds were received (`Paid` or `Shipped`)                |
+| Function           | Params                                                   | Returns                  | Description                                                                    |
+| ------------------ | -------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| `initialize`       | `merchant: Address`                                      | `Result<(), Error>`      | Set the merchant wallet (one-time, deployer signs)                             |
+| `set_merchant`     | `new_merchant: Address`                                  | `Result<(), Error>`      | Change the merchant wallet (current merchant signs)                            |
+| `merchant`         | —                                                        | `Result<Address, Error>` | Read the merchant wallet                                                       |
+| `add_token`        | `token: Address`                                         | `Result<(), Error>`      | Whitelist a SEP-41 token for payments (merchant signs)                         |
+| `remove_token`     | `token: Address`                                         | `Result<(), Error>`      | Remove a token from the whitelist (merchant signs)                             |
+| `is_token_allowed` | `token: Address`                                         | `bool`                   | Query whether a token is accepted                                              |
+| `create_order`     | `buyer`, `order_id: BytesN<32>`, `token`, `amount: i128` | `Result<(), Error>`      | Register order intent as `Pending` (buyer signs; no funds move)                |
+| `pay`              | `token`, `buyer`, `order_id: BytesN<32>`, `amount: i128` | `Result<(), Error>`      | **Escrow** `amount` from `buyer` into the contract; order → `Paid`             |
+| `dispatch`         | `order_id: BytesN<32>`                                   | `Result<(), Error>`      | Release escrow to the merchant; order → `Shipped` (merchant signs)             |
+| `refund`           | `order_id: BytesN<32>`                                   | `Result<(), Error>`      | Return escrow to the buyer; order → `Refunded` (merchant signs)                |
+| `order`            | `order_id: BytesN<32>`                                   | `Option<Order>`          | Read the full order record (`buyer`, `amount`, `token`, `timestamp`, `status`) |
+| `status`           | `order_id: BytesN<32>`                                   | `Option<Status>`         | Read the order lifecycle status                                                |
+| `is_paid`          | `order_id: BytesN<32>`                                   | `bool`                   | True when funds were received (`Paid` or `Shipped`)                            |
 
 ## Order lifecycle
 
@@ -53,24 +53,24 @@ data:   { amount }   (i128, raw units)
 
 ### Events
 
-| Event            | Topics                                    | Data                      |
-| ---------------- | ----------------------------------------- | ------------------------- |
-| `PaymentReceived`| `pay`, token, buyer, merchant, order_id   | `{ amount }`              |
-| `OrderCreated`   | `create_order`, token, buyer, order_id    | `{ amount, timestamp }`   |
-| `OrderShipped`   | `dispatch`, order_id, merchant            | `{ amount }`              |
-| `OrderRefunded`  | `refund`, order_id, buyer                 | `{ amount }`              |
+| Event             | Topics                                  | Data                    |
+| ----------------- | --------------------------------------- | ----------------------- |
+| `PaymentReceived` | `pay`, token, buyer, merchant, order_id | `{ amount }`            |
+| `OrderCreated`    | `create_order`, token, buyer, order_id  | `{ amount, timestamp }` |
+| `OrderShipped`    | `dispatch`, order_id, merchant          | `{ amount }`            |
+| `OrderRefunded`   | `refund`, order_id, buyer               | `{ amount }`            |
 
 ### Errors
 
-| Code | Name                 | Meaning                                  |
-| ---- | -------------------- | ---------------------------------------- |
-| 1    | `NotInitialized`     | `merchant` not set yet                   |
-| 2    | `AlreadyInitialized` | `initialize` called twice                |
-| 3    | `InvalidAmount`      | `amount <= 0`                            |
-| 4    | `OrderAlreadyPaid`   | order already paid / registry id in use  |
-| 5    | `TokenNotAllowed`    | token not on the merchant's whitelist    |
-| 6    | `OrderNotFound`      | no order for the given `order_id`        |
-| 7    | `InvalidOrderStatus` | order is not `Paid` for dispatch/refund  |
+| Code | Name                 | Meaning                                 |
+| ---- | -------------------- | --------------------------------------- |
+| 1    | `NotInitialized`     | `merchant` not set yet                  |
+| 2    | `AlreadyInitialized` | `initialize` called twice               |
+| 3    | `InvalidAmount`      | `amount <= 0`                           |
+| 4    | `OrderAlreadyPaid`   | order already paid / registry id in use |
+| 5    | `TokenNotAllowed`    | token not on the merchant's whitelist   |
+| 6    | `OrderNotFound`      | no order for the given `order_id`       |
+| 7    | `InvalidOrderStatus` | order is not `Paid` for dispatch/refund |
 
 ## Build
 

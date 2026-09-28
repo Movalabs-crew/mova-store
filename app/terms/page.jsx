@@ -50,18 +50,12 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-mova-surface text-slate-900">
       <div className="container mx-auto max-w-3xl px-6 py-16">
-        <h1 className="text-3xl font-bold text-purple-900 sm:text-4xl">
-          Terms of Use
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Last updated: September 8, 2026
-        </p>
+        <h1 className="text-3xl font-bold text-purple-900 sm:text-4xl">Terms of Use</h1>
+        <p className="mt-2 text-sm text-slate-500">Last updated: September 8, 2026</p>
         <div className="mt-10 space-y-8">
           {sections.map((s) => (
             <section key={s.heading}>
-              <h2 className="text-lg font-semibold text-purple-900">
-                {s.heading}
-              </h2>
+              <h2 className="text-lg font-semibold text-purple-900">{s.heading}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">{s.body}</p>
             </section>
           ))}
