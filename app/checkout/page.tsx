@@ -30,6 +30,7 @@ import {
   TokenConfig,
   NETWORK,
 } from "../../lib/stellar/config";
+import { computeCartTotal } from "../../context/CartContext";
 import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
 import {
   validateOTP,
@@ -265,11 +266,12 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    // Read the cart from localStorage. Items and total live in the same stored
-    // object; we still re-fetch prices server-side so a tampered stored total
-    // has no effect on what the customer is charged.
+    // Read the cart from localStorage. The items are the source of truth for the
+    // total (Issue #619): we derive it from the items rather than trusting a
+    // persisted value. We still re-fetch prices server-side so a tampered stored
+    // total has no effect on what the customer is charged.
     const stored = readStoredCart();
-    const storedItems = stored.items;
+    const storedItems = Array.isArray(stored.items) ? stored.items : [];
     setTotalPrice(deriveTotal(storedItems));
     setCartItems(storedItems);
 
