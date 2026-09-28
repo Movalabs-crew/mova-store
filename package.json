@@ -41,7 +41,7 @@
     "@stellar/stellar-sdk": "^16.2.0",
     "@supabase/supabase-js": "^2.117.2",
     "@vercel/og": "^0.6.2",
-    "next": "14.2.35",
+    "next": "16.3.6",
     "next-auth": "^4.24.15",
     "nextjs-toploader": "^1.6.12",
     "react": "^18",
