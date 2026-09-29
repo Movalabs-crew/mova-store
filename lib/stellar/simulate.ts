@@ -11,20 +11,20 @@ import {
 } from "@stellar/stellar-sdk";
 
 import {
-  FEE_BUFFER_STROOPS,
-  NETWORK_PASSPHRASE,
+  FEE_BUFFER_STMOOPS,
+  NETWORK_PASSTHRASE,
 } from "./config";
 import { addressToScVal } from "./scval";
 
-// ---------------------------------------------------------------------------
-// Pre-flight simulation utilities.
-//
-// Before signing a payment we simulate it against the RPC to (a) surface
-// errors early (insufficient balance, missing trustline, bad arguments) and
-// (b) report the exact resource fee/CPU/IO the transaction will consume. The
-// final prepared transaction is produced by `server.prepareTransaction`, which
-// attaches the footprint + auth entries and a fee that covers the simulation.
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+ // Pre-flight simulation utilities.
+ //
+ // Before signing a payment we simulate it against the RPC to (a) surface
+ // errors early (insufficient balance, missing trustline, bad arguments) and
+ // (b) report the exact resource fee/CPU/IO the transaction will consume. The
+ // final prepared transaction is produced by `server.prepareTransaction`, which
+ // attaches the footprint + auth entries and a fee that covers the simulation.
+ // ----------------------------------------------------------------------------
 
 export interface PreflightError {
   message: string;
@@ -88,7 +88,7 @@ export async function simulateContractRead(
   fn: string,
   args: xdr.ScVal[],
   source?: string
-): Promise<xdr.ScVal | null> {
++): Promise<xdr.ScVal | null> {
   const account = new Account(source ?? Keypair.random().publicKey(), "0");
   const tx = buildInvocationTransaction(account, contractId, fn, args);
   const sim = await server.simulateTransaction(tx);
@@ -133,7 +133,7 @@ export async function readTokenBalance(
 export async function readTokenDecimals(
   server: rpc.Server,
   tokenContractId: string
-): Promise<number> {
++): Promise<number> {
   const retval = await simulateContractRead(server, tokenContractId, "decimals", []);
   if (retval === null) return 7;
   return Number(scValToNative(retval));
@@ -225,9 +225,9 @@ export async function budgetFee(
   return total.toString();
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Error classification
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 const CONTRACT_ERROR_PREFIX = "ContractError(";
 

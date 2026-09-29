@@ -11,7 +11,7 @@ import {
 import { FEE_BUFFER_STROOPS, NETWORK_PASSPHRASE } from "../../../lib/stellar/config";
 
 describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts)", () => {
-  const buyerAddress = "GC6EQJ4UAFFFJDECLN37G4EWUJJTMKE3WE55NGIL4JXJXNXICUYKVBQ6";
+  const buyerAddress = "GC6EQJ4UAFFFJDCLN37G4EWUJJJTME3WE55NGIL4JXJXNXICUYKVBQ6";
   const dummyAccount = new Account(buyerAddress, "100");
   const contractId = StrKey.encodeContract(new Uint8Array(32).fill(1));
   const dummyArgs: xdr.ScVal[] = [xdr.ScVal.scvSymbol("test")];
@@ -19,7 +19,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
   describe("recommendedInclusionFee", () => {
     it("returns BigInt(max) for an all-digits max string", async () => {
       const stubServer = {
-        getFeeStats: vi.fn().mockResolvedValue({
+        getFeeStats: vi.fn().mockResolved({
           sorobanInclusionFee: {
             max: "250000",
           },
@@ -27,8 +27,23 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       };
 
       const fee = await recommendedInclusionFee(stubServer as never);
-      expect(fee).toBe(250000n);
+      expect(fee).toBe(BigInt(250000));
       expect(stubServer.getFeeStats).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns BigInt(max) for a raised fee base", async () => {
+      const raisedMax = "123456789";
+      const stubServer = {
+        getFeeStats: vi.fn().mockResolved({
+          sorobanInclusionFee: {
+            max: raisedMax,
+          },
+        }),
+      };
+
+      const fee = await recommendedInclusionFee(stubServer as never);
+      expect(fee).toBe(BigInt(raisedMax));
+      expect(fee).toBe(BigInt(123456789));
     });
 
     it("falls back to BigInt(BASE_FEE) when max is non-numeric or malformed", async () => {
@@ -36,7 +51,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
 
       for (const badMax of nonNumericCases) {
         const stubServer = {
-          getFeeStats: vi.fn().mockResolvedValue({
+          getFeeStats: vi.fn().mockResolved({
             sorobanInclusionFee: {
               max: badMax,
             },
@@ -50,7 +65,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
 
     it("falls back to BigInt(BASE_FEE) when sorobanInclusionFee is missing", async () => {
       const stubServer = {
-        getFeeStats: vi.fn().mockResolvedValue({}),
+        getFeeStats: vi.fn().mockResolved({}),
       };
 
       const fee = await recommendedInclusionFee(stubServer as never);
@@ -59,7 +74,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
 
     it("falls back to BigInt(BASE_FEE) when getFeeStats throws an error", async () => {
       const stubServer = {
-        getFeeStats: vi.fn().mockRejectedValue(new Error("RPC outage or network down")),
+        getFeeStats: vi.fn().mockRejected(new Error("RPC outage or network down")),
       };
 
       const fee = await recommendedInclusionFee(stubServer as never);
@@ -73,7 +88,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       const minResourceFee = 300_000n;
 
       const stubServer = {
-        getFeeStats: vi.fn().mockResolvedValue({
+        getFeeStats: vi.fn().mockResolved({
           sorobanInclusionFee: { max: inclusionFee.toString() },
         }),
       };
@@ -94,7 +109,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       const minResourceFee = 900_000n;
 
       const stubServer = {
-        getFeeStats: vi.fn().mockResolvedValue({
+        getFeeStats: vi.fn().mockResolved({
           sorobanInclusionFee: { max: inclusionFee.toString() },
         }),
       };
@@ -114,7 +129,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       const inclusionFee = 400_000n;
 
       const stubServer = {
-        getFeeStats: vi.fn().mockResolvedValue({
+        getFeeStats: vi.fn().mockResolved({
           sorobanInclusionFee: { max: inclusionFee.toString() },
         }),
       };
@@ -128,6 +143,65 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       const expected = (inclusionFee + FEE_BUFFER_STROOPS).toString();
       expect(fee).toBe(expected);
       expect(fee).toBe("900000");
+    });
+
+    it("raises the fee base when getFeeStats reports a higher inclusion max", async () => {
+      const inclusionFee = 5_000_000n;
+      const minResourceFee = 1_000_000n;
+
+      const stubServer = {
+        getFeeStats: vi.fn().mockResolved({
+          sorobanInclusionFee: { max: inclusionFee.toString() },
+        }),
+      };
+
+      const report: SimulationReport = {
+        ok: true,
+        minResourceFee,
+      };
+
+      const fee = await budgetFee(stubServer as never, report);
+      expect(fee).toBe((inclusionFee + FEE_BUFFER_STROOPS).toString());
+      expect(fee).toBe("5010000");
+    });
+
+    it("falls back to a sane non-zero default when getFeeStats fails", async () => {
+      const minResourceFee = 200_000n;
+
+      const stubServer = {
+        getFeeStats: vi.fn().mockRejected(new Error("RPC outage or network down")),
+      };
+
+      const report: SimulationReport = {
+        ok: true,
+        minResourceFee,
+      };
+
+      const fee = await budgetFee(stubServer as never, report);
+      const expected = (minResourceFee + FEE_BUFFER_STROOPS).toString();
+      expect(fee).toBe(expected);
+      expect(fee).toBe(BigInt(fee) > 0n);
+      expect(fee).not.toBe("0");
+    });
+
+    it("falls back to a sane non-zero default when getFeeStats returns malformed data", async () => {
+      const minResourceFee = 200_000n;
+
+      const stubServer = {
+        getFeeStats: vi.fn().mockResolved({
+          sorobanInclusionFee: { max: "not-a-number" },
+        }),
+      };
+
+      const report: SimulationReport = {
+        ok: true,
+        minResourceFee,
+      };
+
+      const fee = await budgetFee(stubServer as never, report);
+      const expected = (minResourceFee + FEE_BUFFER_STROOPS).toString();
+      expect(fee).toBe(expected);
+      expect(fee).not.toBe("0");
     });
   });
 
@@ -154,7 +228,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       );
 
       expect(tx.fee).toBe(explicitFee);
-      expect(tx.networkPassphrase).toBe(NETWORK_PASSPHRASE);
+      expect(tx.networkPassphrase).toBe(NETWORK_PASRPHRASE);
     });
   });
 
