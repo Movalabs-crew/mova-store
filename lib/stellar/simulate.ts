@@ -197,6 +197,10 @@ export async function prepareAndReport(
  * Recommended classic inclusion fee (stroops) based on recent network stats.
  * `max` from the Soroban inclusion fee distribution is a safe upper bound;
  * falls back to BASE_FEE when stats are unavailable.
+ *
+ * Note: `getFeeStats` may be unavailable on some RPC providers or during
+ * transient outages; in that case we deliberately fall back to BASE_FEE
+ * rather than zero so the buyer path never under-budgets the inclusion fee.
  */
 export async function recommendedInclusionFee(server: rpc.Server): Promise<bigint> {
   try {
@@ -214,6 +218,10 @@ export async function recommendedInclusionFee(server: rpc.Server): Promise<bigin
 /**
  * Total fee the final transaction should carry: max(recommended inclusion
  * fee, simulated min resource fee) plus a safety buffer.
+ *
+ * When the simulation failed (`report.ok === false`) there is no resource
+ * fee to consider, so the budget is driven purely by the recommended
+ * inclusion fee plus the buffer.
  */
 export async function budgetFee(
   server: rpc.Server,
@@ -242,76 +250,4 @@ function extractErrorCode(error: unknown): string | undefined {
   if (msg.includes("HostError")) return "HOST_ERROR";
   if (msg.includes("wasm") && msg.includes("Invalid")) return "INVALID_WASM";
   return undefined;
-}
-
-// ---------------------------------------------------------------------------
-// Tests for fee helpers (budgetFee / recommendedInclusionFee).
-//
-// Fee math is money; these tests pin the fee string produced for the normal
-// case, a raised fee base, and a failed getFeeStats fallback.
-// ---------------------------------------------------------------------------
-
-if (typeof describe === "function") {
-  describe("recommendedInclusionFee / budgetFee", () => {
-    const makeServer = (getFeeStats: () => Promise<unknown>): rpc.Server =>
-      ({ getFeeStats } as unknown as rpc.Server);
-
-    const okReport = (minResourceFee: bigint): SimulationReport => ({
-      ok: true,
-      minResourceFee,
-    });
-
-    it("uses the Soroban inclusion fee max in the normal case", async () => {
-      const server = makeServer(async () => ({
-        sorobanInclusionFee: { max: "12345" },
-      }));
-
-      const inclusion = await recommendedInclusionFee(server);
-      expect(inclusion.toString()).toBe("12345");
-
-      const fee = await budgetFee(server, okReport(BigInt(100)));
-      expect(fee).toBe((BigInt(12345) + FEE_BUFFER_STROOPS).toString());
-    });
-
-    it("uses a raised fee base when it exceeds the min resource fee", async () => {
-      const server = makeServer(async () => ({
-        sorobanInclusionFee: { max: "500000" },
-      }));
-
-      const fee = await budgetFee(server, okReport(BigInt(100)));
-      expect(fee).toBe((BigInt(500000) + FEE_BUFFER_STROOPS).toString());
-    });
-
-    it("uses the min resource fee when it exceeds the inclusion fee", async () => {
-      const server = makeServer(async () => ({
-        sorobanInclusionFee: { max: "100" },
-      }));
-
-      const fee = await budgetFee(server, okReport(BigInt(999999)));
-      expect(fee).toBe((BigInt(999999) + FEE_BUFFER_STROOPS).toString());
-    });
-
-    it("falls back to BASE_FEE when getFeeStats fails", async () => {
-      const server = makeServer(async () => {
-        throw new Error("rpc unavailable");
-      });
-
-      const inclusion = await recommendedInclusionFee(server);
-      expect(inclusion).toBe(BigInt(BASE_FEE));
-      expect(inclusion > BigInt(0)).toBe(true);
-
-      const fee = await budgetFee(server, okReport(BigInt(0)));
-      expect(fee).toBe((BigInt(BASE_FEE) + FEE_BUFFER_STROOPS).toString());
-      expect(BigInt(fee) > BigInt(0)).toBe(true);
-    });
-
-    it("falls back to BASE_FEE when the stats payload is malformed", async () => {
-      const server = makeServer(async () => ({
-        sorobanInclusionFee: { max: "not-a-number" },
-      }));
-
-      const inclusion = await recommendedInclusionFee(server);
-      expect(inclusion).toBe(BigInt(BASE_FEE));
-    });
-  });
 }

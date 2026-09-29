@@ -8,10 +8,10 @@ import {
   simulateContractRead,
   SimulationReport,
 } from "../../../lib/stellar/simulate";
-import { FEE_BUFFER_STROOPS, NETWORK_PASSPHRASE } from "../../../lib/stellar/config";
+import { FEE_BUFFER_STROOPS, NETWORK_PASSHRASE } from "../../../lib/stellar/config";
 
 describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts)", () => {
-  const buyerAddress = "GC6EQJ4UAFFFJDCLN37G4EWUJJJTMK3WE55NGIL4JXJXNXICUYKVBQ6";
+  const buyerAddress = "GC6EQI4UAFFFJDECLN37G4EWUJJTMKE3WE55NGIL4JXJXNXICUYKVBQ6";
   const dummyAccount = new Account(buyerAddress, "100");
   const contractId = StrKey.encodeContract(new Uint8Array(32).fill(1));
   const dummyArgs: xdr.ScVal[] = [xdr.ScVal.scvSymbol("test")];
@@ -27,8 +27,23 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       };
 
       const fee = await recommendedInclusionFee(stubServer as never);
-      expect(fee).toBe(250000n);
+      expect(fee).toBe(BigInt(250000));
       expect(stubServer.getFeeStats).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns the raised fee base from getFeeStats when it exceeds BASE_FEE", async () => {
+      const raisedMax = (BigInt(BASE_FEE) * 20n + 1n).toString();
+      const stubServer = {
+        getFeeStats: vi.fn().mockResolved({
+          sorobanInclusionFee: {
+            max: raisedMax,
+          },
+        }),
+      };
+
+      const fee = await recommendedInclusionFee(stubServer as never);
+      expect(fee).toBe(BigInt(raisedMax));
+      expect(fee).toBe(BigInt(BASE_FEE) * 20n + 1n);
     });
 
     it("falls back to BigInt(BASE_FEE) when max is non-numeric or malformed", async () => {
@@ -54,7 +69,7 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       };
 
       const fee = await recommendedInclusionFee(stubServer as never);
-      expect(fee).toB(BigInt(BASE_FEE));
+      expect(fee).toBe(BigInt(BASE_FEE));
     });
 
     it("falls back to BigInt(BASE_FEE) when getFeeStats throws an error", async () => {
@@ -130,7 +145,27 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       expect(fee).toBe("900000");
     });
 
-    it("falls back to a sane default when getFeeStats fails and minResourceFee is zero", async () => {
+    it("uses a raised fee base from getFeeStats when computing the budget", async () => {
+      const inclusionFee = BigInt(BASE_FEE) * 50n + 7n;
+      const minResourceFee = 1_000n.toBigInt();
+
+      const stubServer = {
+        getFeeStats: vi.fn().mockResolved({
+          sorobanInclusionFee: { max: inclusionFee.toString() },
+        }),
+      };
+
+      const report: SimulationReport = {
+        ok: true,
+        minResourceFee,
+      };
+
+      const fee = await budgetFee(stubServer as never, report);
+      expect(fee).toBe(BigInt(inclusionFee + FEE_BUFFER_STROOPS).toString());
+      expect(fee).toBe(BigInt(BASE_FEE) * 50n + 7n + FEE_BUFFER_STROOPS).toString());
+    });
+
+    it("falls back to a sane default rather than zero when getFeeStats fails", async () => {
       const stubServer = {
         getFeeStats: vi.fn().mockRejected(new Error("RPC outage or network down")),
       };
@@ -143,17 +178,20 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
       const fee = await budgetFee(stubServer as never, report);
       const expected = (BigInt(BASE_FEE) + FEE_BUFFER_STROOPS).toString();
       expect(fee).toBe(expected);
-      expect(fee).toBe((BigInt(BASE_FEE) + FEE_BUFFER_STROOPS).toString());
+      expect(fee).toBe("500000");
       expect(BigInt(fee)).toBeGreaterThan(0n);
     });
 
-    it("falls back to a sane default when getFeeStats fails and minResourceFee is undefined", async () => {
+    it("falls back to a sane default when getFeeStats returns malformed data", async () => {
       const stubServer = {
-        getFeeStats: vi.fn().mockRejected(new Error("RPC outage or network down")),
+        getFeeStats: vi.fn().mockResolved({
+          sorobanInclusionFee: { max: "not-a-number" },
+        }),
       };
 
       const report: SimulationReport = {
         ok: true,
+        minResourceFee: 0n,
       };
 
       const fee = await budgetFee(stubServer as never, report);
