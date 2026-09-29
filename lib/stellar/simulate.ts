@@ -11,20 +11,20 @@ import {
 } from "@stellar/stellar-sdk";
 
 import {
-  FEE_BUFFER_STMOOPS,
-  NETWORK_PASSTHRASE,
+  FEE_BUFFER_STROOPS,
+  NETWORK_PASSPHRASE,
 } from "./config";
 import { addressToScVal } from "./scval";
 
-// ----------------------------------------------------------------------------
- // Pre-flight simulation utilities.
- //
- // Before signing a payment we simulate it against the RPC to (a) surface
- // errors early (insufficient balance, missing trustline, bad arguments) and
- // (b) report the exact resource fee/CPU/IO the transaction will consume. The
- // final prepared transaction is produced by `server.prepareTransaction`, which
- // attaches the footprint + auth entries and a fee that covers the simulation.
- // ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Pre-flight simulation utilities.
+//
+// Before signing a payment we simulate it against the RPC to (a) surface
+// errors early (insufficient balance, missing trustline, bad arguments) and
+// (b) report the exact resource fee/CPU/IO the transaction will consume. The
+// final prepared transaction is produced by `server.prepareTransaction`, which
+// attaches the footprint + auth entries and a fee that covers the simulation.
+// ---------------------------------------------------------------------------
 
 export interface PreflightError {
   message: string;
@@ -88,7 +88,7 @@ export async function simulateContractRead(
   fn: string,
   args: xdr.ScVal[],
   source?: string
-+): Promise<xdr.ScVal | null> {
+): Promise<xdr.ScVal | null> {
   const account = new Account(source ?? Keypair.random().publicKey(), "0");
   const tx = buildInvocationTransaction(account, contractId, fn, args);
   const sim = await server.simulateTransaction(tx);
@@ -133,7 +133,7 @@ export async function readTokenBalance(
 export async function readTokenDecimals(
   server: rpc.Server,
   tokenContractId: string
-+): Promise<number> {
+): Promise<number> {
   const retval = await simulateContractRead(server, tokenContractId, "decimals", []);
   if (retval === null) return 7;
   return Number(scValToNative(retval));
@@ -225,9 +225,9 @@ export async function budgetFee(
   return total.toString();
 }
 
-// ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Error classification
-// ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 const CONTRACT_ERROR_PREFIX = "ContractError(";
 
@@ -242,4 +242,76 @@ function extractErrorCode(error: unknown): string | undefined {
   if (msg.includes("HostError")) return "HOST_ERROR";
   if (msg.includes("wasm") && msg.includes("Invalid")) return "INVALID_WASM";
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Tests for fee helpers (budgetFee / recommendedInclusionFee).
+//
+// Fee math is money; these tests pin the fee string produced for the normal
+// case, a raised fee base, and a failed getFeeStats fallback.
+// ---------------------------------------------------------------------------
+
+if (typeof describe === "function") {
+  describe("recommendedInclusionFee / budgetFee", () => {
+    const makeServer = (getFeeStats: () => Promise<unknown>): rpc.Server =>
+      ({ getFeeStats } as unknown as rpc.Server);
+
+    const okReport = (minResourceFee: bigint): SimulationReport => ({
+      ok: true,
+      minResourceFee,
+    });
+
+    it("uses the Soroban inclusion fee max in the normal case", async () => {
+      const server = makeServer(async () => ({
+        sorobanInclusionFee: { max: "12345" },
+      }));
+
+      const inclusion = await recommendedInclusionFee(server);
+      expect(inclusion.toString()).toBe("12345");
+
+      const fee = await budgetFee(server, okReport(BigInt(100)));
+      expect(fee).toBe((BigInt(12345) + FEE_BUFFER_STROOPS).toString());
+    });
+
+    it("uses a raised fee base when it exceeds the min resource fee", async () => {
+      const server = makeServer(async () => ({
+        sorobanInclusionFee: { max: "500000" },
+      }));
+
+      const fee = await budgetFee(server, okReport(BigInt(100)));
+      expect(fee).toBe((BigInt(500000) + FEE_BUFFER_STROOPS).toString());
+    });
+
+    it("uses the min resource fee when it exceeds the inclusion fee", async () => {
+      const server = makeServer(async () => ({
+        sorobanInclusionFee: { max: "100" },
+      }));
+
+      const fee = await budgetFee(server, okReport(BigInt(999999)));
+      expect(fee).toBe((BigInt(999999) + FEE_BUFFER_STROOPS).toString());
+    });
+
+    it("falls back to BASE_FEE when getFeeStats fails", async () => {
+      const server = makeServer(async () => {
+        throw new Error("rpc unavailable");
+      });
+
+      const inclusion = await recommendedInclusionFee(server);
+      expect(inclusion).toBe(BigInt(BASE_FEE));
+      expect(inclusion > BigInt(0)).toBe(true);
+
+      const fee = await budgetFee(server, okReport(BigInt(0)));
+      expect(fee).toBe((BigInt(BASE_FEE) + FEE_BUFFER_STROOPS).toString());
+      expect(BigInt(fee) > BigInt(0)).toBe(true);
+    });
+
+    it("falls back to BASE_FEE when the stats payload is malformed", async () => {
+      const server = makeServer(async () => ({
+        sorobanInclusionFee: { max: "not-a-number" },
+      }));
+
+      const inclusion = await recommendedInclusionFee(server);
+      expect(inclusion).toBe(BigInt(BASE_FEE));
+    });
+  });
 }
