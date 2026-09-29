@@ -16,11 +16,11 @@ create index if not exists products_created_at_idx on public.products (created_a
 create index if not exists products_updated_at_idx on public.products (updated_at desc);
 
 create or replace function set_updated_at()
-returns trigger as ''
+returns trigger as $$
 begin
   new.updated_at = now();
   return new;
-end;'' language plpgsql;
+end;$$ language plpgsql;
 
 drop trigger if exists products_updated_at_trigger on public.products;
 create trigger products_updated_at_trigger
@@ -37,13 +37,8 @@ create table if not exists public.admin_users (
 alter table public.admin_users enable row level security;
 
 drop policy if exists "Admins can view admin_users" on public.admin_users;
-create policy "Admins can view admin_users"
-  on public.admin_users for select
-  to authenticated
-  using (
-    lower((auth.jwt() ->> 'email')) = lower(email)
-    or coalesce((auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean, false) = true
-  );
+-- The replacement policy is created after public.is_admin() is defined below,
+-- because a policy expression may only reference a function that already exists.
 
 -- Helper function: Evaluates true if the caller is an admin via JWT claims or admin_users table
 create or replace function public.is_admin()
@@ -59,6 +54,16 @@ as $$
       where lower(email) = lower(auth.jwt() ->> 'email')
     );
 $$;
+
+-- admin_users backs is_admin() and holds the privileged allowlist. Only admins
+-- may read it: anon and ordinary authenticated users get no rows, so the list of
+-- privileged addresses is not world-readable. is_admin() is SECURITY DEFINER and
+-- owned by the table owner, which bypasses RLS on this table, so evaluating the
+-- policy does not recurse.
+create policy "Admins can view admin_users"
+  on public.admin_users for select
+  to authenticated
+  using (public.is_admin());
 
 -- Products Row Level Security:
 -- Public can read products; only admins can insert, update, or delete products.
@@ -154,10 +159,39 @@ create policy "Users can read own orders"
   to authenticated
   using (auth.uid() = user_id or auth.email() = user_email);
 
--- Authenticated users or guest checkout can create order records
+-- Orders Row Level Security (insert):
+-- Only authenticated buyers may create order rows, and only for themselves.
+-- The `anon` role is deliberately excluded: holding the public anon key must not
+-- be enough to forge an order for an arbitrary user_id / user_email.
+--
+-- New rows must also start as 'Pending'. A browser can therefore never write a
+-- 'Paid' / 'Shipped' / 'Refunded' / 'Completed' row: payment is verified
+-- server-side (against the on-chain transaction) before the status is advanced.
 drop policy if exists "Users can insert orders" on public.orders;
-create policy "Users can insert orders"
+drop policy if exists "Users can insert own orders" on public.orders;
+create policy "Users can insert own orders"
   on public.orders for insert
-  to authenticated, anon
-  with check (true);
+  to authenticated
+  with check (
+    auth.uid() = user_id
+    and status = 'Pending'
+  );
 
+
+-- Orders Row Level Security (update / delete):
+-- These writes are deliberately admin-only. A buyer can never change the status
+-- of their own order from the browser; that would let an unpaid order be marked
+-- 'Paid'. With RLS enabled and no permissive policy for other roles, update and
+-- delete are denied by default for everyone else.
+drop policy if exists "Admins can update orders" on public.orders;
+create policy "Admins can update orders"
+  on public.orders for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "Admins can delete orders" on public.orders;
+create policy "Admins can delete orders"
+  on public.orders for delete
+  to authenticated
+  using (public.is_admin());

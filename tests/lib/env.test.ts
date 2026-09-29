@@ -70,6 +70,22 @@ describe("isProduction", () => {
   });
 });
 
+describe("NODE_ENV resolution", () => {
+  // The suite must see one value for `process.env.NODE_ENV`. If it is pinned by
+  // a build-time `define` while `test.env` declares something else, the
+  // development-only branches in `lib/env.ts` become unreachable.
+  it("resolves NODE_ENV at runtime to the value the test environment declares", () => {
+    vi.unstubAllEnvs();
+    expect(process.env.NODE_ENV).toBe("development");
+  });
+
+  it("makes the development branch of isDevelopment() reachable without stubbing", () => {
+    vi.unstubAllEnvs();
+    expect(isDevelopment()).toBe(true);
+    expect(isProduction()).toBe(false);
+  });
+});
+
 describe("loadEmailJSConfig", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -400,9 +416,26 @@ describe("validateEnv", () => {
     expect(config.emailjs.publicKey).toBe("pubkey_789");
     expect(config.admin.adminEmails).toContain("admin@store.org");
   });
+
+  it("prefixes the thrown message with the configuration-errors banner", () => {
+    vi.stubEnv("NEXT_PUBLIC_CHECKOUT_CONTRACT_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "");
+    vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "");
+
+    expect(() => validateEnv()).toThrowError(/^Environment configuration errors:/);
+  });
 });
 
+// Each case re-imports both modules from scratch, and lib/stellar/config pulls
+// in the Stellar SDK, so the default 5s timeout is not enough once the whole
+// suite is competing for the worker — these pass alone and time out in a full
+// run. The work is slow for a real reason, so the budget is raised instead of
+// narrowing what is asserted.
 describe("mainnet RPC default", () => {
+  const MODULE_REIMPORT_TIMEOUT_MS = 30_000;
   const RPC_KEY = "NEXT_PUBLIC_STELLAR_RPC_URL";
   let savedRpc: string | undefined;
 
@@ -423,25 +456,33 @@ describe("mainnet RPC default", () => {
     vi.resetModules();
   });
 
-  it("resolves the same endpoint from lib/env and lib/stellar/config", async () => {
-    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
-    vi.resetModules();
+  it(
+    "resolves the same endpoint from lib/env and lib/stellar/config",
+    async () => {
+      vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+      vi.resetModules();
 
-    const { loadStellarConfig } = await import("../../lib/env");
-    const { RPC_URL } = await import("../../lib/stellar/config");
+      const { loadStellarConfig } = await import("../../lib/env");
+      const { RPC_URL } = await import("../../lib/stellar/config");
 
-    // Both read NEXT_PUBLIC_STELLAR_RPC_URL, so an operator who leaves it unset
-    // must not get a different endpoint depending on which module resolved it.
-    expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
-  });
+      // Both read NEXT_PUBLIC_STELLAR_RPC_URL, so an operator who leaves it unset
+      // must not get a different endpoint depending on which module resolved it.
+      expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
+    },
+    MODULE_REIMPORT_TIMEOUT_MS
+  );
 
-  it("keeps testnet in step too", async () => {
-    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
-    vi.resetModules();
+  it(
+    "keeps testnet in step too",
+    async () => {
+      vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+      vi.resetModules();
 
-    const { loadStellarConfig } = await import("../../lib/env");
-    const { RPC_URL } = await import("../../lib/stellar/config");
+      const { loadStellarConfig } = await import("../../lib/env");
+      const { RPC_URL } = await import("../../lib/stellar/config");
 
-    expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
-  });
+      expect(RPC_URL).toBe(loadStellarConfig().rpcUrl);
+    },
+    MODULE_REIMPORT_TIMEOUT_MS
+  );
 });

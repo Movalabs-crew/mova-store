@@ -1,11 +1,12 @@
 import Image from "next/image";
+import { LANDING_IMAGES } from "./landingImages";
 
 const images = [
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80",
-  "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=400&q=80",
-  "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&q=80",
-  "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&q=80",
-  "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&q=80",
+  LANDING_IMAGES.aeroRunner,
+  LANDING_IMAGES.cityStride,
+  LANDING_IMAGES.courtClassic,
+  LANDING_IMAGES.cloudknit,
+  LANDING_IMAGES.sliders,
 ];
 
 const Slider = () => {

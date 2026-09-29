@@ -22,11 +22,12 @@ function wrapper({ children }) {
   return <CartProvider>{children}</CartProvider>;
 }
 
-// Cart rows carry a runtime `cartItemId` line identity so duplicate products
-// stay independently removable. It is not part of the product payload, so the
-// comparisons below ignore it while still asserting contents, count, and total.
-function withoutLineIds(items) {
-  return items.map(({ cartItemId: _cartItemId, ...rest }) => rest);
+// `addToCart` gives every line its own `cartItemId` so duplicate products keep
+// distinct identities (see the remove / duplicate-row suites, which assert that
+// property directly). These cases are about counts, totals and persistence, so
+// the generated line id is normalised away rather than pinned to a literal.
+function withoutLineIds(cartItems) {
+  return cartItems.map(({ cartItemId, ...rest }) => rest);
 }
 
 function expectCartState(result, { items, count, total }) {

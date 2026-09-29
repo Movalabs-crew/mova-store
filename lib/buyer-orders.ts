@@ -35,6 +35,98 @@ export interface BuyerOrder {
 const STORAGE_KEY = "mova_buyer_orders";
 
 /**
+ * Local storage is untrusted input: a cache entry can be hand-edited, truncated
+ * by a partial write, or left behind by an older schema. The orders list renders
+ * `total` through `Number.prototype.toFixed`, maps over `items`, and reads
+ * `orderId`/`createdAt`/`status` directly, so an entry whose *container* is a
+ * well-formed array can still crash the page.
+ *
+ * These guards validate each entry's shape and drop the ones that fail, rather
+ * than trusting the contents because the container is an array.
+ */
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+/** Optional fields may be omitted, but must not be the wrong type when present. */
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === "string";
+}
+
+function isOptionalFiniteNumber(value: unknown): boolean {
+  return value === undefined || value === null || isFiniteNumber(value);
+}
+
+/**
+ * Validates one entry of an order's `items` array.
+ *
+ * Returns the original item on success so a valid cache is handed back by
+ * reference, untouched.
+ */
+function validateOrderItem(value: unknown): OrderItem | null {
+  if (!isPlainObject(value)) return null;
+
+  // The card renders `item.name?.slice(...)` and `Number(item.price).toFixed(2)`.
+  if (typeof value.name !== "string") return null;
+  if (!isFiniteNumber(value.price)) return null;
+
+  if (!isOptionalFiniteNumber(value.quantity)) return null;
+  if (value.id !== undefined && value.id !== null) {
+    if (typeof value.id !== "string" && !isFiniteNumber(value.id)) return null;
+  }
+  if (!isOptionalString(value.img)) return null;
+
+  return value as unknown as OrderItem;
+}
+
+/**
+ * Validates one cached order.
+ *
+ * Returns the original order on success so a valid cache is handed back by
+ * reference, untouched.
+ */
+function validateBuyerOrder(value: unknown): BuyerOrder | null {
+  if (!isPlainObject(value)) return null;
+
+  // Rendered identifiers and values: `order.orderId` is shown and copied,
+  // `order.total` goes through `.toFixed`, `order.createdAt` through `new Date`.
+  if (!isNonEmptyString(value.orderId)) return null;
+  if (!isFiniteNumber(value.total)) return null;
+  if (typeof value.createdAt !== "string") return null;
+  if (typeof value.status !== "string") return null;
+  if (typeof value.paymentMethod !== "string") return null;
+
+  // Optional display fields must be the right type when present.
+  if (!isOptionalString(value.id)) return null;
+  if (!isOptionalString(value.userId)) return null;
+  if (!isOptionalString(value.userEmail)) return null;
+  if (!isOptionalString(value.tokenSymbol)) return null;
+  if (!isOptionalString(value.txHash)) return null;
+  // `order.tokenAmount.toFixed(2)` runs whenever `tokenAmount` is truthy.
+  if (!isOptionalFiniteNumber(value.tokenAmount)) return null;
+  if (!isOptionalFiniteNumber(value.ledger)) return null;
+
+  // `items` is only skipped when absent; a truthy non-array would reach `.map`.
+  if (value.items !== undefined && value.items !== null) {
+    if (!Array.isArray(value.items)) return null;
+    for (const item of value.items) {
+      if (validateOrderItem(item) === null) return null;
+    }
+  }
+
+  return value as unknown as BuyerOrder;
+}
+
+/**
  * Saves an order to Supabase and syncs to local storage cache.
  */
 export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
@@ -84,6 +176,9 @@ export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
 
 /**
  * Retrieves all cached orders from localStorage.
+ *
+ * The payload is treated as untrusted: non-JSON, non-array and malformed
+ * entries are dropped so the orders page only ever receives renderable orders.
  */
 export function getCachedBuyerOrders(): BuyerOrder[] {
   if (typeof window === "undefined") return [];
@@ -91,7 +186,14 @@ export function getCachedBuyerOrders(): BuyerOrder[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+
+    const orders: BuyerOrder[] = [];
+    for (const entry of parsed) {
+      const order = validateBuyerOrder(entry);
+      if (order !== null) orders.push(order);
+    }
+    return orders;
   } catch {
     return [];
   }
@@ -135,16 +237,16 @@ export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrd
     console.warn("Supabase query failed, falling back to cached orders:", err);
   }
 
-  // Fallback to localStorage cached orders
+  // Fallback to localStorage cached orders. The cache is shared by every account
+  // that has ever used this browser, so matching is strict: an order is only
+  // surfaced when the identifier matches exactly, and a caller without an
+  // identifier only ever sees the anonymous (guest) entries.
   if (orders.length === 0) {
     const cached = getCachedBuyerOrders();
     if (userEmailOrId) {
-      orders = cached.filter(
-        (o) =>
-          !o.userEmail || !o.userId || o.userEmail === userEmailOrId || o.userId === userEmailOrId
-      );
+      orders = cached.filter((o) => o.userEmail === userEmailOrId || o.userId === userEmailOrId);
     } else {
-      orders = cached;
+      orders = cached.filter((o) => !o.userEmail && !o.userId);
     }
   }
 

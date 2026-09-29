@@ -34,6 +34,8 @@ export interface IndexedEvent {
 
 export interface IndexerStatus {
   running: boolean;
+  /** True while the indexer is started but polling is suspended (tab hidden). */
+  paused: boolean;
   latestLedger?: number;
   lastCursor?: string;
   eventsSeen: number;
@@ -63,6 +65,11 @@ export class PaymentEventIndexer {
   private readonly seenIds = new Set<string>();
 
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Prevents a new poll from starting while the previous one is still running. */
+  private inFlight = false;
+  /** Set while the document is hidden; polling resumes on visibilitychange. */
+  private paused = false;
+  private visibilityListener: (() => void) | null = null;
   private running = false;
   private started = false;
   private initializing = false;
@@ -85,6 +92,7 @@ export class PaymentEventIndexer {
   get status(): IndexerStatus {
     return {
       running: this.running,
+      paused: this.paused,
       latestLedger: this.latestLedger,
       lastCursor: this.cursor,
       eventsSeen: this.eventsSeen,
@@ -99,12 +107,24 @@ export class PaymentEventIndexer {
     this.running = true;
     this.started = true;
 
+    this.attachVisibilityListener(callbacks);
+
+    // A tab that is already hidden must not schedule polls at all; the
+    // visibilitychange handler resumes (with a catch-up tick) on focus.
+    if (typeof document !== "undefined" && document.hidden) {
+      this.paused = true;
+      callbacks.onStatus?.(this.status);
+      return;
+    }
+
     this.timer = setInterval(() => void this.tick(callbacks), this.pollMs);
     void this.tick(callbacks);
   }
 
   stop(): void {
     this.running = false;
+    this.paused = false;
+    this.detachVisibilityListener();
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
@@ -112,16 +132,78 @@ export class PaymentEventIndexer {
   }
 
   private async tick(callbacks: IndexerCallbacks): Promise<void> {
-    if (!this.running) return;
+    if (!this.running || this.paused) return;
 
-    if (!this.initialized) {
-      await this.ensureInitialized(callbacks);
+    // Never let the interval outrun its own work. If the previous poll is still
+    // unresolved (a slow getLatestLedger/getEvents), skip this tick entirely —
+    // overlapping polls would read the same cursor, advance it out of order and
+    // deliver the same event twice.
+    if (this.inFlight) return;
+    this.inFlight = true;
+
+    try {
       if (!this.initialized) {
-        return;
+        await this.ensureInitialized(callbacks);
+        if (!this.initialized) {
+          return;
+        }
       }
-    }
 
-    await this.poll(callbacks);
+      await this.poll(callbacks);
+    } finally {
+      this.inFlight = false;
+    }
+  }
+
+  /**
+   * Background tabs should not poll: stop the interval while the document is
+   * hidden so a buyer who switches tabs mid-payment stops hammering the RPC.
+   */
+  private attachVisibilityListener(callbacks: IndexerCallbacks): void {
+    if (typeof document === "undefined" || this.visibilityListener) return;
+    this.visibilityListener = () => this.handleVisibilityChange(callbacks);
+    document.addEventListener("visibilitychange", this.visibilityListener);
+  }
+
+  private detachVisibilityListener(): void {
+    if (this.visibilityListener && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.visibilityListener);
+    }
+    this.visibilityListener = null;
+  }
+
+  private handleVisibilityChange(callbacks: IndexerCallbacks): void {
+    if (!this.running) return;
+    if (typeof document !== "undefined" && document.hidden) {
+      this.pause(callbacks);
+    } else {
+      this.resume(callbacks);
+    }
+  }
+
+  private pause(callbacks: IndexerCallbacks): void {
+    if (this.paused) return;
+    this.paused = true;
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    callbacks.onStatus?.(this.status);
+  }
+
+  /**
+   * Resume polling and run one catch-up tick immediately. The cursor is kept
+   * across the pause, so the catch-up reads every event that landed while the
+   * tab was hidden — nothing is skipped.
+   */
+  private resume(callbacks: IndexerCallbacks): void {
+    if (!this.paused) return;
+    this.paused = false;
+    if (this.timer === null) {
+      this.timer = setInterval(() => void this.tick(callbacks), this.pollMs);
+    }
+    callbacks.onStatus?.(this.status);
+    void this.tick(callbacks);
   }
 
   private async ensureInitialized(callbacks: IndexerCallbacks): Promise<void> {

@@ -116,4 +116,42 @@ describe("useToast hook (Issue #31)", () => {
       });
     }).not.toThrow();
   });
+
+  it("lets a per-call duration override the hook default", () => {
+    const { result } = renderHook(() => useToast(5000));
+
+    act(() => {
+      result.current.showToast("Custom duration alert", 1500);
+    });
+    expect(result.current.toast.show).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(1499);
+    });
+    expect(result.current.toast.show).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.toast.show).toBe(false);
+  });
+
+  it("falls back to the 3000ms default when no duration is passed", () => {
+    const { result } = renderHook(() => useToast());
+
+    act(() => {
+      result.current.showToast("Product added to cart");
+    });
+    expect(result.current.toast).toEqual({ show: true, message: "Product added to cart" });
+
+    act(() => {
+      vi.advanceTimersByTime(2999);
+    });
+    expect(result.current.toast.show).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.toast).toEqual({ show: false, message: "" });
+  });
 });

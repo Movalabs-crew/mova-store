@@ -20,7 +20,43 @@ set -euo pipefail
 NETWORK="${STELLAR_NETWORK:-testnet}"
 SOURCE_ACCOUNT="${STELLAR_SOURCE_ACCOUNT:-alice}"
 CONTRACT_DIR="contracts/checkout"
-MERCHANT="${1:-$(stellar keys address "${SOURCE_ACCOUNT}")}"
+
+# ---------------------------------------------------------------------------
+# Prerequisites
+#
+# Validate every tool, target and keypair up front so a missing prerequisite
+# aborts, with a message naming it, before the build/deploy steps can run.
+# ---------------------------------------------------------------------------
+require_cmd() {
+  local name="$1"
+  local hint="$2"
+  if ! command -v "${name}" >/dev/null 2>&1; then
+    echo "error: required prerequisite '${name}' was not found on PATH." >&2
+    echo "       ${hint}" >&2
+    exit 1
+  fi
+}
+
+require_cmd cargo "Install Rust via rustup: https://rustup.rs"
+require_cmd rustup "Install Rust via rustup so the wasm32v1-none target can be checked: https://rustup.rs"
+require_cmd stellar "Install the Stellar CLI: https://github.com/stellar/stellar-cli"
+
+if ! rustup target list --installed 2>/dev/null | grep -qx "wasm32v1-none"; then
+  echo "error: required Rust target 'wasm32v1-none' is not installed." >&2
+  echo "       Install it with: rustup target add wasm32v1-none" >&2
+  exit 1
+fi
+
+# Resolve the signing keypair before touching the network, otherwise a bad
+# STELLAR_SOURCE_ACCOUNT only surfaces after a full build.
+if ! SOURCE_ADDRESS="$(stellar keys address "${SOURCE_ACCOUNT}" 2>/dev/null)" \
+  || [[ -z "${SOURCE_ADDRESS}" ]]; then
+  echo "error: Stellar keypair '${SOURCE_ACCOUNT}' could not be resolved." >&2
+  echo "       Generate and fund one with: stellar keys generate ${SOURCE_ACCOUNT} --fund" >&2
+  exit 1
+fi
+
+MERCHANT="${1:-${SOURCE_ADDRESS}}"
 
 echo "==> Building contract (wasm32v1-none)…"
 (cd "${CONTRACT_DIR}" && cargo build --target wasm32v1-none --release)

@@ -42,6 +42,12 @@ vi.mock("../../../components/Toast", () => ({
 
 import Products from "../../../app/shop/page";
 
+// ProductGridSkeleton renders elements with role="presentation"; it never had
+// data-testid hooks, so the loading state is detected through the role.
+function skeletons() {
+  return screen.queryAllByRole("presentation", { hidden: true });
+}
+
 describe("Shop Products Grid - Loading, Empty, and Error States", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,8 +65,8 @@ describe("Shop Products Grid - Loading, Empty, and Error States", () => {
 
     render(<Products />);
 
-    expect(screen.getByTestId("products-loading")).toBeInTheDocument();
-    expect(screen.queryByTestId("products-empty")).not.toBeInTheDocument();
+    expect(skeletons().length).toBeGreaterThan(0);
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
   });
 
   it("renders explicit empty state when listProducts resolves with empty array", async () => {
@@ -69,10 +75,9 @@ describe("Shop Products Grid - Loading, Empty, and Error States", () => {
     render(<Products />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId("products-loading")).not.toBeInTheDocument();
+      expect(skeletons()).toHaveLength(0);
     });
 
-    expect(screen.getByTestId("products-empty")).toBeInTheDocument();
     expect(screen.getByText("No products yet.")).toBeInTheDocument();
   });
 
@@ -82,11 +87,11 @@ describe("Shop Products Grid - Loading, Empty, and Error States", () => {
     render(<Products />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId("products-loading")).not.toBeInTheDocument();
+      expect(skeletons()).toHaveLength(0);
     });
 
     expect(screen.getByText("Network connection error")).toBeInTheDocument();
-    expect(screen.queryByTestId("products-empty")).not.toBeInTheDocument();
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
   });
 
   it("renders products grid when listProducts resolves with products", async () => {
@@ -99,13 +104,13 @@ describe("Shop Products Grid - Loading, Empty, and Error States", () => {
     render(<Products />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId("products-loading")).not.toBeInTheDocument();
+      expect(skeletons()).toHaveLength(0);
     });
 
     expect(screen.getByText("Nike Air Zoom")).toBeInTheDocument();
     expect(screen.getByText("$120")).toBeInTheDocument();
     expect(screen.getByText("Adidas Ultraboost")).toBeInTheDocument();
     expect(screen.getByText("$150")).toBeInTheDocument();
-    expect(screen.queryByTestId("products-empty")).not.toBeInTheDocument();
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
   });
 });

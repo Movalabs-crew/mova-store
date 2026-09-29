@@ -1,165 +1,264 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-
-const CART_ITEMS_KEY = "cartItems";
-const CART_COUNT_KEY = "itemCount";
-const CART_TOTAL_KEY = "totalPrice";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
 /**
- * Stable per-line identifier for a cart row. Duplicate products must stay
- * independently removable, so every row gets its own id even when the
- * underlying product object (and its `id`) is identical.
+ * Create a stable, unique identifier for a single cart line.
+ *
+ * `crypto.randomUUID()` is used when available (browsers on a secure context,
+ * Node >= 16.7 via webcrypto). The fallback keeps the cart usable in older
+ * runtimes without silently falling back to array indexes.
  */
-let cartItemSeq = 0;
-const nextCartItemId = () => `cart-item-${Date.now().toString(36)}-${(cartItemSeq += 1)}`;
+export const createCartItemId = () => {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through to the deterministic-ish fallback below
+  }
 
-const withLineIds = (items) =>
-  items.map((item) => (item && item.cartItemId ? item : { ...item, cartItemId: nextCartItemId() }));
+  return `cart-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
 /**
- * Reads and parses a localStorage value, returning `fallback` for missing
- * values and for anything that fails to parse. Number keys are validated so a
- * corrupt value cannot poison the derived totals.
+ * Give every cart line a unique `cartItemId`.
+ *
+ * Lines already carrying an id are returned untouched so re-hydrating an
+ * already-normalised cart does not churn identities (keys must stay stable
+ * across re-renders). Legacy lines persisted before line identities existed
+ * are upgraded in place.
  */
-const readNumber = (key, fallback) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw === null) return fallback;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
+export const ensureCartItemIds = (items) => {
+  if (!Array.isArray(items)) {
+    return { items: [], changed: false };
   }
+
+  let changed = false;
+  const nextItems = items.map((item) => {
+    if (item && typeof item === "object" && item.cartItemId) {
+      return item;
+    }
+
+    changed = true;
+    return { ...(item || {}), cartItemId: createCartItemId() };
+  });
+
+  return { items: nextItems, changed };
 };
 
 export const readStoredCart = () => {
   let storedCartItems = [];
+  let storedItemCount = 0;
+  let storedTotalPrice = 0;
 
   try {
-    const rawItems = localStorage.getItem(CART_ITEMS_KEY);
+    const rawItems = localStorage.getItem("cartItems");
     if (rawItems) {
       const parsed = JSON.parse(rawItems);
       if (Array.isArray(parsed)) {
-        // Legacy rows persisted before line identities existed are assigned
-        // one here; already-identified rows keep the id they were saved with
-        // so a remove-after-reload targets the same row.
-        storedCartItems = withLineIds(parsed.filter((item) => item && typeof item === "object"));
+        storedCartItems = parsed;
       }
     }
   } catch {
     storedCartItems = [];
   }
 
-  return {
-    storedCartItems,
-    storedItemCount: readNumber(CART_COUNT_KEY, storedCartItems.length),
-    storedTotalPrice: readNumber(CART_TOTAL_KEY, 0),
-  };
-};
-
-/**
- * Persists the cart rows and the count/total mirror keys. Count and total are
- * derived from the rows themselves, so storage can never disagree with the
- * cart contents (no negative counts, no phantom totals).
- */
-const persistCart = (items) => {
   try {
-    localStorage.setItem(CART_ITEMS_KEY, JSON.stringify(items));
-    localStorage.setItem(CART_COUNT_KEY, String(items.length));
-    const total = items.reduce((sum, item) => sum + (Number(item?.price) || 0), 0);
-    localStorage.setItem(CART_TOTAL_KEY, String(total));
-  } catch {}
-  return items;
+    const rawCount = localStorage.getItem("itemCount");
+    if (rawCount) {
+      const parsedCount = parseInt(rawCount, 10);
+      if (Number.isFinite(parsedCount) && parsedCount >= 0) {
+        storedItemCount = parsedCount;
+      }
+    }
+  } catch {
+    storedItemCount = 0;
+  }
+
+  try {
+    const rawPrice = localStorage.getItem("totalPrice");
+    if (rawPrice) {
+      const parsedPrice = parseFloat(rawPrice);
+      if (Number.isFinite(parsedPrice) && parsedPrice >= 0) {
+        storedTotalPrice = parsedPrice;
+      }
+    }
+  } catch {
+    storedTotalPrice = 0;
+  }
+
+  return { storedCartItems, storedItemCount, storedTotalPrice };
 };
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
+  const [itemCount, setItemCount] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const isHydratedRef = useRef(false);
-  // Mirror of the authoritative rows. Mutations are computed from this ref and
-  // applied synchronously (state updaters can be re-invoked by React, so
-  // read-modify-write must not live inside them).
-  const itemsRef = useRef([]);
-
-  const commit = (items) => {
-    itemsRef.current = items;
-    setCartItems(items);
-  };
 
   useEffect(() => {
     isHydratedRef.current = true;
-    const { storedCartItems } = readStoredCart();
-    // Storage already includes any items added before this effect ran: those
-    // adds were persisted synchronously, so this keeps them.
-    commit(storedCartItems);
     setHydrated(true);
+    const { storedCartItems, storedItemCount, storedTotalPrice } = readStoredCart();
+
+    // Upgrade legacy rows (persisted before line identities existed) so every
+    // line has a unique id, and persist the normalised form once.
+    const { items: hydratedCartItems, changed } = ensureCartItemIds(storedCartItems);
+    if (changed) {
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(hydratedCartItems));
+      } catch {}
+    }
+
+    setCartItems(hydratedCartItems);
+    setItemCount(storedItemCount);
+    setTotalPrice(storedTotalPrice);
   }, []);
 
-  const addToCart = (product) => {
-    if (!product || typeof product !== "object") return;
-    const line = { ...product, cartItemId: nextCartItemId() };
-    const current = isHydratedRef.current ? itemsRef.current : readStoredCart().storedCartItems;
-    commit(persistCart([...current, line]));
-  };
+  const addToCart = useCallback((product) => {
+    // Each call adds a *new line*, even for a product already in the cart, so
+    // the line gets its own identity rather than reusing the product id.
+    const cartLine = { ...(product || {}), cartItemId: createCartItemId() };
+
+    if (!isHydratedRef.current) {
+      // Pre-hydration: read once, then compute and persist all three keys in a
+      // single pass. Splitting this into three independent updaters that each
+      // re-read localStorage lets one add see a half-written cart, so the item
+      // count and total drift out of step with the items.
+      const stored = readStoredCart();
+      const updatedCartItems = [...stored.storedCartItems, cartLine];
+      const newItemCount = stored.storedItemCount + 1;
+      const newTotalPrice = stored.storedTotalPrice + (product?.price || 0);
+
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+        localStorage.setItem("itemCount", newItemCount.toString());
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+      } catch {}
+
+      setCartItems(updatedCartItems);
+      setItemCount(newItemCount);
+      setTotalPrice(newTotalPrice);
+      return;
+    }
+
+    setCartItems((prevCartItems) => {
+      const merged = [...prevCartItems, cartLine];
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(merged));
+      } catch {}
+      return merged;
+    });
+
+    setItemCount((prevItemCount) => {
+      const newItemCount = prevItemCount + 1;
+      try {
+        localStorage.setItem("itemCount", newItemCount.toString());
+      } catch {}
+      return newItemCount;
+    });
+
+    setTotalPrice((prevTotalPrice) => {
+      const newTotalPrice = prevTotalPrice + (product?.price || 0);
+      try {
+        localStorage.setItem("totalPrice", newTotalPrice.toString());
+      } catch {}
+      return newTotalPrice;
+    });
+  }, []);
 
   /**
-   * Accepts a product object, a full cart line (with `cartItemId`), or a raw
-   * `cartItemId` string. Passing a line removes exactly that row, which is
-   * what makes duplicate lines independently removable. Removing something
-   * that is not in the cart is a no-op.
+   * Remove a single cart line.
+   *
+   * `target` may be the line object itself or a `cartItemId` string. Lines are
+   * matched by `cartItemId` when one is supplied so that duplicate products are
+   * removed by identity instead of by array position (or by the shared product
+   * id, which would always drop the first duplicate).
    */
-  const removeFromCart = (item) => {
-    const targetId =
-      typeof item === "string"
-        ? item
-        : typeof item?.cartItemId === "string"
-          ? item.cartItemId
-          : null;
+  const removeFromCart = useCallback(
+    (target) => {
+      const targetCartItemId = typeof target === "string" ? target : target?.cartItemId || null;
+      const targetProductId = typeof target === "object" && target !== null ? target.id : null;
 
-    const current = isHydratedRef.current ? itemsRef.current : readStoredCart().storedCartItems;
-    let index = -1;
-    if (targetId) {
-      index = current.findIndex((line) => line.cartItemId === targetId);
-    } else if (item && typeof item === "object") {
-      index = current.findIndex((line) => line.id === item.id);
-    }
-    if (index === -1) return;
+      const matchesLine = (item) => {
+        if (!item) return false;
+        if (targetCartItemId) {
+          return item.cartItemId === targetCartItemId;
+        }
+        // Legacy callers pass a bare product without a line id: fall back to the
+        // product id (first match) exactly as before.
+        return item.id === targetProductId;
+      };
 
-    commit(persistCart(current.slice(0, index).concat(current.slice(index + 1))));
-  };
+      const stored = isHydratedRef.current ? null : readStoredCart();
+      const source = isHydratedRef.current ? cartItems : stored.storedCartItems;
+      const currentItemCount = isHydratedRef.current ? itemCount : stored.storedItemCount;
+      const currentTotalPrice = isHydratedRef.current ? totalPrice : stored.storedTotalPrice;
 
-  const clearCart = () => {
-    commit([]);
-    try {
-      localStorage.removeItem(CART_ITEMS_KEY);
-      localStorage.removeItem(CART_COUNT_KEY);
-      localStorage.removeItem(CART_TOTAL_KEY);
-    } catch {}
-  };
+      const index = source.findIndex(matchesLine);
+      if (index === -1) return;
 
-  // Count and total are always derived from the rows themselves, so they can
-  // never fall out of step with the cart contents.
-  const itemCount = cartItems.length;
-  const totalPrice = cartItems.reduce((sum, item) => sum + (Number(item?.price) || 0), 0);
+      const removedItem = source[index];
+      const nextCartItems = [...source];
+      nextCartItems.splice(index, 1);
 
-  return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        itemCount,
-        totalPrice,
-        hydrated,
-        isHydrated: hydrated,
-        addToCart,
-        removeFromCart,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+      const removedPrice = removedItem?.price || 0;
+      const nextItemCount = Math.max(0, currentItemCount - 1);
+      const nextTotalPrice = Math.max(0, currentTotalPrice - removedPrice);
+
+      setCartItems(nextCartItems);
+      setItemCount(nextItemCount);
+      setTotalPrice(nextTotalPrice);
+
+      try {
+        localStorage.setItem("cartItems", JSON.stringify(nextCartItems));
+        localStorage.setItem("itemCount", nextItemCount.toString());
+        localStorage.setItem("totalPrice", nextTotalPrice.toString());
+      } catch {}
+    },
+    [cartItems, itemCount, totalPrice]
   );
+
+  const clearCart = useCallback(() => {
+    setCartItems([]);
+    setItemCount(0);
+    setTotalPrice(0);
+    try {
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
+    } catch {}
+  }, []);
+
+  // One referentially stable value per cart state (Issue #633): without this the
+  // inline object literal is recreated on every provider render, so every
+  // consumer re-renders even when the cart itself has not changed.
+  const contextValue = useMemo(
+    () => ({
+      cartItems,
+      itemCount,
+      totalPrice,
+      hydrated,
+      isHydrated: hydrated,
+      addToCart,
+      removeFromCart,
+      clearCart,
+    }),
+    [cartItems, itemCount, totalPrice, hydrated, addToCart, removeFromCart, clearCart]
+  );
+
+  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;
 };

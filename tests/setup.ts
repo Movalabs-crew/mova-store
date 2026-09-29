@@ -1,7 +1,14 @@
 import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
 import React from "react";
 import { webcrypto } from "node:crypto";
+import { resetProductCache } from "../lib/productCache";
+
+// The product list cache is module-level state; wipe it between tests so a
+// cached read from one test can never satisfy (or skip) another test's fetch.
+beforeEach(() => {
+  resetProductCache();
+});
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({

@@ -1,5 +1,5 @@
 import { Address, rpc, xdr } from "@stellar/stellar-sdk";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentEventIndexer, type IndexedEvent } from "../../../lib/stellar/indexer";
 import {
@@ -600,5 +600,149 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
       expect(receivedEvents[0].fields.amount).toBe("100000000");
       expect(indexer.status.eventsSeen).toBe(1);
     });
+  });
+});
+
+describe("PaymentEventIndexer document visibility (Issue #636)", () => {
+  const setDocumentHidden = (value: boolean) => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => value });
+  };
+
+  afterEach(() => {
+    // Remove the per-test override so jsdom's own (visible) getter applies again.
+    delete (document as unknown as { hidden?: boolean }).hidden;
+  });
+
+  it("does not poll while the document is already hidden", async () => {
+    setDocumentHidden(true);
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 10 }),
+      getEvents: vi.fn().mockResolvedValue({ latestLedger: 10, cursor: "c1", events: [] }),
+    };
+    const indexer = new PaymentEventIndexer({ pollMs: 10 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(fakeServer.getLatestLedger).not.toHaveBeenCalled();
+    expect(fakeServer.getEvents).not.toHaveBeenCalled();
+    expect(indexer.status.running).toBe(true);
+    expect(indexer.status.paused).toBe(true);
+
+    indexer.stop();
+  });
+
+  it("stops polling when hidden and resumes with an immediate catch-up poll", async () => {
+    setDocumentHidden(false);
+    let calls = 0;
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 100 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        calls += 1;
+        return { latestLedger: 100, cursor: `cursor-${calls}`, events: [] };
+      }),
+    };
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls).toBeGreaterThanOrEqual(1);
+    const beforeHide = calls;
+
+    // Hide the tab: the interval must be cleared so no further poll fires.
+    setDocumentHidden(true);
+    document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(indexer.status.paused).toBe(true);
+    expect(calls).toBe(beforeHide);
+
+    // Focus again: catch up immediately instead of waiting a whole interval,
+    // advancing the cursor from exactly where it stopped.
+    setDocumentHidden(false);
+    document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(indexer.status.paused).toBe(false);
+    expect(calls).toBe(beforeHide + 1);
+    expect(indexer.status.lastCursor).toBe(`cursor-${beforeHide + 1}`);
+
+    indexer.stop();
+  });
+
+  it("detaches its visibility listener on stop()", async () => {
+    setDocumentHidden(false);
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 5 }),
+      getEvents: vi.fn().mockResolvedValue({ latestLedger: 5, cursor: "c", events: [] }),
+    };
+    const indexer = new PaymentEventIndexer({ pollMs: 1000 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+    const removeSpy = vi.spyOn(document, "removeEventListener");
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    indexer.stop();
+
+    expect(removeSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
+    expect(indexer.status.paused).toBe(false);
+    removeSpy.mockRestore();
+  });
+});
+
+describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
+  it("keeps at most one poll in flight when a response outruns the interval", async () => {
+    let active = 0;
+    let maxActive = 0;
+    let calls = 0;
+
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 1000 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        calls += 1;
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        active -= 1;
+        return { latestLedger: 1000, cursor: `cursor-${calls}`, events: [] };
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 10 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    indexer.stop();
+
+    // Serialized: no second poll starts until the previous one has settled.
+    expect(maxActive).toBe(1);
+    // The guard must not deadlock the loop — later ticks still run.
+    expect(calls).toBeGreaterThanOrEqual(2);
+  });
+
+  it("releases the in-flight guard after a failed poll so later polls still run", async () => {
+    let calls = 0;
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 1 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        calls += 1;
+        if (calls === 1) {
+          throw new Error("RPC blip");
+        }
+        return { latestLedger: 1, cursor: `cursor-${calls}`, events: [] };
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+    const errors: string[] = [];
+
+    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    indexer.stop();
+
+    expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
+    expect(calls).toBeGreaterThanOrEqual(2);
   });
 });

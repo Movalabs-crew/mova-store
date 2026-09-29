@@ -134,13 +134,23 @@ The current OTP implementation generates codes client-side for demonstration pur
 - Implement rate limiting on OTP requests
 - Add OTP expiration (recommended: 5 minutes)
 
-### Card Payment Fields
+### Card Payment Fields (threat model)
 
-The card payment form fields are UI-only placeholders. In production:
+The card number, expiry and CVV fields on `/checkout` are a **UI-only demo
+affordance**. No card data may be transmitted, persisted or processed by this
+application:
 
-- Integrate with a PCI-compliant payment processor (Stripe, etc.)
-- Never handle raw card data on your servers
-- Use tokenization for card storage
+- Card values live only in React state for the lifetime of the tab. They are never
+  sent to an API, logged, written to `localStorage`, placed in a URL, or handed to
+  a third party.
+- Because no card value leaves the browser, Mova Store stays outside PCI DSS scope
+  for cardholder data.
+- The UI labels the fields as demo-only so a shopper cannot mistake them for a real
+  payment form; the sanctioned path is the Stellar (Soroban) checkout.
+
+Do not "finish" this form in place. If real card payments are ever required,
+integrate a PCI-compliant processor (Stripe, etc.) and let it collect card data in
+its own iframe/tokenization flow — never handle raw card data on our servers.
 
 ### Supabase Row Level Security
 

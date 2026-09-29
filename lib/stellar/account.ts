@@ -119,7 +119,21 @@ export async function loadAccount(
 }
 
 export async function fundTestnetAccount(publicKey: string): Promise<void> {
-  const res = await fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(publicKey)}`);
+  const url = `${FRIENDBOT_URL}?addr=${encodeURIComponent(publicKey)}`;
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (err) {
+    // A network-level failure must surface as the same mapped error as an HTTP
+    // failure, otherwise it falls through to a generic UNKNOWN_ERROR and the
+    // buyer cannot tell that funding — not the payment — is what failed.
+    throw new WalletError(
+      `Could not fund testnet account (friendbot unreachable: ${
+        err instanceof Error ? err.message : String(err)
+      }).`,
+      "FRIENDBOT_ERROR"
+    );
+  }
   if (!res.ok) {
     throw new WalletError(
       `Could not fund testnet account (friendbot HTTP ${res.status}).`,

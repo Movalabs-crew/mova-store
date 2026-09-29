@@ -31,19 +31,58 @@ vi.mock("../../components/StellarOrderWatch", () => ({
   default: () => <div data-testid="stellar-order-watch" />,
 }));
 
-// The checkout page reads the cart from localStorage directly (not useCart) and
-// bails to an empty-cart screen before rendering any form when the cart is
-// empty, so every test seeds a cart first.
-const SEED_CART = () => {
+/**
+ * The page replaces itself with the "Your cart is empty" panel as soon as it
+ * has loaded an empty cart, so the checkout form only exists once a cart has
+ * been persisted. Every test seeds one before rendering.
+ */
+function seedCart(): void {
   localStorage.setItem(
     "cartItems",
-    JSON.stringify([
-      { id: "prod-1", name: "Mova Runner", price: 100, img: "/runner.png", cartItemId: "seed-1" },
-    ])
+    JSON.stringify([{ id: "p1", name: "Widget", price: 25, quantity: 2 }])
   );
-  localStorage.setItem("itemCount", "1");
-  localStorage.setItem("totalPrice", "100");
-};
+  localStorage.setItem("itemCount", "2");
+  localStorage.setItem("totalPrice", "50");
+}
+
+/** A future MM/YY, so the expiry check keeps passing as time moves on. */
+function futureExpiry(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 2);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear() % 100).padStart(2, "0");
+  return `${month}/${year}`;
+}
+
+function field(container: HTMLElement, id: string): HTMLInputElement {
+  const input = container.querySelector<HTMLInputElement>(`#${id}`);
+  if (!input) throw new Error(`checkout field #${id} is not rendered`);
+  return input;
+}
+
+function formOf(container: HTMLElement): HTMLFormElement {
+  const form = container.querySelector("form");
+  if (!form) throw new Error("checkout form is not rendered");
+  return form;
+}
+
+/** Fills every field with data its validator accepts. */
+function fillValidForm(container: HTMLElement): void {
+  const values: Record<string, string> = {
+    "checkout-first-name": "Ada",
+    "checkout-last-name": "Lovelace",
+    "checkout-email": "ada@example.com",
+    "checkout-address": "12 Analytical Engine Way",
+    // 16 digits that satisfy the Luhn check.
+    "checkout-card-number": "4242424242424242",
+    "checkout-expiry-date": futureExpiry(),
+    "checkout-cvv": "123",
+  };
+
+  for (const [id, value] of Object.entries(values)) {
+    fireEvent.change(field(container, id), { target: { value } });
+  }
+}
 
 describe("Checkout page button disabled states", () => {
   beforeEach(() => {
@@ -58,12 +97,12 @@ describe("Checkout page button disabled states", () => {
     });
 
     vi.mocked(sendMail).mockImplementation(() => sendMailPromise as any);
-    SEED_CART();
 
+    seedCart();
     const { container } = render(<Checkout />);
 
-    const form = container.querySelector("form")!;
-    expect(form).toBeInTheDocument();
+    const form = formOf(container);
+    fillValidForm(container);
 
     const submitBtn = screen.getByRole("button", { name: /submit/i });
     expect(submitBtn).toBeEnabled();
@@ -91,11 +130,12 @@ describe("Checkout page button disabled states", () => {
 
   it("disables stage-2 OTP confirm button while OTP verification is processed", async () => {
     vi.mocked(sendMail).mockResolvedValueOnce({ status: 200, text: "OK" } as any);
-    SEED_CART();
 
+    seedCart();
     const { container } = render(<Checkout />);
 
-    const form = container.querySelector("form")!;
+    const form = formOf(container);
+    fillValidForm(container);
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -104,5 +144,84 @@ describe("Checkout page button disabled states", () => {
 
     const confirmBtn = screen.getByRole("button", { name: /confirm/i });
     expect(confirmBtn).toBeEnabled();
+  });
+});
+
+describe("Checkout form error identification (#603)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("marks an invalid field aria-invalid and links the message that explains why", async () => {
+    seedCart();
+    const { container } = render(<Checkout />);
+    fillValidForm(container);
+
+    // Every other field stays valid, so exactly one error is reported.
+    const expiry = field(container, "checkout-expiry-date");
+    fireEvent.change(expiry, { target: { value: "" } });
+    expect(expiry).toHaveAttribute("aria-invalid", "false");
+
+    fireEvent.submit(formOf(container));
+
+    await waitFor(() => {
+      expect(expiry).toHaveAttribute("aria-invalid", "true");
+    });
+    expect(expiry).toHaveAttribute("aria-describedby", "checkout-expiry-date-error");
+    // The id that aria-describedby points at has to exist, otherwise the reason
+    // for the failure is never announced to a screen reader.
+    expect(
+      container.querySelector<HTMLParagraphElement>("#checkout-expiry-date-error")
+    ).toHaveTextContent("Expiry date is required");
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it("focuses the first invalid field in the form and sends no OTP", async () => {
+    seedCart();
+    const { container } = render(<Checkout />);
+    fillValidForm(container);
+
+    // Two independent failures: an incomplete CVV, and a 16-digit card that
+    // fails the Luhn check.
+    fireEvent.change(field(container, "checkout-cvv"), { target: { value: "12" } });
+    fireEvent.change(field(container, "checkout-card-number"), {
+      target: { value: "1234567890123456" },
+    });
+
+    fireEvent.submit(formOf(container));
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('[aria-invalid="true"]')).toHaveLength(2);
+    });
+    // A form already known to be invalid never requests an OTP.
+    expect(sendMail).not.toHaveBeenCalled();
+    // Focus lands on the first failure in document order (the card), not the
+    // last one that was validated.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(field(container, "checkout-card-number"));
+    });
+  });
+
+  it("clears the error and aria-invalid once the user corrects the field", async () => {
+    seedCart();
+    const { container } = render(<Checkout />);
+    fireEvent.submit(formOf(container));
+
+    const firstName = field(container, "checkout-first-name");
+    await waitFor(() => {
+      expect(firstName).toHaveAttribute("aria-invalid", "true");
+    });
+    expect(
+      container.querySelector<HTMLParagraphElement>("#checkout-first-name-error")
+    ).toHaveTextContent("First name is required");
+
+    fireEvent.change(firstName, { target: { value: "Ada" } });
+
+    await waitFor(() => {
+      expect(firstName).toHaveAttribute("aria-invalid", "false");
+    });
+    expect(container.querySelector("#checkout-first-name-error")).not.toBeInTheDocument();
+    expect(firstName).not.toHaveAttribute("aria-describedby");
   });
 });

@@ -71,7 +71,14 @@ const EditProductForm = ({ productId, onProductUpdated }) => {
       <h1 className="text-3xl font-bold mb-6 text-center text-purple-500">Edit Product</h1>
       <form onSubmit={handleSubmit}>
         {successMessage && (
-          <div className="mb-4 p-4 text-white bg-green-500 rounded-md">{successMessage}</div>
+          <div
+            role="status"
+            aria-live="polite"
+            data-testid="success-banner"
+            className="mb-4 p-4 text-white bg-green-500 rounded-md"
+          >
+            {successMessage}
+          </div>
         )}
         {errorMessage && (
           <div

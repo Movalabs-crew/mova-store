@@ -8,32 +8,35 @@ import {
 } from "../../lib/buyer-orders";
 import * as stellarOrders from "../../lib/stellar/orders";
 
+/**
+ * Rows the mocked Supabase `select -> order -> eq` chain resolves with.
+ * Tests reset this to `[]` to exercise the localStorage fallback.
+ */
+const db = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
+
 vi.mock("../../lib/supabase", () => ({
   supabase: {
     from: vi.fn(() => ({
       insert: vi.fn().mockResolvedValue({ data: null, error: null }),
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockResolvedValue({
-        data: [
-          {
-            id: "db-1",
-            order_id: "SS-DB-1",
-            user_email: "buyer@example.com",
-            total: 120,
-            status: "Paid",
-            payment_method: "stellar",
-            token_symbol: "USDC",
-            tx_hash: "abcd1234efgh5678",
-            created_at: "2026-09-05T08:00:00.000Z",
-            items: [{ name: "Nike Air Max", price: 120, quantity: 1 }],
-          },
-        ],
-        error: null,
-      }),
+      eq: vi.fn(() => Promise.resolve({ data: db.rows, error: null })),
     })),
   },
 }));
+
+const DB_ROW = {
+  id: "db-1",
+  order_id: "SS-DB-1",
+  user_email: "buyer@example.com",
+  total: 120,
+  status: "Paid",
+  payment_method: "stellar",
+  token_symbol: "USDC",
+  tx_hash: "abcd1234efgh5678",
+  created_at: "2026-09-05T08:00:00.000Z",
+  items: [{ name: "Nike Air Max", price: 120, quantity: 1 }],
+};
 
 describe("Buyer Orders Management", () => {
   const sampleOrder: BuyerOrder = {
@@ -54,6 +57,7 @@ describe("Buyer Orders Management", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+    db.rows = [{ ...DB_ROW }];
   });
 
   it("saves an order and caches it in localStorage", async () => {
@@ -83,12 +87,80 @@ describe("Buyer Orders Management", () => {
     expect(orders[0].total).toBe(120);
   });
 
-  it("falls back to local cache when Supabase returns empty", async () => {
+  it("falls back to the local cache for the signed-in user when Supabase is empty", async () => {
+    db.rows = [];
     await saveBuyerOrder(sampleOrder);
-    // Query with no user email should fallback to local cache
-    const orders = await fetchBuyerOrders(undefined);
+
+    const orders = await fetchBuyerOrders("buyer@example.com");
+
     expect(orders.length).toBe(1);
     expect(orders[0].orderId).toBe("SS-101");
+  });
+
+  it("matches a cached order by userId as well as by email", async () => {
+    db.rows = [];
+    await saveBuyerOrder(sampleOrder);
+
+    const byEmail = await fetchBuyerOrders("buyer@example.com");
+    const byId = await fetchBuyerOrders("user-123");
+
+    expect(byEmail.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(byId.map((o) => o.orderId)).toEqual(["SS-101"]);
+  });
+
+  it("never returns another account's cached orders (cross-user leak)", async () => {
+    db.rows = [];
+    await saveBuyerOrder(sampleOrder);
+
+    const intruder = await fetchBuyerOrders("someone-else@example.com");
+
+    expect(intruder).toEqual([]);
+  });
+
+  it("does not surface an order that is missing one identifier", async () => {
+    db.rows = [];
+    // The old `||` filter matched this order for every caller because it had
+    // no userId, so anyone could see it on a shared browser.
+    const emailOnly: BuyerOrder = {
+      ...sampleOrder,
+      id: "ord-email-only",
+      orderId: "SS-EMAIL-ONLY",
+      userId: undefined,
+    };
+    await saveBuyerOrder(emailOnly);
+
+    const unrelated = await fetchBuyerOrders("user-999");
+    const owner = await fetchBuyerOrders("buyer@example.com");
+
+    expect(unrelated).toEqual([]);
+    expect(owner.map((o) => o.orderId)).toEqual(["SS-EMAIL-ONLY"]);
+  });
+
+  it("does not return attributed orders to an anonymous caller", async () => {
+    db.rows = [];
+    await saveBuyerOrder(sampleOrder);
+
+    const anonymous = await fetchBuyerOrders(undefined);
+
+    expect(anonymous).toEqual([]);
+  });
+
+  it("shows guest orders only to an anonymous caller", async () => {
+    db.rows = [];
+    const guestOrder: BuyerOrder = {
+      ...sampleOrder,
+      id: "ord-guest",
+      orderId: "SS-GUEST",
+      userId: undefined,
+      userEmail: undefined,
+    };
+    await saveBuyerOrder(guestOrder);
+
+    const signedIn = await fetchBuyerOrders("buyer@example.com");
+    const anonymous = await fetchBuyerOrders(undefined);
+
+    expect(signedIn).toEqual([]);
+    expect(anonymous.map((o) => o.orderId)).toEqual(["SS-GUEST"]);
   });
 
   it("verifies order on-chain via readOrder", async () => {

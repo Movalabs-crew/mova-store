@@ -15,7 +15,12 @@ pending database deletion therefore cannot remove the image.
 
 A failed image lookup does not block the requested row deletion. A missing image
 or a URL outside the configured project's public bucket does not trigger storage
-removal. Storage failures after row deletion are tolerated as best-effort cleanup.
+removal. Storage failures after row deletion are tolerated as best-effort
+cleanup and reported on `console.warn` with the product id, object path, and
+underlying message. This is required because `supabase-js` returns storage
+failures in the resolved value rather than rejecting, so a `try`/`catch` alone
+would discard them silently. The failure is logged, never thrown: the row
+deletion the caller requested has already succeeded.
 This is not an atomic database/storage transaction or an affected-row-count
 guarantee.
 

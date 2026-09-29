@@ -16,9 +16,13 @@ export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet";
 export const IS_MAINNET = NETWORK === "mainnet";
 
 // Mainnet default matches lib/env.ts STELLAR_DEFAULTS.mainnet and the endpoint
-// docs/MAINNET_DEPLOYMENT.md tells operators to configure; keep the three in
-// step (tests/lib/env.test.ts pins the agreement). This is what an operator
-// gets when the env var is unset.
+// docs/MAINNET_DEPLOYMENT.md tells operators to configure. Keep the three in
+// step: this value is what an operator gets when the env var is unset.
+//
+// d5fb865 reconciled env.ts and the deployment guide onto the stellar.org
+// endpoint but left this module behind, so an operator who left the variable
+// unset talked to gateway.fm from here and stellar.org from lib/env — two
+// different RPCs depending on which module resolved it. Aligned to match.
 export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
   (IS_MAINNET ? "https://soroban-rpc.stellar.org" : "https://soroban-testnet.stellar.org");

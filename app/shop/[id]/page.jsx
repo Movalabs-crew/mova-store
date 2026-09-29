@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { FaShoppingCart } from "react-icons/fa";
 import { useCart } from "../../../context/CartContext";
-import Modal from "../../../components/Modal";
+import CartModal from "../../../components/CartModal";
 import Toast from "../../../components/Toast";
 import Cart from "../../../components/Cart";
 import useToast from "../../../hooks/useToast";
@@ -83,53 +83,14 @@ const ProductPage = ({ params }) => {
       </div>
 
       <Toast message={toast.message} show={toast.show} onClose={hideToast} />
-      <Modal show={showModal} onClose={closeModal}>
-        <h2 className="text-2xl mb-4">Cart Items</h2>
-        {cartItems.length === 0 ? (
-          <p>Your cart is empty.</p>
-        ) : (
-          <div>
-            {cartItems.map((item, index) => (
-              <div
-                key={item.cartItemId || item.lineId || `${item.id}-${index}`}
-                className="flex justify-between items-center mb-2"
-              >
-                <div className="w-16 h-16 flex-shrink-0">
-                  <Image
-                    src={item.img}
-                    width={64}
-                    height={64}
-                    alt={`${item.name} image`}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                <span className="ml-4">{item.name}</span>
-                <span className="ml-4">${item.price}</span>
-                <button
-                  className="ml-4 bg-purple-500 text-white px-2 py-1 rounded"
-                  onClick={() => removeFromCart(item)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex justify-between items-center mt-4 mx-5 sm:mx-10">
-          <div>
-            {cartItems.length > 0 && <strong>Total:</strong>}
-            {totalPrice ? <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span> : ""}
-          </div>
-          {cartItems.length > 0 && (
-            <button
-              onClick={handleCheckout}
-              className="bg-purple-500 text-white px-4 py-1 rounded mt-4"
-            >
-              Checkout
-            </button>
-          )}
-        </div>
-      </Modal>
+      <CartModal
+        show={showModal}
+        onClose={closeModal}
+        cartItems={cartItems}
+        totalPrice={totalPrice}
+        onRemove={removeFromCart}
+        onCheckout={handleCheckout}
+      />
     </>
   );
 };

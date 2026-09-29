@@ -52,6 +52,33 @@ describe("bytes32ToScVal", () => {
   });
 });
 
+describe("hexToBytes / bytesToHex", () => {
+  it("accepts a bare or 0x-prefixed hex string and round-trips it", () => {
+    expect(bytesToHex(hexToBytes("0x12abef"))).toBe("12abef");
+    expect(bytesToHex(hexToBytes("12abef"))).toBe("12abef");
+  });
+
+  it("parses case-insensitively and always renders lowercase", () => {
+    expect(bytesToHex(hexToBytes("a1B2c3"))).toBe("a1b2c3");
+  });
+
+  it("returns an empty Uint8Array for an empty string or a bare 0x", () => {
+    expect(hexToBytes("")).toEqual(new Uint8Array(0));
+    expect(hexToBytes("0x")).toEqual(new Uint8Array(0));
+  });
+
+  it("rejects an odd-length hex string", () => {
+    expect(() => hexToBytes("abc")).toThrow("invalid hex string (odd length)");
+    expect(() => hexToBytes("0x123")).toThrow("invalid hex string (odd length)");
+  });
+
+  it("rejects a string containing a non-hex character", () => {
+    expect(() => hexToBytes("gggg")).toThrow(/invalid hex character/);
+    expect(() => hexToBytes("0xzz")).toThrow(/invalid hex character/);
+    expect(() => hexToBytes("123g")).toThrow(/invalid hex character/);
+  });
+});
+
 describe("toSdkBytes", () => {
   it("hands a plain Uint8Array to scvBytes unchanged", () => {
     const raw = new Uint8Array(32).fill(9);

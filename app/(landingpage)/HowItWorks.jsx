@@ -49,9 +49,9 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <ol className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 list-none">
           {steps.map((step, index) => (
-            <div key={step.step} className="relative">
+            <li key={step.step} className="relative">
               {/* Connector line */}
               {index < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-8 left-[60%] w-full h-0.5 bg-gray-200" />
@@ -67,9 +67,9 @@ export default function HowItWorks() {
                 <h3 className="font-semibold text-gray-900 text-lg mb-2">{step.title}</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">{step.description}</p>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
 
         <div className="mt-12 text-center">
           <p className="text-gray-500 text-sm mb-4">Don't have a Stellar wallet yet?</p>

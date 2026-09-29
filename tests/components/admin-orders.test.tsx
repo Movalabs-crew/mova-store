@@ -93,4 +93,19 @@ describe("Admin Orders Page (Issue #67)", () => {
     // Acceptance criterion: asserts the admin page passes the event-derived hex id unmodified
     expect(mockRefundOrder).toHaveBeenCalledWith(SAMPLE_64_HEX);
   });
+
+  it("gives the orders table an accessible caption and scoped column headers", async () => {
+    render(<OrdersManagement />);
+
+    const table = await screen.findByRole("table", {
+      name: /escrow orders with their buyer/i,
+    });
+    expect(table).toBeInTheDocument();
+
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(7);
+    for (const header of headers) {
+      expect(header).toHaveAttribute("scope", "col");
+    }
+  });
 });

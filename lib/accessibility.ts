@@ -267,10 +267,14 @@ function getChannelLuminance(val: number): number {
 
 /**
  * Calculates the relative luminance of an sRGB color.
+ *
+ * Returns `NaN` for input that is not a parsable 3- or 6-digit hex colour.
+ * Callers must not treat that as black: an unreadable colour has no luminance,
+ * and `meetsContrastRequirement` already fails closed on a non-finite ratio.
  */
 export function getRelativeLuminance(hex: string): number {
   const rgb = parseHexColor(hex);
-  if (!rgb) return 0;
+  if (!rgb) return NaN;
   const [r, g, b] = rgb.map(getChannelLuminance);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -296,6 +300,11 @@ export function meetsContrastRequirement(
   largeText = false
 ): boolean {
   const ratio = getContrastRatio(foreground, background);
+  // Fail closed: a colour this helper cannot parse has no meaningful ratio, and
+  // a compliance check must never certify what it could not compute. Previously
+  // an invalid colour inherited black's luminance of 0, so
+  // meetsContrastRequirement("not-a-color", "#ffffff") reported a 21:1 pass.
+  if (!Number.isFinite(ratio)) return false;
   const threshold = largeText ? 3.0 : 4.5;
   return ratio >= threshold;
 }

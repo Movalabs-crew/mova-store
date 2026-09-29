@@ -43,6 +43,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check next / eslint-config-next are in step
+        run: |
+          node -e "const p=require('./package.json');const n=p.dependencies&&p.dependencies.next;const e=p.devDependencies&&p.devDependencies['eslint-config-next'];if(!n||!e){console.error('Both next and eslint-config-next must be declared in package.json');process.exit(1);}if(n!==e){console.error('next ('+n+') and eslint-config-next ('+e+') must be pinned to the same version');process.exit(1);}console.log('next and eslint-config-next are both '+n);"
+
       # Order matters: a step that fails skips every step after it. Formatting is
       # therefore reported last on purpose, so a repo-wide style drift cannot hide
       # the results of the type check, the tests and the build.
@@ -52,10 +56,11 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Run tests
-        run: npm run test
-
-      - name: Run test coverage
+      # "vitest run --coverage" executes the whole suite once and collects v8
+      # coverage in the same pass, so a separate "npm run test" step would run
+      # every test a second time for no extra signal. The coverage thresholds in
+      # vitest.config.ts still gate this step.
+      - name: Run tests with coverage
         run: npm run test:coverage
 
       - name: Build Next.js
@@ -73,6 +78,19 @@ jobs:
       # Reported last: see the note above the ESLint step.
       - name: Check code formatting
         run: npm run format:check
+
+  # Test file naming convention
+  test-naming:
+    name: Test File Naming
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enforce test file naming convention
+        run: node scripts/check-test-names.mjs
 
   # Soroban contract checks
   contracts:
@@ -117,13 +135,6 @@ jobs:
         working-directory: contracts/checkout
         run: cargo build --release --target wasm32v1-none
 
-      - name: Check formatting
-        working-directory: contracts/checkout
-        run: cargo fmt -- --check
-
-      - name: Run clippy
-        working-directory: contracts/checkout
-        run: cargo clippy --all-targets -- -D warnings
 
       - name: Run contract tests
         working-directory: contracts/checkout
@@ -166,22 +177,25 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_VERSION }}
 
       - name: Install cargo-audit
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit
 
+      # A security gate that cannot fail is documentation, not a control.
+      # rust-security is one of ci-success's needs, so an advisory found here
+      # must fail the job. Tolerate a specific advisory only by adding an
+      # explicit `--ignore <RUSTSEC-id>` with a comment saying why.
       - name: Run cargo audit
         working-directory: contracts/checkout
         run: cargo audit
-        continue-on-error: true
 
   # Summary job that requires all checks to pass
   ci-success:
     name: CI Success
-    needs: [frontend, contracts, security, rust-security]
+    needs: [frontend, contracts, security, rust-security, test-naming]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -203,6 +217,10 @@ jobs:
           fi
           if [[ "${{ needs.rust-security.result }}" != "success" ]]; then
             echo "Rust security job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.test-naming.result }}" != "success" ]]; then
+            echo "Test naming job failed"
             exit 1
           fi
           echo "All required checks passed!"

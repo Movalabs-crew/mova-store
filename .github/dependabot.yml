@@ -1,0 +1,58 @@
+version: 2
+updates:
+  # JavaScript / TypeScript dependencies for the Next.js app at the repository root.
+  # package-lock.json is the lockfile, so the npm ecosystem is the correct one here.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    versioning-strategy: "increase"
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      # next, eslint-config-next and @next/* must move together:
+      # eslint-config-next depends on @next/eslint-plugin-next at its own
+      # exact version, so bumping one alone desynchronises the lint rules
+      # from the framework version.
+      nextjs-toolchain:
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+          - "eslint-plugin-next"
+      # Minor and patch updates are safe to review together; majors stay
+      # one-PR-per-dependency so a breaking upgrade can be evaluated alone.
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # Soroban contract dependencies, workspace root is contracts/checkout.
+  - package-ecosystem: "cargo"
+    directory: "/contracts/checkout"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "rust"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"

@@ -97,9 +97,20 @@ function Navbar() {
 
   return (
     <>
+      {/*
+        The drawer below is `z-50` *inside* this nav, so the nav's own
+        z-index is the ceiling of its stacking context. While it was pinned to
+        `z-10`, that ceiling sat under the floating cart / scroll-to-top
+        controls (`z-40`), which then painted over the open menu and swallowed
+        its clicks. Raising the nav to `z-50` for as long as the drawer is open
+        puts the whole menu above those controls, and it drops back to `z-10`
+        once closed so the floating buttons stay on top of ordinary pages.
+      */}
       <nav
         aria-label="Main navigation"
-        className="fixed z-10 w-full border-b border-purple-100/80 bg-white/85 backdrop-blur-md"
+        className={`fixed w-full border-b border-purple-100/80 bg-white/85 backdrop-blur-md ${
+          showNav ? "z-50" : "z-10"
+        }`}
       >
         <div className="hidden items-center justify-between px-3 py-2 sm:px-6 md:flex">
           <BrandMark />

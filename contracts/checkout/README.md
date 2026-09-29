@@ -51,6 +51,14 @@ topics: ["pay", token, buyer, merchant, order_id]
 data:   { amount }   (i128, raw units)
 ```
 
+### Paying with a different token than `create_order`
+
+`create_order` records the token the buyer *intends* to pay with, but `pay`
+settles with the `token` passed to the call. Both only need to be whitelisted, so
+paying an order with a different accepted token is allowed: the stored order is
+overwritten with the token, amount and `Paid` status of the payment that actually
+happened, and the token named by `create_order` is never charged.
+
 ### Events
 
 | Event             | Topics                                  | Data                    |

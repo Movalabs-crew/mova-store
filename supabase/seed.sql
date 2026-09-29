@@ -1,4 +1,9 @@
 -- Mova Store — Sample Products Seed Data
+--
+-- Photo ids are shared with the landing page (app/(landingpage)/landingImages.js),
+-- which is the single source of truth for image ids and the 400px transform. Seeded
+-- catalogue rows keep their own `auto=format&fit=crop&w=600&q=80` transform because
+-- they render larger than the landing cards; update the id in both places.
 -- Run this after schema.sql in Supabase SQL Editor (Dashboard → SQL → New query)
 -- Idempotent: safe to run multiple times without duplicate key errors
 

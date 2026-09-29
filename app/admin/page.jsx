@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { listProducts, deleteProduct } from "../../lib/products";
+import { deleteProduct } from "../../lib/products";
+import { useProducts } from "../../hooks/useProducts";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
 import AdminGuard from "../../components/AdminGuard";
@@ -10,32 +11,25 @@ import { SiStellar } from "react-icons/si";
 import { MdInventory } from "react-icons/md";
 
 const ProductsAdminContent = () => {
-  const [products, setProducts] = useState([]);
+  const { products, error } = useProducts();
   const [selectedProductId, setSelectedProductId] = useState(null);
+  // Issue #564: a stray click on Delete used to destroy a product with no way
+  // back. Destructive actions go through a confirmation dialog instead.
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const data = await listProducts();
-      setProducts(data);
-    } catch (error) {
+    if (error) {
       console.error("Error fetching products: ", error);
     }
-  };
+  }, [error]);
 
   const handleProductAdded = () => {
     setSelectedProductId(null);
-    fetchProducts();
   };
 
   const handleProductUpdated = () => {
     setSelectedProductId(null);
-    fetchProducts();
   };
 
   const handleDeleteClick = (product) => {
@@ -43,6 +37,8 @@ const ProductsAdminContent = () => {
   };
 
   const handleDeleteCancel = () => {
+    // The buttons disable while the request is in flight so a second
+    // confirmation cannot fire a second delete.
     if (isDeleting) return;
     setProductToDelete(null);
   };
@@ -52,8 +48,9 @@ const ProductsAdminContent = () => {
 
     setIsDeleting(true);
     try {
+      // deleteProduct invalidates the shared cache, so the hook above
+      // refetches the list with the row removed.
       await deleteProduct(productToDelete.id);
-      setProducts(products.filter((product) => product.id !== productToDelete.id));
       setProductToDelete(null);
     } catch (error) {
       console.error("Error deleting product: ", error);
@@ -135,7 +132,7 @@ const ProductsAdminContent = () => {
         </div>
       </div>
 
-      <Modal show={Boolean(productToDelete)} onClose={handleDeleteCancel}>
+      <Modal show={Boolean(productToDelete)} onClose={handleDeleteCancel} title="Delete product">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Delete product</h2>
         <p className="text-gray-600 mb-2">
           Are you sure you want to delete{" "}

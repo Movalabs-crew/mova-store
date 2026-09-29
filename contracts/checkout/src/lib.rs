@@ -130,8 +130,8 @@ impl Checkout {
     /// records the order as `Paid`. Funds are released to the merchant by
     /// calling `dispatch`, or returned to the buyer by calling `refund`.
     ///
-    /// Emits `pay` (aliased `payment_received`). An order can only be paid
-    /// once; duplicate payments are rejected with `OrderAlreadyPaid`.
+    /// Emits `pay`, the single canonical payment event topic. An order can
+    /// only be paid once; duplicate payments are rejected with `OrderAlreadyPaid`.
     pub fn pay(
         env: Env,
         token: Address,

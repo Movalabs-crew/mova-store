@@ -88,3 +88,46 @@ describe("Toast display and exit timers", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 });
+
+describe("Toast dismiss control accessibility (#594)", () => {
+  afterEach(() => cleanup());
+
+  it("exposes a programmatic name and hides the glyph from assistive tech", () => {
+    render(<Toast message="Saved" show={true} onClose={() => {}} />);
+
+    // The control is reachable by its accessible name, not by the "✕" symbol.
+    const dismiss = screen.getByRole("button", { name: "Dismiss notification" });
+    expect(dismiss).toBeTruthy();
+
+    // The visible glyph is decorative, so it must not be announced verbatim.
+    expect(screen.getByText("✕")).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+describe("Toast accessibility live region (Issue #593)", () => {
+  afterEach(cleanup);
+
+  it("announces status messages politely and atomically", () => {
+    render(<Toast message="Item added to cart" show={true} onClose={vi.fn()} />);
+
+    const region = screen.getByRole("status");
+    expect(region).toHaveTextContent("Item added to cart");
+    expect(region).toHaveAttribute("aria-live", "polite");
+    expect(region).toHaveAttribute("aria-atomic", "true");
+  });
+
+  it("announces error messages assertively", () => {
+    render(<Toast message="Payment failed" show={true} onClose={vi.fn()} variant="error" />);
+
+    const region = screen.getByRole("alert");
+    expect(region).toHaveTextContent("Payment failed");
+    expect(region).toHaveAttribute("aria-live", "assertive");
+    expect(region).toHaveAttribute("aria-atomic", "true");
+  });
+
+  it("keeps the live region mounted while hidden so later updates are announced", () => {
+    render(<Toast message="Saved" show={false} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+});

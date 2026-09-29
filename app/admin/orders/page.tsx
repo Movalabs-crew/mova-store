@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import AdminGuard from "../../../components/AdminGuard";
 import StellarWalletButton from "../../../components/StellarWalletButton";
 import { PaymentEventIndexer, IndexedEvent } from "../../../lib/stellar/indexer";
@@ -275,17 +275,35 @@ const OrdersManagementContent = () => {
     }
   }, []);
 
-  // Sort orders by timestamp (newest first)
-  const sortedOrders = Array.from(orders.values()).sort((a, b) => b.timestamp - a.timestamp);
+  // Sort orders by timestamp (newest first) and derive the status counts in a
+  // single pass. Both are pure functions of the order map, so memoise them:
+  // without this every indexer event - and every dispatch/refund state update -
+  // re-sorts the whole list and walks it once more per status during render.
+  const { sortedOrders, stats } = useMemo(() => {
+    const sorted = Array.from(orders.values()).sort((a, b) => b.timestamp - a.timestamp);
 
-  // Stats
-  const stats = {
-    total: sortedOrders.length,
-    pending: sortedOrders.filter((o) => o.status === "Pending").length,
-    paid: sortedOrders.filter((o) => o.status === "Paid").length,
-    shipped: sortedOrders.filter((o) => o.status === "Shipped").length,
-    refunded: sortedOrders.filter((o) => o.status === "Refunded").length,
-  };
+    const counts: Record<OrderStatus, number> = {
+      Pending: 0,
+      Paid: 0,
+      Shipped: 0,
+      Refunded: 0,
+      Unknown: 0,
+    };
+    for (const order of sorted) {
+      counts[order.status] = (counts[order.status] ?? 0) + 1;
+    }
+
+    return {
+      sortedOrders: sorted,
+      stats: {
+        total: sorted.length,
+        pending: counts.Pending,
+        paid: counts.Paid,
+        shipped: counts.Shipped,
+        refunded: counts.Refunded,
+      },
+    };
+  }, [orders]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -400,27 +418,52 @@ const OrdersManagementContent = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full">
+              <caption className="sr-only">
+                Escrow orders with their buyer, amount, status, date, transaction hash, and
+                available admin actions
+              </caption>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Order ID
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Buyer
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Amount
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Status
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Date
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     TX Hash
                   </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Actions
                   </th>
                 </tr>

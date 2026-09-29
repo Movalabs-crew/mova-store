@@ -15,13 +15,54 @@ easy to test, and consistent across the frontend and the Rust contract.
 
 ## Table of Contents
 
+- [Quickstart](#quickstart)
 - [How Milestones & Issues Work on GrantFox](#how-milestones--issues-work-on-grantfox)
+- [Campaign Waves](#campaign-waves)
 - [The 5-Step Contribution Pipeline](#the-5-step-contribution-pipeline)
 - [Code Formatting](#code-formatting)
 - [Testing Guidelines](#testing-guidelines)
+- [Dependency Management](#dependency-management)
 - [Commit Message Style](#commit-message-style)
 - [Pull Request Checklist](#pull-request-checklist)
 - [Code of Conduct](#code-of-conduct)
+
+---
+
+## Quickstart
+
+Prerequisites: Node 18.18+ (Node 20 is recommended; see `.nvmrc`) and npm. The
+Rust toolchain is only needed if you change `contracts/checkout`.
+
+```bash
+git clone https://github.com/Movalabs-crew/mova-store.git
+cd mova-store
+npm install
+
+# Copy the environment template and fill in the required keys.
+cp .env.local.example .env.local
+
+npm run dev          # storefront on http://localhost:3000
+```
+
+`npm run dev` starts the Next.js storefront. Until you deploy the checkout
+contract and set `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`, the on-chain checkout stays
+disabled; the catalog, cart and contact form still work. The full variable list
+lives in the [README](README.md#environment-variables-reference).
+
+Run the checks a pull request is expected to pass before you push:
+
+```bash
+npm run lint         # ESLint (next lint)
+npm run type-check   # tsc --noEmit
+npm run test         # Vitest, single pass
+npm run build        # production build
+```
+
+If your change touches the Rust contract, also run:
+
+```bash
+cd contracts/checkout && cargo test
+```
 
 ---
 
@@ -39,6 +80,28 @@ platform:
 A common misconception: bounty work is not "first to merge wins." It is
 **reviewed on quality**, so a well-tested, well-documented PR that satisfies the
 acceptance criteria wins over a faster, sloppier one.
+
+## Campaign Waves
+
+Some contribution campaigns are organized into numbered **waves**. A wave is a
+time-boxed group of issues that share a campaign label; the label identifies the
+issues included in that campaign and makes the current worklist easy to find.
+
+### Active campaign labels
+
+| Label          | What it means                                 |
+| -------------- | --------------------------------------------- |
+| `Stellar Wave` | An issue in the active Stellar Wave campaign. |
+
+To see the current Stellar Wave worklist, open the
+[open issues labeled `Stellar Wave`](https://github.com/Movalabs-crew/mova-store/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22Stellar%20Wave%22).
+When a later wave begins, its campaign label and worklist will be documented in
+this table.
+
+Only issues carrying the label for the campaign you are joining are part of
+that campaign. An issue with no campaign label, or one labeled for another
+wave, is not eligible for the current wave even if it is otherwise open. Check
+the issue's labels before applying for a related bounty or starting work.
 
 ## The 5-Step Contribution Pipeline
 
@@ -115,7 +178,7 @@ code must be formatted before pushing.
 
 ### JavaScript / TypeScript (frontend)
 
-- **Prettier** for formatting (`npx prettier --write "app/**/*.{js,jsx,ts,tsx}" "lib/**/*.ts" "components/**/*.{js,jsx}"`).
+- **Prettier** via the repo script: `npm run format` (verify with `npm run format:check`).
 - **ESLint** via the Next.js lint script for correctness:
 
 ```bash
@@ -127,6 +190,24 @@ npm run lint
 ```bash
 npx tsc --noEmit
 ```
+
+### Git hooks (installed automatically)
+
+The root `prepare` script installs a `pre-commit` hook, so the formatting and
+lint checks above run on exactly the files you are committing:
+
+```bash
+npm install          # installs the hook via `prepare`
+git commit -m "..."  # formats and lints the staged files first
+```
+
+`scripts/pre-commit-checks.mjs` runs Prettier and ESLint (`--fix`) over the
+staged files, re-stages anything it rewrites, and aborts the commit when ESLint
+still reports errors. The hook is not committed: it lives in
+`.git/hooks/pre-commit`, and `scripts/setup-git-hooks.mjs` (re)installs it on
+every `npm install` from the root `prepare` script. Both scripts are no-ops
+outside a git checkout (CI, tarballs). Use `git commit --no-verify` to bypass
+the hook for a single commit.
 
 ### Rust (contract)
 
@@ -182,7 +263,14 @@ npm run test:ui
 
 - Unit tests: `tests/lib/` for library functions (for example `tests/lib/env.test.ts` and `tests/lib/validation.test.ts`)
 - Shared Vitest setup: `tests/setup.ts`
-- Tests should be named `*.test.ts` or `*.test.tsx`
+- Tests must be named `<kebab-case-stem>.test.ts` or `<kebab-case-stem>.test.tsx`,
+  where the stem is the kebab-case name of the module under test. Dotted
+  qualifiers are allowed for a second concern in the same module, for example
+  `tests/context/cart-context.hydration.test.tsx`.
+- `.js` / `.jsx` test files are not allowed, and two test files in the same
+  directory may not share a stem (case-insensitively) — that is the case-only
+  collision that caused the mix-ups this convention replaces.
+- The rule is enforced in CI and locally with `npm run test:naming`.
 - Put new component tests under `tests/` only when you add them; do not assume a `tests/components/` directory exists yet
 
 **What to test:**
@@ -217,11 +305,57 @@ npm run lint         # ESLint checks
 npm run build        # Production build must succeed
 ```
 
+### Local verification (`npm run verify`)
+
+`npm run verify` runs the same checks as CI, in the same order, so a
+contributor can reproduce a green (or red) build locally before pushing:
+
+```bash
+npm run verify
+```
+
+It expands to:
+
+1. `npm run lint` — ESLint
+2. `npm run type-check` — `tsc --noEmit`
+3. `npm run test` — Vitest, single run
+4. `npm run test:coverage` — Vitest with the coverage thresholds
+5. `npm run build` — production Next.js build
+6. `npm run format:check` — Prettier drift report
+
+The build step reads the `NEXT_PUBLIC_*` variables, so copy
+`.env.local.example` to `.env.local` (or export the values) before running
+`verify`; CI injects throwaway values into `npm run build` for the same reason.
+Formatting is checked last on purpose, exactly as in CI, so repo-wide style
+drift cannot hide a failing type check, test, or build.
+
 ### Manual QA for Payment Changes
 
 If your PR touches the Stellar payment flow, describe in the PR how you tested
 it against testnet (Freighter + USDC faucet account). Follow the flow in the
 root [README](README.md#paying-with-stellar-testnet).
+
+## Dependency Management
+
+Some packages are tightly coupled and must be bumped together:
+
+- **`next` and `eslint-config-next`** are pinned to the same version.
+  `eslint-config-next` depends on `@next/eslint-plugin-next` at that exact
+  version, so bumping `next` without `eslint-config-next` (or vice versa)
+  silently desynchronises the lint rules from the framework version.
+- **`@next/*` packages** track the `next` version.
+
+Bump them as one unit:
+
+- Dependabot (`.github/dependabot.yml`) is configured to open a single grouped
+  PR for `next`, `eslint-config-next`, `@next/*` and `eslint-plugin-next`.
+  Merge that group as one change.
+- For a manual bump, set **both** entries in `package.json` to the same
+  version, run `npm install` so `package-lock.json` is regenerated, and commit
+  all three files together.
+
+CI fails when the two `package.json` entries drift, so a half-finished bump
+cannot land unnoticed.
 
 ## Commit Message Style
 
@@ -271,6 +405,7 @@ Before opening a PR, verify:
 - [ ] Frontend tests pass (`npm run test`).
 - [ ] Contract tests pass (`cd contracts/checkout && cargo test`).
 - [ ] Build succeeds (`npm run build`).
+- [ ] Combined local check passes (`npm run verify`)
 - [ ] New behavior has tests; existing tests updated where needed.
 - [ ] No secrets, `.env` files, or build artifacts in the diff.
 - [ ] README/docs updated if behavior or config changed.

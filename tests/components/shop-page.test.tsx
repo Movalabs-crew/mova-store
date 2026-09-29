@@ -86,13 +86,13 @@ describe("Shop product loading states", () => {
 
     fireEvent.click(within(productLink.parentElement!).getByRole("button"));
 
+    // The badge carries an accessible name, so the cart reads as "Shopping cart
+    // with 1 item" rather than exposing the bare digit.
     expect(screen.getByRole("button", { name: /shopping cart with 1 item/i })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Item added to cart");
-    // Cart rows carry a runtime cartItemId line identity (see CartContext),
-    // so compare the product payload rather than the exact row objects.
-    expect(JSON.parse(localStorage.getItem("cartItems")!)).toEqual([
-      { ...product, cartItemId: expect.any(String) },
-    ]);
+    expect(
+      JSON.parse(localStorage.getItem("cartItems")!).map(({ cartItemId, ...rest }) => rest)
+    ).toEqual([product]);
   });
 
   it("replaces skeletons with the request error without claiming the catalogue is empty", async () => {
@@ -108,5 +108,27 @@ describe("Shop product loading states", () => {
     expect(skeletons()).toHaveLength(0);
     expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+});
+
+describe("Shop page heading hierarchy (Issue #597)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("renders exactly one h1 and demotes product names to h2", async () => {
+    const request = pendingProducts();
+    renderShop();
+
+    await act(async () => request.resolve([product]));
+
+    const h1s = screen.getAllByRole("heading", { level: 1 });
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0]).toHaveTextContent("Welcome to Mova Store");
+
+    expect(screen.getByRole("heading", { level: 2, name: product.name })).toBeInTheDocument();
+    // The price is no longer a heading at all.
+    expect(screen.queryByRole("heading", { name: "$75" })).not.toBeInTheDocument();
   });
 });

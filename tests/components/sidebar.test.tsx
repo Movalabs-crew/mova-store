@@ -101,6 +101,7 @@ describe("Sidebar component", () => {
     const destinations = [
       { name: "Home", href: "/" },
       { name: "Shop", href: "/shop" },
+      { name: "Blog", href: "/blog" },
       { name: "Collections", href: "/collections" },
       ...(isAdmin ? [{ name: "Admin", href: "/admin" }] : []),
     ];
@@ -113,6 +114,29 @@ describe("Sidebar component", () => {
       expect(link).toHaveAttribute("title", name);
     }
   });
+
+  it.each([false, true])(
+    "exposes the same destinations on desktop and mobile when isAdmin=%s",
+    (isAdmin) => {
+      mockUseAuth.mockReturnValue({
+        user: isAdmin ? { uid: "admin-user", email: "admin@test.com" } : null,
+        isAdmin,
+        loading: false,
+      });
+
+      render(<Sidebar />);
+
+      const [desktopNavigation, mobileNavigation] = screen.getAllByRole("navigation");
+      const hrefsIn = (navigation: HTMLElement) =>
+        within(navigation)
+          .getAllByRole("link")
+          .map((link) => link.getAttribute("href"));
+
+      // The icon-only mobile rail is easy to forget when a destination is added
+      // to the desktop list — that is how /blog went missing from it.
+      expect(hrefsIn(mobileNavigation)).toEqual(hrefsIn(desktopNavigation));
+    }
+  );
 
   it("does not render Admin links when isAdmin is false even with legacy UID", () => {
     mockUseAuth.mockReturnValue({

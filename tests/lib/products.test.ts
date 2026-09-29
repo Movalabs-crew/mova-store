@@ -26,6 +26,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  parseStoragePathFromUrl,
   storageObjectPathFromPublicUrl,
 } from "../../lib/products";
 
@@ -389,12 +390,37 @@ describe("lib/products data layer", () => {
     });
   });
 
+  describe("parseStoragePathFromUrl", () => {
+    it("recovers the object path from a public URL in the given bucket", () => {
+      expect(
+        parseStoragePathFromUrl(
+          "https://proj.supabase.co/storage/v1/object/public/products/12345-abc.jpg",
+          "products"
+        )
+      ).toBe("12345-abc.jpg");
+    });
+
+    it("returns null for missing, empty and non-string inputs", () => {
+      expect(parseStoragePathFromUrl("")).toBeNull();
+      expect(parseStoragePathFromUrl(null)).toBeNull();
+      expect(parseStoragePathFromUrl(undefined)).toBeNull();
+      expect(parseStoragePathFromUrl(42)).toBeNull();
+    });
+
+    it("returns null for an object living in another bucket", () => {
+      expect(
+        parseStoragePathFromUrl(
+          "https://proj.supabase.co/storage/v1/object/public/avatars/a.jpg",
+          "products"
+        )
+      ).toBeNull();
+    });
+  });
+
   describe("deleteProduct", () => {
     // deleteProduct now reads the row's image before deleting, so each case
     // stubs the lookup as well as the delete. The original assertions on the
-    // The lookup resolves a product URL whose object path is "shoe photo.jpg"
-    // (storageObjectPathFromPublicUrl decodes it) so the storage cleanup call
-    // can be asserted deterministically.
+    // delete call and the error path are unchanged.
     const stubFrom = (img: string | null, deleteResult = { data: null, error: null }) => {
       const mockMaybeSingle = vi.fn().mockResolvedValue({
         data: img === null ? null : { img },
@@ -405,35 +431,35 @@ describe("lib/products data layer", () => {
       const mockEq = vi.fn().mockResolvedValue(deleteResult);
       const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect, delete: mockDelete });
-      return { mockSelect, mockSelectEq, mockDelete, mockEq };
+      return { mockSelect, mockSelectEq, mockDelete, mockEq, mockDeleteEq: mockEq };
     };
 
+    const storedImageUrl =
+      "https://proj.supabase.co/storage/v1/object/public/products/catalog/shoe%20photo.jpg";
+
     it("deletes a product by id", async () => {
-      const { mockSelect, mockSelectEq, mockEq } = stubFrom(
-        "https://proj.supabase.co/storage/v1/object/public/products/shoe%20photo.jpg"
-      );
+      const { mockSelect, mockSelectEq, mockDeleteEq } = stubFrom(storedImageUrl);
+      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
 
       await deleteProduct("p-del");
 
       expect(mockSelect).toHaveBeenCalledWith("img");
       expect(mockSelectEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["shoe photo.jpg"]);
-      expect(mockEq.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
+      expect(mockDeleteEq.mock.invocationCallOrder[0]).toBeLessThan(
         mockStorageFrom.remove.mock.invocationCallOrder[0]
       );
     });
 
     it("still deletes the row when storage removal rejects", async () => {
-      const { mockEq } = stubFrom(
-        "https://proj.supabase.co/storage/v1/object/public/products/shoe%20photo.jpg"
-      );
+      const { mockDeleteEq } = stubFrom(storedImageUrl);
       mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
 
       await expect(deleteProduct("p-del")).resolves.toBeUndefined();
 
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["shoe photo.jpg"]);
+      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
+      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
     });
 
     it("throws error when delete fails", async () => {

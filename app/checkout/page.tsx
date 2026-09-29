@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import Toast from "../../components/Toast";
 import useToast from "../../hooks/useToast";
@@ -35,6 +35,20 @@ import {
   validateCardExpiry,
   validateCardCVV,
 } from "../../lib/validation";
+import { ariaInvalid, focusFirstError } from "../../lib/accessibility";
+
+/** Stable ids for the per-field error text, referenced by aria-describedby. */
+const FIELD_ERROR_IDS = {
+  firstName: "checkout-first-name-error",
+  lastName: "checkout-last-name-error",
+  email: "checkout-email-error",
+  address: "checkout-address-error",
+  cardNumber: "checkout-card-number-error",
+  expiryDate: "checkout-expiry-date-error",
+  cvv: "checkout-cvv-error",
+} as const;
+
+type CheckoutField = keyof typeof FIELD_ERROR_IDS;
 
 const Checkout = () => {
   // OTP is stored as a zero-padded 6-digit string so it always matches the format
@@ -52,6 +66,8 @@ const Checkout = () => {
   const [isOtpSending, setIsOtpSending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [enteredOtp, setEnteredOtp] = useState("");
+  const [errors, setErrors] = useState<Partial<Record<CheckoutField, string>>>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -79,22 +95,84 @@ const Checkout = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
+    clearError(name as CheckoutField);
   };
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEnteredOtp(e.target.value);
   };
 
+  /**
+   * Clears a field's error as soon as the user edits it, so a message never
+   * outlives the value that caused it.
+   */
+  const clearError = (field: CheckoutField) =>
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+
+  /**
+   * Runs every field validator and returns only the failures. The card helpers
+   * were imported but never called, so no field could report an invalid state.
+   */
+  const validateCheckoutFields = () => {
+    const next: Partial<Record<CheckoutField, string>> = {};
+
+    const first = validateName(formData.firstName, "First name");
+    if (!first.isValid) next.firstName = first.error;
+
+    const last = validateName(formData.lastName, "Last name");
+    if (!last.isValid) next.lastName = last.error;
+
+    const email = validateEmail(formData.email);
+    if (!email.isValid) next.email = email.error;
+
+    const address = validateAddress(formData.address);
+    if (!address.isValid) next.address = address.error;
+
+    const card = validateCardNumber(formData.cardNumber);
+    if (!card.isValid) next.cardNumber = card.error;
+
+    const expiry = validateCardExpiry(formData.expiryDate);
+    if (!expiry.isValid) next.expiryDate = expiry.error;
+
+    const cvv = validateCardCVV(formData.cvv);
+    if (!cvv.isValid) next.cvv = cvv.error;
+
+    return next;
+  };
+
+  // Focus has to wait for the render that writes aria-invalid onto the fields:
+  // focusFirstError resolves the element by `[aria-invalid="true"]`, which does
+  // not exist yet in the same tick as setErrors.
+  useEffect(() => {
+    if (Object.keys(errors).length === 0) return;
+    if (formRef.current) focusFirstError(formRef.current);
+  }, [errors]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    const nextErrors = validateCheckoutFields();
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      // Never send an OTP for a form already known to be invalid; the effect
+      // above moves focus to the first field marked aria-invalid.
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await sendMail({
         name: `${formData.firstName} ${formData.lastName}`,
+        // The recipient is pinned to this validated address inside sendMail;
+        // callers can no longer choose an arbitrary recipient.
         email: formData.email,
         message: `You are about to checkout your cart on Mova Store. Your OTP is: ${otp}`,
-        recipientEmail: formData.email,
         subject: formData.subject,
       });
 
@@ -137,23 +215,60 @@ const Checkout = () => {
   };
 
   useEffect(() => {
+    // Read the cart items from localStorage (IDs only; we re-fetch prices
+    // server-side so a tampered localStorage.totalPrice has no effect).
+    let storedItems: any[] = [];
     try {
-      const storedItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
-      const storedTotalPrice = localStorage.getItem("totalPrice");
-      if (Array.isArray(storedItems)) {
-        setCartItems(storedItems);
-      }
-      if (storedTotalPrice) {
-        setTotalPrice(parseFloat(storedTotalPrice));
+      const raw = localStorage.getItem("cartItems");
+      const parsed = JSON.parse(raw || "[]");
+      if (Array.isArray(parsed)) {
+        storedItems = parsed;
       }
     } catch {
-      setCartItems([]);
-    } finally {
-      setIsLoaded(true);
+      storedItems = [];
     }
+
+    setCartItems(storedItems);
+
+    if (storedItems.length === 0) {
+      setIsLoaded(true);
+      return;
+    }
+
+    // Ask the server to compute the authoritative total from current DB prices.
+    const itemRefs = storedItems.map((item: any) => ({
+      id: item.id,
+      quantity: item.quantity ?? 1,
+    }));
+
+    fetch("/api/checkout/compute-total", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: itemRefs }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`compute-total: HTTP ${res.status}`);
+        return res.json() as Promise<{ total: number }>;
+      })
+      .then(({ total }) => {
+        setTotalPrice(total);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch server-side total:", err);
+        // Keep totalPrice at 0 so the cart is treated as unresolvable.
+        setTotalPrice(0);
+      })
+      .finally(() => {
+        setIsLoaded(true);
+      });
   }, []);
 
-  const isEmptyCart = isLoaded && (cartItems.length === 0 || totalPrice <= 0);
+  // Emptiness is about the cart, not the total. If the server-side total cannot
+  // be computed (the compute-total request failed), the cart still has items and
+  // the customer must see the form — showing "Your cart is empty" would hide a
+  // full cart behind a transient API error. The pay button is gated separately on
+  // `totalPrice <= 0`, so an unresolved total still cannot be paid.
+  const isEmptyCart = isLoaded && cartItems.length === 0;
 
   useEffect(() => {
     if (stage === 3) {
@@ -226,8 +341,20 @@ const Checkout = () => {
           </div>
           <div className="w-full md:w-1/2 px-4 p-4 rounded-md">
             {stage === 1 && (
-              <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow-md">
+              <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                noValidate
+                className="bg-white p-4 rounded shadow-md"
+              >
                 <h2 className="text-2xl mb-4 text-center">Checkout</h2>
+                <p
+                  role="note"
+                  className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                >
+                  Demo checkout — the card fields below are placeholders. Card values are never
+                  transmitted or stored. Use the Stellar payment option to place a real order.
+                </p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="mb-4">
                     <label htmlFor="checkout-first-name" className="block text-gray-700">
@@ -241,7 +368,13 @@ const Checkout = () => {
                       onChange={handleChange}
                       required
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      {...ariaInvalid(Boolean(errors.firstName), FIELD_ERROR_IDS.firstName)}
                     />
+                    {errors.firstName && (
+                      <p id={FIELD_ERROR_IDS.firstName} className="mt-1 text-xs text-red-600">
+                        {errors.firstName}
+                      </p>
+                    )}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-last-name" className="block text-gray-700">
@@ -255,7 +388,13 @@ const Checkout = () => {
                       onChange={handleChange}
                       required
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      {...ariaInvalid(Boolean(errors.lastName), FIELD_ERROR_IDS.lastName)}
                     />
+                    {errors.lastName && (
+                      <p id={FIELD_ERROR_IDS.lastName} className="mt-1 text-xs text-red-600">
+                        {errors.lastName}
+                      </p>
+                    )}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-email" className="block text-gray-700">
@@ -269,7 +408,13 @@ const Checkout = () => {
                       onChange={handleChange}
                       required
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      {...ariaInvalid(Boolean(errors.email), FIELD_ERROR_IDS.email)}
                     />
+                    {errors.email && (
+                      <p id={FIELD_ERROR_IDS.email} className="mt-1 text-xs text-red-600">
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-address" className="block text-gray-700">
@@ -283,7 +428,13 @@ const Checkout = () => {
                       onChange={handleChange}
                       required
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      {...ariaInvalid(Boolean(errors.address), FIELD_ERROR_IDS.address)}
                     />
+                    {errors.address && (
+                      <p id={FIELD_ERROR_IDS.address} className="mt-1 text-xs text-red-600">
+                        {errors.address}
+                      </p>
+                    )}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-card-number" className="block text-gray-700">
@@ -294,6 +445,7 @@ const Checkout = () => {
                         id="checkout-card-number"
                         type="text"
                         name="cardNumber"
+                        autoComplete="off"
                         value={formData.cardNumber}
                         onChange={(e) => {
                           let { value } = e.target;
@@ -305,17 +457,24 @@ const Checkout = () => {
                             ...prevData,
                             cardNumber: value,
                           }));
+                          clearError("cardNumber");
                         }}
                         maxLength={19}
                         placeholder="16-digit card number"
                         required
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                        {...ariaInvalid(Boolean(errors.cardNumber), FIELD_ERROR_IDS.cardNumber)}
                       />
                       <FaCreditCard
                         className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
                         aria-hidden="true"
                       />
                     </div>
+                    {errors.cardNumber && (
+                      <p id={FIELD_ERROR_IDS.cardNumber} className="mt-1 text-xs text-red-600">
+                        {errors.cardNumber}
+                      </p>
+                    )}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-expiry-date" className="block text-gray-700">
@@ -326,6 +485,7 @@ const Checkout = () => {
                         id="checkout-expiry-date"
                         type="text"
                         name="expiryDate"
+                        autoComplete="off"
                         value={formData.expiryDate}
                         onChange={(e) => {
                           let { value } = e.target;
@@ -344,17 +504,24 @@ const Checkout = () => {
                             ...prevData,
                             expiryDate: value,
                           }));
+                          clearError("expiryDate");
                         }}
                         placeholder="MM/YY"
                         maxLength={5}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
+                        {...ariaInvalid(Boolean(errors.expiryDate), FIELD_ERROR_IDS.expiryDate)}
                       />
                       <BsCalendarDate
                         className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
                         aria-hidden="true"
                       />
                     </div>
+                    {errors.expiryDate && (
+                      <p id={FIELD_ERROR_IDS.expiryDate} className="mt-1 text-xs text-red-600">
+                        {errors.expiryDate}
+                      </p>
+                    )}
                   </div>
 
                   <div className="mb-4">
@@ -366,6 +533,7 @@ const Checkout = () => {
                         id="checkout-cvv"
                         type="text"
                         name="cvv"
+                        autoComplete="off"
                         value={formData.cvv}
                         onChange={(e) => {
                           let { value } = e.target;
@@ -377,17 +545,24 @@ const Checkout = () => {
                             ...prevData,
                             cvv: value,
                           }));
+                          clearError("cvv");
                         }}
                         placeholder="CVV"
                         maxLength={4}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
+                        {...ariaInvalid(Boolean(errors.cvv), FIELD_ERROR_IDS.cvv)}
                       />
                       <FaCreditCard
                         className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
                         aria-hidden="true"
                       />
                     </div>
+                    {errors.cvv && (
+                      <p id={FIELD_ERROR_IDS.cvv} className="mt-1 text-xs text-red-600">
+                        {errors.cvv}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button

@@ -51,6 +51,26 @@ describe("Accessibility - Color Contrast & Luminance (#39)", () => {
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
+
+  it("fails closed on unparseable colours instead of treating them as black (#605)", () => {
+    expect(Number.isNaN(getRelativeLuminance("not-a-color"))).toBe(true);
+    expect(Number.isNaN(getRelativeLuminance("#12"))).toBe(true);
+    expect(Number.isNaN(getRelativeLuminance("#gggggg"))).toBe(true);
+
+    // The old behaviour defaulted an invalid colour to luminance 0, so this
+    // reported a passing 21:1 ratio against white for input it could not read.
+    expect(meetsContrastRequirement("not-a-color", "#ffffff")).toBe(false);
+    expect(meetsContrastRequirement("#ffffff", "not-a-color")).toBe(false);
+    expect(meetsContrastRequirement("not-a-color", "#ffffff", true)).toBe(false);
+  });
+
+  it("leaves valid colours unchanged (#605)", () => {
+    expect(getRelativeLuminance("#000000")).toBe(0);
+    expect(getRelativeLuminance("#ffffff")).toBeCloseTo(1, 5);
+    expect(meetsContrastRequirement("#000000", "#ffffff")).toBe(true);
+    expect(meetsContrastRequirement("#ffffff", "#000000")).toBe(true);
+    expect(meetsContrastRequirement("#828282", "#ffffff", true)).toBe(true);
+  });
 });
 
 describe("Accessibility - DOM and ARIA Helpers", () => {
