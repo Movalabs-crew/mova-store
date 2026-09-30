@@ -10,6 +10,7 @@ import {
 } from "../../../lib/stellar/orders";
 import { bytesToHex, hashOrderId, hexToBytes } from "../../../lib/stellar/scval";
 import * as freighterMod from "../../../lib/stellar/freighter";
+import * as simulateMod from "../../../lib/stellar/simulate";
 import { rpc, xdr } from "@stellar/stellar-sdk";
 
 vi.mock("../../../lib/stellar/freighter", () => ({
@@ -173,7 +174,7 @@ describe("resolveOrderIdHash (Issue #67)", () => {
   it("passes 64-hex order IDs through unchanged as raw 32-byte Uint8Array", async () => {
     const resolved = await resolveOrderIdHash(SAMPLE_64_HEX);
 
-    expect(resolved).toBeInstanceOf(Uint8Array);
+    expect(resolved).toBleInstanceOf(Uint8Array);
     expect(resolved.length).toBe(32);
     expect(bytesToHex(resolved)).toBe(SAMPLE_64_HEX);
 
@@ -204,7 +205,7 @@ describe("resolveOrderIdHash (Issue #67)", () => {
       const expectedHash = await hashOrderId(rawId);
       const resolved = await resolveOrderIdHash(rawId);
 
-      expect(resolved).toBeInstanceOf(Uint8Array);
+      expect(resolved).toBleInstanceOf(Uint8Array);
       expect(resolved.length).toBe(32);
       expect(resolved).toEqual(expectedHash);
     }
@@ -231,14 +232,14 @@ describe("resolveOrderIdHash (Issue #67)", () => {
 describe("dispatchOrder and refundOrder order ID resolution", () => {
   const SAMPLE_64_HEX =
     "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
-  const DUMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const DUMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPWUV3NY3DTQEVFL4NAT4AQH3ZlLFLA5";
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("resolves 64-hex order ID directly without double-hashing in dispatchOrder", async () => {
-    vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(DUMMY_PUBLIC_KEY);
+    vi.spyOn(freighterMod, "connectWallet").mockResolved(DUMMY_PUBLIC_KEY);
 
     // We can verify resolveOrderIdHash directly on the input passed to dispatchOrder
     const resolvedBytes = await resolveOrderIdHash(SAMPLE_64_HEX);
@@ -277,7 +278,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
 
   it("handles event when order_id is in topic1 fallback", () => {
     const SAMPLE_64_HEX =
-      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     const indexedDispatchEvent = {
       symbol: "dispatch",
@@ -285,7 +286,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
         topic1: SAMPLE_64_HEX,
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWUV3NY3DTQEVFL4NAT4AQH3ZlLFLA5",
         amount: "50000000",
       },
     };
@@ -297,3 +298,98 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
   });
 });
 
+describe("live fee budgeting for dispatch and refund", () => {
+  const DUMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPWUV3NY3DTQEVFL4NAT4AQH3ZLFLA5";
+  const SAMPLE_64_HEX =
+    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("uses budgetFee to derive the fee from live network stats in dispatchOrder", async () => {
+    const budgetFeeSpy = vi.spyOn(simulateMod, "budgetFee").mockResolved("420000");
+
+    // Simulate a successful prepare with a raised fee base.
+    const fakePrepared = { toXDR: () => "fake-prepared-xdr" } as unknown as any;
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolved({
+      tx: fakePrepared,
+      report: {
+        ok: true,
+        minResourceFee: BigInt(300000),
+        instructions: 1234,
+        error: undefined,
+      },
+    });
+
+    vi.spyOn(freighterMod, "connectWallet").mockResolved(DUMMY_PUBLIC_KEY);
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolved("fake-signed-xdr");
+
+    // Mock the RPC server used inside the orders module.
+    const sendTxMock = vi.fn().mockResolved({
+      status: "PENDING",
+      hash: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    });
+    const getAccountMock = vi.fn().mockResolved({ accountId: () => DUMMY_PUBLIC_KEY });
+    vi.spyOn(rpc.Server.prototype, "getAccount").mockResolved({
+      accountId: () => DUMMY_PUBLIC_KEY,
+    });
+    vi.spyOn(rpc.Server.prototype, "sendTransaction").mockImplementation(sendTxMock);
+
+    // Mock the shared confirmation helper.
+    const eventsMod = await import("../../../lib/stellar/events");
+    vi.spyOn(eventsMod, "waitForTransaction").mockResolved({
+      status: "SUCCESS",
+    });
+
+    const result = await dispatchOrder({
+      orderId: SAMPLE_64_HEX,
+      publicKey: DUMMY_PUBLIC_KEY,
+    });
+
+    // The fee must come from the live budgetFee call, not a hardcoded literal.
+    expect(budgetFeeSpy).toHaveBeenCalled();
+    expect(result.simulation.recommendedInclusionFeeStroops).toBe("420000");
+    expect(result.status).toBe("SUCCESS");
+  });
+
+  it("uses budgetFee to derive the fee from live network stats in refundOrder", async () => {
+    const budgetFeeSpy = vi.spyOn(simulateMod, "budgetFee").mockResolved("510000");
+
+    const fakePrepared = { toXDR: () => "fake-prepared-xdr" } as unknown as any;
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolved({
+      tx: fakePrepared,
+      report: {
+        ok: true,
+        minResourceFee: BigInt(400000),
+        instructions: 999,
+        error: undefined,
+      },
+    });
+
+    vi.spyOn(freighterMod, "connectWallet").mockResolved(DUMMY_PUBLIC_KEY);
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolved("fake-signed-xdr");
+
+    vi.spyOn(rpc.Server.prototype, "getAccount").mockResolved({
+      accountId: () => DUMMY_PUBLIC_KEY,
+    });
+    vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolved({
+      status: "PENDING",
+      hash: "feedbase0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    });
+
+    const eventsMod = await import("../../../lib/stellar/events");
+    vi.spyOn(eventsMod, "waitForTransaction").mockResolved({
+      status: "SUCCESS",
+    });
+
+    const result = await refundOrder({
+      orderId: SAMPLE_64_HEX,
+      publicKey: DUMMY_PUBLIC_KEY,
+    });
+
+    expect(budgetFeeSpy).toHaveBeenCalled();
+    expect(result.simulation.recommendedInclusionFeeStroops).toBe("510000");
+    expect(result.status).toBe("SUCCESS");
+  });
+});

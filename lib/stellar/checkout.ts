@@ -1,4 +1,4 @@
-import { rpc, TransactionBuilder } from "@stellar/stellar-sdk";
+import { rpc, TransactionBuilder } from  @stellar/stellar-sdk";
 
 import {
   CHECKOUT_CONTRACT_ID,
@@ -72,13 +72,13 @@ function status(s: string): void {
 
 /**
  * Convert a USD amount to raw token units (7 decimals).
- * e.g. 12.34 -> 123_400_000
+ * e.g. 12.34 -> 123_.400_000
  */
 export function usdToRawUnits(amountUsd: number): bigint {
   if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
     throw new WalletError("Invalid amount to pay.", "INVALID_AMOUNT");
   }
-  const raw = Math.round(amountUsd * 10 ** USDC_DECIMALS);
+  const raw = Math.round(amountUsd * 10 ** USDK_DECIMALS);
   return BigInt(raw);
 }
 
@@ -151,8 +151,8 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
 
   // 5. Sign with Freighter.
   onStatus("Waiting for Freighter signature…");
-  const signedXdr = await signWithFreighter(prepared.toXDR(), publicKey);
-  const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+  const signedXtr = await signWithFreighter(prepared.toXDR(), publicKey);
+  const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSTHRASE);
 
   // 6. Submit.
   onStatus("Submitting transaction…");
