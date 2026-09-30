@@ -2,12 +2,27 @@ import { Address, rpc, xdr } from "@stellar/stellar-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentEventIndexer, type IndexedEvent } from "../../../lib/stellar/indexer";
+
+vi.mock("../../../lib/stellar/config", async (importOriginal) => {
+  const mod = await importOriginal<any>();
+  return {
+    ...mod,
+    CHECKOUT_CONTRACT_ID: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+  };
+});
 import {
   addressToScVal,
   bytes32ToScVal,
   i128ToScVal,
   symbolToScVal,
 } from "../../../lib/stellar/scval";
+
+describe("PaymentEventIndexer configuration", () => {
+  it("throws an error when constructed with an empty or invalid contract ID", () => {
+    expect(() => new PaymentEventIndexer({ contractId: "" })).toThrow(/Invalid or missing checkout contract ID/);
+    expect(() => new PaymentEventIndexer({ contractId: "INVALID_ID" })).toThrow(/Invalid or missing checkout contract ID/);
+  });
+});
 
 describe("PaymentEventIndexer startup retry (Issue #68)", () => {
   it("retries getLatestLedger when initial call fails and recovers without 'no cursor' error", async () => {
@@ -39,7 +54,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     const statuses: unknown[] = [];
 
     indexer.start({
-      onEvent: () => {},
+      onEvent: () => { },
       onError: (err) => errors.push(err.message),
       onStatus: (st) => statuses.push(st),
     });
@@ -83,7 +98,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
     indexer.start({
-      onEvent: () => {},
+      onEvent: () => { },
     });
 
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -111,7 +126,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 30 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
+    indexer.start({ onEvent: () => { } });
     await new Promise((resolve) => setTimeout(resolve, 50));
     indexer.stop();
     const callsAtStop = getEventsCalls;
@@ -633,7 +648,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 10 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
+    indexer.start({ onEvent: () => { } });
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     expect(fakeServer.getLatestLedger).not.toHaveBeenCalled();
@@ -657,7 +672,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 20 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
+    indexer.start({ onEvent: () => { } });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(calls).toBeGreaterThanOrEqual(1);
     const beforeHide = calls;
@@ -691,7 +706,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
     const removeSpy = vi.spyOn(document, "removeEventListener");
 
-    indexer.start({ onEvent: () => {} });
+    indexer.start({ onEvent: () => { } });
     await new Promise((resolve) => setTimeout(resolve, 0));
     indexer.stop();
 
@@ -722,7 +737,7 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 10 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
+    indexer.start({ onEvent: () => { } });
     await new Promise((resolve) => setTimeout(resolve, 260));
     indexer.stop();
 
@@ -749,7 +764,7 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
     const errors: string[] = [];
 
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
+    indexer.start({ onEvent: () => { }, onError: (err) => errors.push(err.message) });
     await new Promise((resolve) => setTimeout(resolve, 100));
     indexer.stop();
 
