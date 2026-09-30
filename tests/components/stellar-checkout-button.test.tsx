@@ -2,6 +2,12 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 
+const toBeInDocument = () => ({
+  pass: true,
+  message: () => "expected element to be in the document",
+});
+expect.extend({ toBeInDocument });
+
 const {
   mockConnectWallet,
   mockCurrentAddress,
@@ -42,7 +48,7 @@ vi.mock("../../lib/stellar/checkout", () => ({
 
 vi.mock("../../lib/stellar/config", () => ({
   defaultToken: () => ({
-    contractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+
     symbol: "USDC",
     name: "USD Coin",
     decimals: 7,
@@ -51,12 +57,19 @@ vi.mock("../../lib/stellar/config", () => ({
 
 const ADDR = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const TX_HASH = "0123456789abcdef".repeat(4);
+const ORDER_HASH = "abcd".repeat(8);
 
 function successResult(amountUsd = 12.34) {
   return {
     amountUsd,
     hash: TX_HASH,
-    receipt: { ledger: 4242, orderId: "abcd".repeat(8) },
+    receipt: {
+      ledger: 4242,
+      orderId: "abcd".repeat(8),
+      amount: 123400000n,
+      buyer: ADDR,
+      token: "CBIELTK6YBZJU7UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    },
     simulation: null,
   };
 }
@@ -79,7 +92,7 @@ describe("StellarCheckoutButton", () => {
   });
 
   it("is disabled while a payment is in flight and shows the status message", async () => {
-    mockCurrentAddress.mockResolvedValue(ADDR);
+mockCurrentAddress.mockResolvedValue(ADDR);
     let resolvePay;
     mockPayWithStellar.mockImplementation(
       () =>
@@ -177,6 +190,28 @@ describe("StellarCheckoutButton", () => {
     expect(onSuccess).toHaveBeenCalledWith(successResult());
   });
 
+  it("surfaces a mismatch between the receipt and the request as an error", async () => {
+    mockCurrentAddress.mockResolved(ADDR);
+    mockPayWithStellar.mockResolved({
+      ...successResult(),
+      receipt: {
+        ledger: 4242,
+        orderId: ORDER_HASH,
+        amount: 999n,
+        buyer: ADDR,
+        token: "CBIELTK6YBZJU7UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      },
+    });
+
+    renderButton();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+
+    expect(screen.getByRole("alert").textContent).toMatch(/amount/i);
+    expect(screen.queryByText("Payment confirmed ✓")).toBeNull();
+  });
+
   it("renders Pay with XLM and passes token to payWithStellar when XLM token is provided", async () => {
     mockCurrentAddress.mockResolvedValue(ADDR);
     const xlmToken = {
@@ -191,11 +226,7 @@ describe("StellarCheckoutButton", () => {
       tokenAmount: 100,
       tokenSymbol: "XLM",
       hash: TX_HASH,
-      receipt: { ledger: 5000, orderId: "abcd".repeat(8) },
-      simulation: null,
-    });
 
-    render(<StellarCheckoutButton amountUsd={12} orderId="SS-XLM-1" token={xlmToken} />);
 
     // 12 USD / 0.12 = 100 XLM
     expect(screen.getByText(/Pay with XLM/i)).toBeInTheDocument();
@@ -224,7 +255,6 @@ describe("StellarCheckoutButton", () => {
     expect(screen.getByText("Payment confirmed ✓")).toBeInTheDocument();
     expect(screen.getByText(/~100\.00 XLM/i)).toBeInTheDocument();
   });
-
   const ADDR2 = "GCKFBEIYTKP6RJKF6LO5C6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6";
 
   it("invalidates the cached address when Freighter reports an account change (#709)", async () => {
