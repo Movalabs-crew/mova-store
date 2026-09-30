@@ -186,8 +186,17 @@ export async function getTrustline(
       balanceRaw: BigInt(res.balanceEntry.amount),
       authorized: res.balanceEntry.authorized,
     };
-  } catch {
-    return { hasTrustline: false, balanceRaw: BigInt(0), authorized: false };
+  } catch (err) {
+    if (isAccountMissingError(err)) {
+      return { hasTrustline: false, balanceRaw: BigInt(0), authorized: false };
+    }
+    if (err instanceof WalletError) {
+      throw err;
+    }
+    throw new WalletError(
+      `RPC error retrieving trustline: ${err instanceof Error ? err.message : String(err)}`,
+      "RPC_ERROR"
+    );
   }
 }
 
