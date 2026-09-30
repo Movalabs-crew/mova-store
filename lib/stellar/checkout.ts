@@ -48,10 +48,6 @@ export interface PayResult {
   };
 }
 
-function status(s: string): void {
-  console.log(`[stellar] ${s}`);
-}
-
 /**
  * Convert a USD amount to raw token units (7 decimals).
  * e.g. 12.34 -> 123_400_000
@@ -77,7 +73,10 @@ export async function orderIdHash(orderId: string): Promise<string> {
  * sign -> submit -> wait -> decode event.
  */
 export async function payWithStellar(options: PayOptions): Promise<PayResult> {
-  const { amountUsd, orderId, publicKey, onStatus = status } = options;
+  // The default progress sink is intentionally silent: library code must not
+  // write payment state to the console in production (issue #718). Callers that
+  // want progress updates pass an explicit `onStatus` handler.
+  const { amountUsd, orderId, publicKey, onStatus = () => undefined } = options;
   const token = options.token ?? defaultToken();
 
   if (!CHECKOUT_CONTRACT_ID) {
