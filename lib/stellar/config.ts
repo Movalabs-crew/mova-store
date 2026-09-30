@@ -42,12 +42,22 @@ export const TESTNET_USDC_CONTRACT_ID =
   "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 // Set NEXT_PUBLIC_USDC_CONTRACT_ID to the mainnet USDC SAC contract id.
 export const USDC_CONTRACT_ID =
-  process.env.NEXT_PUBLIC_USDC_CONTRACT_ID ?? TESTNET_USDC_CONTRACT_ID;
+  process.env.NEXT_PUBLIC_USDC_CONTRACT_ID ??
+  (IS_MAINNET
+    ? (() => {
+      throw new Error("NEXT_PUBLIC_USDC_CONTRACT_ID is required on mainnet");
+    })()
+    : TESTNET_USDC_CONTRACT_ID);
 
 // Testnet USDC is issued by Circle's classic testnet issuer (trustline only
 // needed for non-native assets; native XLM needs no trustline).
 export const TESTNET_USDC_ISSUER =
   "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+export const MAINNET_USDC_ISSUER =
+  "GA5ZSEJYB37JRC52ZMRGKEZ2O6TKTHTEBZ5MM2KHYL3Q6XIXT6E7BW5U";
+export const USDC_ISSUER =
+  process.env.NEXT_PUBLIC_USDC_ISSUER ??
+  (IS_MAINNET ? MAINNET_USDC_ISSUER : TESTNET_USDC_ISSUER);
 
 // Native XLM Stellar Asset Contract ids.
 //
@@ -87,7 +97,7 @@ export const SUPPORTED_TOKENS: TokenConfig[] = [
     name: "USD Coin",
     decimals: 7,
     assetCode: "USDC",
-    assetIssuer: TESTNET_USDC_ISSUER,
+    assetIssuer: USDC_ISSUER,
   },
   {
     contractId: NATIVE_ASSET_CONTRACT_ID,

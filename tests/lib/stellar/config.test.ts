@@ -81,4 +81,34 @@ describe("lib/stellar/config — env overrides", () => {
     expect(mod2.defaultToken().contractId).toBe("ANOTHER_CUSTOM_ID");
     expect(mod2.defaultToken().contractId).not.toBe(originalUsdc);
   });
+
+  it("throws when NEXT_PUBLIC_USDC_CONTRACT_ID is unset on mainnet", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", "");
+    delete process.env.NEXT_PUBLIC_USDC_CONTRACT_ID;
+
+    await expect(import("../../../lib/stellar/config")).rejects.toThrow("NEXT_PUBLIC_USDC_CONTRACT_ID is required on mainnet");
+  });
+
+  it("resolves USDC issuer dynamically per-network", async () => {
+    // 1. Testnet default
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    const modTest = await import("../../../lib/stellar/config");
+    expect(modTest.SUPPORTED_TOKENS[0].assetIssuer).toBe("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
+
+    vi.resetModules();
+
+    // 2. Mainnet (with custom contract to avoid the throw)
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", "CUSTOM_MAINNET_USDC");
+    const modMain = await import("../../../lib/stellar/config");
+    expect(modMain.SUPPORTED_TOKENS[0].assetIssuer).toBe("GA5ZSEJYB37JRC52ZMRGKEZ2O6TKTHTEBZ5MM2KHYL3Q6XIXT6E7BW5U");
+
+    vi.resetModules();
+
+    // 3. Environment override
+    vi.stubEnv("NEXT_PUBLIC_USDC_ISSUER", "CUSTOM_ISSUER");
+    const modCustom = await import("../../../lib/stellar/config");
+    expect(modCustom.SUPPORTED_TOKENS[0].assetIssuer).toBe("CUSTOM_ISSUER");
+  });
 });
