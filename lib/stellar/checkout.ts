@@ -48,8 +48,16 @@ export interface PayResult {
   };
 }
 
+/**
+ * Default progress reporter for callers that don't pass their own `onStatus`.
+ * It only writes to the console when an explicit debug flag is set, so a
+ * production payment never leaks internal payment state to the browser
+ * console. See issue #718.
+ */
 function status(s: string): void {
-  console.log(`[stellar] ${s}`);
+  if (process.env.NEXT_PUBLIC_STELLAR_DEBUG === "true") {
+    console.log(`[stellar] ${s}`);
+  }
 }
 
 /**

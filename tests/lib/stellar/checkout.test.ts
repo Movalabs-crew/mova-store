@@ -38,19 +38,16 @@ describe("usdToRawUnits", () => {
     ["Infinity", Number.POSITIVE_INFINITY],
   ];
 
-  it.each(cases)(
-    "throws WalletError with code INVALID_AMOUNT for %s",
-    (_label, value) => {
-      let caught: unknown;
-      try {
-        usdToRawUnits(value);
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBeInstanceOf(WalletError);
-      expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  it.each(cases)("throws WalletError with code INVALID_AMOUNT for %s", (_label, value) => {
+    let caught: unknown;
+    try {
+      usdToRawUnits(value);
+    } catch (err) {
+      caught = err;
     }
-  );
+    expect(caught).toBeInstanceOf(WalletError);
+    expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  });
 });
 
 describe("orderIdHash", () => {
@@ -79,7 +76,9 @@ describe("payWithStellar", () => {
   it("throws CONTRACT_NOT_CONFIGURED if CHECKOUT_CONTRACT_ID is empty", async () => {
     vi.resetModules();
     vi.doMock("../../../lib/stellar/config", async () => {
-      const actual = await vi.importActual<typeof import("../../../lib/stellar/config")>("../../../lib/stellar/config");
+      const actual = await vi.importActual<typeof import("../../../lib/stellar/config")>(
+        "../../../lib/stellar/config"
+      );
       return {
         ...actual,
         CHECKOUT_CONTRACT_ID: "",
@@ -97,6 +96,43 @@ describe("payWithStellar", () => {
     });
     vi.doUnmock("../../../lib/stellar/config");
     vi.resetModules();
+  });
+
+  it("logs nothing to the console by default (production payment)", async () => {
+    delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(freighterMod, "ensureNetwork").mockRejectedValue(new Error("halt before network"));
+
+    await expect(
+      payWithStellar({
+        amountUsd: 1,
+        orderId: "ORD-718-MUTE",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toThrow("halt before network");
+
+    expect(logSpy).not.toHaveBeenCalled();
+    logSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
+
+  it("logs progress only when NEXT_PUBLIC_STELLAR_DEBUG is enabled", async () => {
+    process.env.NEXT_PUBLIC_STELLAR_DEBUG = "true";
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(freighterMod, "ensureNetwork").mockRejectedValue(new Error("halt before network"));
+
+    await expect(
+      payWithStellar({
+        amountUsd: 1,
+        orderId: "ORD-718-DEBUG",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toThrow("halt before network");
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[stellar]"));
+    delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    logSpy.mockRestore();
+    vi.restoreAllMocks();
   });
 
   it("executes full successful checkout payment flow", async () => {
