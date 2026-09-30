@@ -58,14 +58,14 @@ export async function ensureNetwork(): Promise<string> {
     throw new WalletError(res.error.toString(), "FREIGHTER_NETWORK_ERROR");
   }
   const detected = res.network;
-  // Freighter reports networks as "TESTNET" / "PUBLIC" / "STANDALONE".
-  if (
-    (NETWORK === "testnet" && detected.toUpperCase() !== "TESTNET") ||
-    (NETWORK === "mainnet" && detected.toUpperCase() !== "PUBLIC")
-  ) {
+  // Freighter reports networks as "TESTNET" / "PUBLIC" / "STANDALONE", but the
+  // name is only a label. The value that determines whether a signed envelope
+  // is valid is the passphrase, so validate that instead of the label.
+  const passphrase = res.networkPassphrase;
+  if (passphrase !== NETWORK_PASSPHRASE) {
     throw new WalletError(
-      `Freighter is on "${detected}" but this store expects "${NETWORK}". ` +
-        "Switch your Freighter network and try again.",
+      `Freighter is on network "${detected}" (${passphrase || "unknown passphrase"}) but this store expects ` +
+        `"${NETWORK}" (${NETWORK_PASSPHRASE}). Switch your Freighter network and try again.`,
       "WRONG_NETWORK"
     );
   }

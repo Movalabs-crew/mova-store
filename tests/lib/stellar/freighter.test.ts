@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
+import { Networks } from "@stellar/stellar-sdk";
 
 vi.mock("@stellar/freighter-api", () => ({
   getAddress: vi.fn().mockResolvedValue({ address: "G" + "A".repeat(55) }),
-  getNetwork: vi.fn().mockResolvedValue({ passphrase: "Test SDF" }),
+  getNetwork: vi.fn().mockResolvedValue({
+    network: "TESTNET",
+    networkPassphrase: "Test SDF Network ; September 2015",
+  }),
   isConnected: vi.fn().mockResolvedValue({ isConnected: true }),
   requestAccess: vi.fn().mockResolvedValue({ success: true, addresses: [] }),
   signTransaction: vi.fn().mockResolvedValue({ signedTxXdr: "AQ" }),
 }));
 
-import { WalletError, shortAddress } from "../../../lib/stellar/freighter";
+import { getNetwork } from "@stellar/freighter-api";
+import { WalletError, shortAddress, ensureNetwork } from "../../../lib/stellar/freighter";
 
 const ADDRESS56 = "G" + "A".repeat(55);
 
@@ -45,11 +50,48 @@ describe("WalletError", () => {
   });
 
   it("preserves custom codes used by the UI", () => {
-    expect(
-      new WalletError("nope", "FREIGHTER_NOT_FOUND").code
-    ).toBe("FREIGHTER_NOT_FOUND");
-    expect(new WalletError("bad", "INVALID_AMOUNT").code).toBe(
-      "INVALID_AMOUNT"
-    );
+    expect(new WalletError("nope", "FREIGHTER_NOT_FOUND").code).toBe("FREIGHTER_NOT_FOUND");
+    expect(new WalletError("bad", "INVALID_AMOUNT").code).toBe("INVALID_AMOUNT");
+  });
+});
+
+describe("ensureNetwork", () => {
+  it("accepts a wallet whose passphrase matches the configured network", async () => {
+    vi.mocked(getNetwork).mockResolvedValueOnce({
+      network: "TESTNET",
+      networkPassphrase: Networks.TESTNET,
+    });
+    await expect(ensureNetwork()).resolves.toBe("TESTNET");
+  });
+
+  it("rejects a wallet on a different passphrase even when the label looks right", async () => {
+    vi.mocked(getNetwork).mockResolvedValueOnce({
+      network: "PUBLIC",
+      networkPassphrase: Networks.PUBLIC,
+    });
+    await expect(ensureNetwork()).rejects.toMatchObject({
+      code: "WRONG_NETWORK",
+    });
+  });
+
+  it("rejects an unsupported network (standalone) instead of passing", async () => {
+    vi.mocked(getNetwork).mockResolvedValueOnce({
+      network: "STANDALONE",
+      networkPassphrase: "Standalone Network ; February 2017",
+    });
+    await expect(ensureNetwork()).rejects.toMatchObject({
+      code: "WRONG_NETWORK",
+    });
+  });
+
+  it("surfaces a Freighter network error", async () => {
+    vi.mocked(getNetwork).mockResolvedValueOnce({
+      network: "TESTNET",
+      networkPassphrase: Networks.TESTNET,
+      error: { message: "extension unavailable" } as never,
+    });
+    await expect(ensureNetwork()).rejects.toMatchObject({
+      code: "FREIGHTER_NETWORK_ERROR",
+    });
   });
 });
