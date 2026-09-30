@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Account, Keypair, TransactionBuilder, Networks, rpc } from "@stellar/stellar-sdk";
 
 vi.mock("@stellar/freighter-api", () => ({
@@ -252,5 +252,58 @@ describe("payWithStellar", () => {
     });
 
     vi.restoreAllMocks();
+  });
+});
+
+describe("payWithStellar console output", () => {
+  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const previousDebugFlag = process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+
+  const stellarLogCalls = (calls: unknown[][]) =>
+    calls.filter(([message]) => typeof message === "string" && message.startsWith("[stellar]"));
+
+  afterEach(() => {
+    if (previousDebugFlag === undefined) {
+      delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    } else {
+      process.env.NEXT_PUBLIC_STELLAR_DEBUG = previousDebugFlag;
+    }
+    vi.restoreAllMocks();
+  });
+
+  it("writes no [stellar] output for a production payment", async () => {
+    delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(freighterMod, "ensureNetwork").mockRejectedValue(
+      new WalletError("stop after first status", "STOP")
+    );
+
+    await expect(
+      payWithStellar({
+        amountUsd: 1,
+        orderId: "ORD-NO-LOGS",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toBeInstanceOf(WalletError);
+
+    expect(stellarLogCalls(logSpy.mock.calls)).toHaveLength(0);
+  });
+
+  it("writes [stellar] output when NEXT_PUBLIC_STELLAR_DEBUG=1", async () => {
+    process.env.NEXT_PUBLIC_STELLAR_DEBUG = "1";
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(freighterMod, "ensureNetwork").mockRejectedValue(
+      new WalletError("stop after first status", "STOP")
+    );
+
+    await expect(
+      payWithStellar({
+        amountUsd: 1,
+        orderId: "ORD-DEBUG-LOGS",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toBeInstanceOf(WalletError);
+
+    expect(stellarLogCalls(logSpy.mock.calls).length).toBeGreaterThan(0);
   });
 });

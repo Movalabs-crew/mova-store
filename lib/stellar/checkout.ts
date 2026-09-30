@@ -48,7 +48,18 @@ export interface PayResult {
   };
 }
 
+/**
+ * Whether step-by-step payment status is written to the console.
+ *
+ * Off unless explicitly opted in, so production payments never emit library
+ * output. Set NEXT_PUBLIC_STELLAR_DEBUG=1 while debugging locally.
+ */
+function isDebugLoggingEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_STELLAR_DEBUG === "1";
+}
+
 function status(s: string): void {
+  if (!isDebugLoggingEnabled()) return;
   console.log(`[stellar] ${s}`);
 }
 
