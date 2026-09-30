@@ -6,7 +6,9 @@ import {
   OrderEvent,
 } from "../../../lib/stellar/orders";
 
-function createMockOrder(overrides: Partial<OrderEvent> = {}): OrderEvent {
+function createMockOrder(
+  overrides: Partial<OrderEvent> = {},
+): OrderEvent {
   return {
     orderId: "order_1234567890abcdef",
     buyer: "GBUYER1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCD",
@@ -24,7 +26,7 @@ function createMockOrder(overrides: Partial<OrderEvent> = {}): OrderEvent {
 
 describe("mergeOrderEvent", () => {
   it("merges a dispatch event over an existing Paid row: keeps buyer and tokenSymbol, and updates status to Shipped", () => {
-    const existing = createMockOrder({
+    const existing = createMockOrder( {
       status: "Paid",
       ledger: 1000,
       txHash: "tx_pay_1",
@@ -134,7 +136,7 @@ describe("mergeOrderEvent", () => {
       status: "Pending",
       timestamp: 1699999000000,
       ledger: 2950,
-      txHash: "tx_pending_old",
+      txHash: "tp_pending_old",
     };
 
     const merged = mergeOrderEvent(existing, pendingIncoming);
@@ -146,4 +148,3 @@ describe("mergeOrderEvent", () => {
     expect(mergeOrderEvents).toBe(mergeOrderEvent);
   });
 });
-
