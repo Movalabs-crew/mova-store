@@ -1,1 +1,354 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGl0LCBleHBlY3QsIHZpIH0gZnJvbSAidml0ZXN0IjsKaW1wb3J0IHsKICBmb3JtYXRBbW91bnQsCiAgTUlOX05BVElWRV9SRVNFUlZFLAogIGxvYWRBY2NvdW50LAogIGdldE5hdGl2ZUJhbGFuY2UsCiAgaXNBY2NvdW50TWlzc2luZ0Vycm9yLAogIGdldFRydXN0bGluZSwKfSBmcm9tICIuLi8uLi8uLi9saWIvc3RlbGxhci9hY2NvdW50IjsKaW1wb3J0IHsgRlJJRU5EQk9UX1VSTCB9IGZyb20gIi4uLy4uLy4uL2xpYi9zdGVsbGFyL2NvbmZpZyI7CmltcG9ydCB7IFdhbGxldEVycm9yIH0gZnJvbSAiLi4vLi4vLi4vbGliL3N0ZWxsYXIvZnJlaWdodGVyIjsKaW1wb3J0IHsgcGFyc2VFcnJvciB9IGZyb20gIi4uLy4uLy4uL2xpYi9lcnJvcnMiOwoKZGVzY3JpYmUoImZvcm1hdEFtb3VudCIsICgpID0+IHsKICBpdCgiZm9ybWF0cyBNSU5fTkFUSVZFX1JFU0VSVkUgd2l0aCA3IGRlY2ltYWxzIGNvcnJlY3RseSIsICgpID0+IHsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoTUlOX05BVElWRV9SRVNFUlZFLCA3KSkudG9CZSgiMSIpOwogIH0pOwoKICBpdCgiZm9ybWF0cyBkZWNpbWFsIGFtb3VudHMgd2l0aCBmcmFjdGlvbmFsIHBhcnRzIGNvcnJlY3RseSIsICgpID0+IHsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoMTIzNDAwMDAwbiwgNykpLnRvQmUoIjEyLjM0Iik7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KDVuLCA3KSkudG9CZSgiMC4wMDAwMDA1Iik7CiAgfSk7CgogIGl0KCJ0cmltcyB0cmFpbGluZyB6ZXJvcyBjbGVhbmx5IiwgKCkgPT4gewogICAgZXhwZWN0KGZvcm1hdEFtb3VudCgxMDAwMDAwMG4sIDcpKS50b0JlKCIxIik7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KDEwNTAwMDAwbiwgNykpLnRvQmUoIjEuMDUiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoMTAwMDAwMDFuLCA3KSkudG9CZSgiMS4wMDAwMDAxIik7CiAgfSk7CgogIGl0KCJoYW5kbGVzIG5lZ2F0aXZlIHZhbHVlcyB3aXRoIGEgbGVhZGluZyBtaW51cyBzaWduIiwgKCkgPT4gewogICAgZXhwZWN0KGZvcm1hdEFtb3VudCgtNTAwMDAwMDBuLCA3KSkudG9CZSgiLTUiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoLTEyMzQwMDAwMG4sIDcpKS50b0JlKCItMTIuMzQiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoLTVuLCA3KSkudG9CZSgiLTAuMDAwMDAwNSIpOwogIH0pOwoKICBpdCgiaGFuZGxlcyB6ZXJvIGNvcnJlY3RseSIsICgpID0+IHsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoMG4sIDcpKS50b0JlKCIwIik7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KDBuLCAwKSkudG9CZSgiMCIpOwogIH0pOwoKICBpdCgiaGFuZGxlcyBkZWNpbWFscyA9IDAiLCAoKSA9PiB7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KDQybiwgMCkpLnRvQmUoIjQyIik7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KDEwMG4sIDApKS50b0JlKCIxMDAiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoLTduLCAwKSkudG9CZSgiLTciKTsKICB9KTsKCiAgaXQoImhhbmRsZXMgaW50ZWdlcnMgZXhjZWVkaW5nIE51bWJlci5NQVhfU0FGRV9JTlRFR0VSIHdpdGhvdXQgcHJlY2lzaW9uIGxvc3MiLCAoKSA9PiB7CiAgICBjb25zdCBodWdlID0gMW4gPDwgODBuOwogICAgY29uc3QgZm9ybWF0dGVkID0gZm9ybWF0QW1vdW50KGh1Z2UsIDcpOwogICAgY29uc3QgZXhwZWN0ZWRJbnQgPSAoaHVnZSAvIDEwMDAwMDAwbi50b1N0cmluZygpOwogICAgY29uc3QgZXhwZWN0ZWRGcmFjID0gKGh1Z2UgJSAxMDAwMDAwMG4pLnRvU3RyaW5nKCkucGFkU3RhcnQoNywgIjAiKS5yZXBsYWNlKC8wKyQvLCAiIik7CiAgICBjb25zdCBleHBlY3RlZCA9IGV4cGVjdGVkRnJhYyA/IGAke2V4cGVjdGVkSW50fS4ke2V4cGVjdGVkRnJhY31gIDogZXhwZWN0ZWRJbnQ7CiAgICBleHBlY3QoZm9ybWF0dGVkKS50b0JlKGV4cGVjdGVkKTsKICB9KTsKCiAgaXQoInByZXNlcnZlcyBleGFjdCBwcmVjaXNpb24gYWJvdmUgMl41MyAoTnVtYmVyLk1BWF9TQUZFX0lOVEVHRVIgYm91bmRhcnkpIHdoZXJlIE51bWJlcigpIGxvc2VzIHByZWNpc2lvbiIsICgpID0+IHsKICAgIC8vIDJeNTMgKyAxID0gOTAwNzE5OTI1NDc0MDk5M24uIEluIElFRUUtNzU0IGRvdWJsZSwgTnVtYmVyKDkwMDcxOTkyNTQ3NDA5OTNuKSByb3VuZHMgZG93biB0byA5MDA3MTk5MjU0NzQwOTkyLgogICAgY29uc3QgYWJvdmVTYWZlID0gOTAwNzE5OTI1NDc0MDk5M247CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KGFib3ZlU2FmZSwgMCkpLnRvQmUoIjkwMDcxOTkyNTQ3NDA5OTMiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoYWJvdmVTYWZlLCA3KSkudG9CZSgiOTAwNzE5OTI1LjQ3NDA5OTMiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoLWFib3ZlU2FmZSwgNykpLnRvQmUoIi05MDA3MTk5MjUuNDc0MDk5MyIpOwoKICAgIC8vIDJeNTMgKyAzID0gOTAwNzE5OTI1NDc0MDk5NW4KICAgIGNvbnN0IGFib3ZlU2FmZTIgPSA5MDA3MTk5MjU0NzQwOTk1bjsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQoYWJvdmVTYWZlMiwgNykpLnRvQmUoIjkwMDcxOTkyNS40NzQwOTk1Iik7CiAgfSk7CgogIGl0KCJmb3JtYXRzIGV4YWN0IHZhbHVlcyBhY3Jvc3MgZWFjaCBkZWNpbWFsIGJvdW5kYXJ5IGZvciBudW1iZXJzIGFib3ZlIDJeNTMiLCAoKSA9PiB7CiAgICBjb25zdCByYXcgPSA5MDA3MTk5MjU0NzQwOTkzbjsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQocmF3LCAwKSkudG9CZSgiOTAwNzE5OTI1NDc0MDk5MyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChyYXcsIDEpKS50b0JlKCI5MDA3MTk5MjU0NzQwOTkuMyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChyYXcsIDIpKS50b0JlKCI5MDA3MTk5MjU0NzQwOS45MyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChyYXcsIDQpKS50b0JlKCI5MDA3MTk5MjU0NzQuMDk5MyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChyYXcsIDcpKS50b0JlKCI5MDA3MTk5MjUuNDc0MDk5MyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChyYXcsIDE1KSkudG9CZSgiOS4wMDcxOTkyNTQ3NDA5OTMiKTsKICAgIGV4cGVjdChmb3JtYXRBbW91bnQocmF3LCAxNikpLnRvQmUoIjAuOTAwNzE5OTI1NDc0MDk5MyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChyYXcsIDE4KSkudG9CZSgiMC4wMDkwMDcxOTkyNTQ3NDA5OTMiKTsKICB9KTsKCiAgaXQoImZvcm1hdHMgbGFyZ2UgU3RlbGxhciBpMTI4IGJvdW5kYXJ5IGFtb3VudHMgYWNjdXJhdGVseSB3aXRob3V0IHByZWNpc2lvbiBkZWdyYWRhdGlvbiIsICgpID0+IHsKICAgIGNvbnN0IEkxMjhfTUFYID0gKDFuIDw8IDEyN24pIC0gMW47IC8vIDE3MDE0MTE4MzQ2MDQ2OTIzMTczMTY4NzMwMzcxNTg4NDEwNTcyN24KICAgIGNvbnN0IEkxMjhfTUlOID0gLSgxbiA8PCAxMjduKTsgLy8gLTE3MDE0MTE4MzQ2MDQ2OTIzMTczMTY4NzMwMzcxNTg4NDEwNTcyOG4KCiAgICBleHBlY3QoZm9ybWF0QW1vdW50KEkxMjhfTUFYLCA3KSkudG9CZSgiMTcwMTQxMTgzNDYwNDY5MjMxNzMxNjg3MzAzNzE1ODguNDEwNTcyNyIpOwogICAgZXhwZWN0KGZvcm1hdEFtb3VudChJMTI4X01JTiwgNykpLnRvQmUoIi0xNzAxNDExODM0NjA0NjkyMzE3MzE2ODczMDM3MTU4OC40MTA1NzI4Iik7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KEkxMjhfTUFYLCAwKSkudG9CZSgiMTcwMTQxMTgzNDYwNDY5MjMxNzMxNjg3MzAzNzE1ODg0MTA1NzI3Iik7CiAgICBleHBlY3QoZm9ybWF0QW1vdW50KEkxMjhfTUlOLCAwKSkudG9CZSgiLTE3MDE0MTE4MzQ2MDQ2OTIzMTczMTY4NzMwMzcxNTg4NDEwNTcyOCIpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJpc0FjY291bnRNaXNzaW5nRXJyb3IiLCAoKSA9PiB7CiAgaXQoImlkZW50aWZpZXMgNDA0IHN0YXR1cyBhbmQgYWNjb3VudCBub3QgZm91bmQgbWVzc2FnZXMiLCAoKSA9PiB7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKHsgc3RhdHVzOiA0MDQgfSkpLnRvQmUodHJ1ZSk7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKHsgcmVzcG9uc2U6IHsgc3RhdHVzOiA0MDQgfSB9KSkudG9CZS h0cnVlKTsKICAgIGV4cGVjdChpc0FjY291bnRNaXNzaW5nRXJyb3IobmV3IEVycm9yKCJBY2NvdW50IG5vdCBmb3VuZCIpKSkudG9CZS h0cnVlKTsKICAgIGV4cGVjdChpc0FjY291bnRNaXNzaW5nRXJyb3IobmV3IEVycm9yKCJSZXNvdXJjZSBub3QgZm91bmQiKSkpLnRvQmUodHJ1ZSk7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKG5ldyBFcnJvcigiQWNjb3VudCBkb2VzIG5vdCBleGlzdCIpKSkudG9CZS h0cnVlKTsKICAgIGV4cGVjdChpc0FjY291bnRNaXNzaW5nRXJyb3IobmV3IEVycm9yKCJFcnJvciBjb2RlOiA0MDQiKSkpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJpZGVudGlmaWVzIG5ldHdvcmsgYW5kIFJQQyBvdXRhZ2VzIGFzIE5PVCBhY2NvdW50LW1pc3NpbmciLCAoKSA9PiB7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKG5ldyBFcnJvcigiTmV0d29yayBlcnJvciIpKSkudG9CZS hmYWxzZSk7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKG5ldyBFcnJvcigiZmV0Y2ggZmFpbGVkIikpKS50b0JlKGZhbHNlKTsKICAgIGV4cGVjdChpc0FjY291bnRNaXNzaW5nRXJyb3IobmV3IEVycm9yKCJjb25uZWN0IEVDT05OUkVGVVNFRCIpKSkudG9CZS hmYWxzZSk7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKG5ldyBFcnJvcigicmVxdWVzdCB0aW1lb3V0IikpKS50b0JlKGZhbHNlKTsKICAgIGV4cGVjdChpc0FjY291bnRNaXNzaW5nRXJyb3IobmV3IEVycm9yKCI1MDAgSW50ZXJuYWwgU2VydmVyIEVycm9yIikpKS50b0JlKGZhbHNlKTsKICAgIGV4cGVjdChpc0FjY291bnRNaXNzaW5nRXJyb3IobmV3IEVycm9yKCI1MDMgU2VydmljZSBVbmF2YWlsYWJsZSIpKSkudG9CZS hmYWxzZSk7CiAgICBleHBlY3QoaXNBY2NvdW50TWlzc2luZ0Vycm9yKG51bGwpKS50b0JlKGZhbHNlKTsKICB9KTsKfSk7CgpkZXNjcmliZSgibG9hZEFjY291bnQiLCAoKSA9PiB7CiAgY29uc3QgZHVtbXlQdWJsaWNLZXkgPSAiR0JCRDQ3SUY2TFdLN1A3TURFVlNDV1I3RFBVV1YzTlkzRFRRRVZGTDROQVQ0QVFIM1pMTEZMQTUiOwoKICBpdCgibmV2ZXIgY2FsbHMgZnJpZW5kYm90IGFuZCByZWplY3RzIHdoZW4gZ2V0QWNjb3VudCBmYWlscyB3aXRoIGEgbmV0d29yayBlcnJvciIsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IGZldGNoU3B5ID0gdmkuc3B5T24oZ2xvYmFsVGhpcywgImZldGNoIik7CgogICAgY29uc3Qgc3R1YlNlcnZlciA9IHsKICAgICAgZ2V0QWNjb3VudDogdmkuZm4oKS5tb2NrUmVqZWN0ZWRWYWx1ZShuZXcgRXJyb3IoImZldGNoIGZhaWxlZDogY29ubmVjdGlvbiByZWZ1c2VkIikpLAogICAgfTsKCiAgICBhd2FpdCBleHBlY3QobG9hZEFjY291bnQoc3R1YlNlcnZlciBhcyBuZXZlciwgZHVtbXlQdWJsaWNLZXksIHsgZnVuZDogdHJ1ZSB9KSkucmVqZWN0cy50b1Rocm93KAogICAgICAvUlBDIGVycm9yIGxvYWRpbmcgYWNjb3VudC8KICAgICk7CgogICAgZXhwZWN0KGZldGNoU3B5KS5ub3QudG9IYXZlQmVlbkNhbGxlZCgpOwogICAgZmV0Y2hTcHkubW9ja1Jlc3RvcmUoKTsKICB9KTsKCiAgaXQoInRyaWdnZXJzIGZyaWVuZGJvdCBmdW5kaW5nIGFuZCByZS1sb2FkcyBhY2NvdW50IHdoZW4gZ2V0QWNjb3VudCBmYWlscyB3aXRoIGFjY291bnQtbWlzc2luZyBlcnJvciIsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IGR1bW15QWNjb3VudCA9IHsgaWQ6IGR1bW15UHVibGljS2V5LCBzZXF1ZW5jZTogIjEiIH07CiAgICBjb25zdCBmZXRjaFNweSA9IHZpLnNweU9uKGdsb2JhbFRoaXMsICJmZXRjaCIpLm1vY2tSZXNvbHZlZFZhbHVlKHsKICAgICAgb2s6IHRydWUsCiAgICAgIHN0YXR1czogMjAwLAogICAgfSBhcyBSZXNwb25zZSk7CgogICAgY29uc3Qgc3R1YlNlcnZlciA9IHsKICAgICAgZ2V0QWNjb3VudDogdmkKICAgICAgICAuZm4oKQogICAgICAgIC5tb2NrUmVqZWN0ZWRWYWx1ZU9uY2UobmV3IEVycm9yKCJBY2NvdW50IG5vdCBmb3VuZCAoNDA0KSIpKQogICAgICAgIC5tb2NrUmVzb2x2ZWRWYWx1ZU9uY2UoZHVtbXlBY2NvdW50KSwKICAgIH07CgogICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgbG9hZEFjY291bnQoc3R1YlNlcnZlciBhcyBuZXZlciwgZHVtbXlQdWJsaWNLZXksIHsgZnVuZDogdHJ1ZSB9KTsKICAgIGV4cGVjdChyZXN1bHQuZnVuZGVkKS50b0JlKHRydWUpOwogICAgZXhwZWN0KHJlc3VsdC5hY2NvdW50KS50b0JlKGR1bW15QWNjb3VudCk7CiAgICBleHBlY3QoZmV0Y2hTcHkpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygxKTsKCiAgICAvLyBGcmllbmRib3QgaXMgYXNrZWQgZm9yIHRoaXMgZXhhY3QgcHVibGljIGtleSAoVVJMLWVuY29kZWQp4oCmCiAgICBleHBlY3QoZmV0Y2hTcHkpLnRvSGF2ZUJlZW5DYWxsZWRXaXRoKAogICAgICBgJHtGUklFTkRCT1RfVVJMfT9hZGRyPSR7ZW5jb2RlVVJJQ29tcG9uZW50KGR1bW15UHVibGljS2V5KX1gCiAgICApOwogICAgLy8g4oCmZXhhY3RseSBvbmNlLCBhbmQgaXQgcnVucyBiZXR3ZWVuIHRoZSBmYWlsZWQgbG9va3VwIGFuZCB0aGUgcmUtbG9hZDoKICAgIC8vIGEgc2Vjb25kIGdldEFjY291bnQgd2l0aG91dCBmdW5kaW5nIHdvdWxkIGp1c3QgbWlzcyBhZ2Fpbi4KICAgIGV4cGVjdChzdHViU2VydmVyLmdldEFjY291bnQpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygyKTsKICAgIGV4cGVjdChzdHViU2VydmVyLmdldEFjY291bnQpLnRvSGF2ZUJlZW5OdGhDYWxsZWRXaXRoKDEsIGR1bW15UHVibGljS2V5KTsKICAgIGV4cGVjdChzdHViU2VydmVyLmdldEFjY291bnQpLnRvSGF2ZUJlZW5OdGhDYWxsZWRXaXRoKDIsIGR1bW15UHVibGljS2V5KTsKICAgIGV4cGVjdChmZXRjaFNweS5tb2NrLmludm9jYXRpb25DYWxsT3JkZXJbMF0pLnRvQmVMZXNzVGhhbihzdHViU2VydmVyLmdldEFjY291bnQubW9jay5pbnZvY2F0aW9uQ2FsbE9yZGVyWzFdKTsKCiAgICBmZXRjaFNweS5tb2NrUmVzdG9yZSgpOwogIH0pOwoKICBpdCgibmV2ZXIgZnVuZHMgYW4gYWNjb3VudCB0aGF0IGFscmVhZHkgZXhpc3RzIiwgYXN5bmMgKCkgPT4gewogICAgY29uc3QgZHVtbXlBY2NvdW50ID0geyBpZDogZHVtbXlQdWJsaWNLZXksIHNlcXVlbmNlOiAiNyIgfTsKICAgIGNvbnN0IGZldGNoU3B5ID0gdmkuc3B5T24oZ2xvYmFsVGhpcywgImZldGNoIikubW9ja1Jlc29sdmVkVmFsdWUoewogICAgICBvazogdHJ1ZSwKICAgICAgc3RhdHVzOiAyMDAsCiAgICB9IGFzIFJlc3BvbnNlKTsKCiAgICBjb25zdCBzdHViU2VydmVyID0geyBnZXRBY2NvdW50OiB2aS5mbigpLm1vY2tSZXNvbHZlZFZhbHVlKGR1bW15QWNjb3VudCkgfTsKCiAgICBjb25zdCByZXN1bHQgPSBhd2FpdCBsb2FkQWNjb3VudChzdHViU2VydmVyIGFzIG5ldmVyLCBkdW1teVB1YmxpY0tleSwgeyBmdW5kOiB0cnVlIH0pOwoKICAgIGV4cGVjdChyZXN1bHQpLnRvRXF1YWwoeyBhY2NvdW50OiBkdW1teUFjY291bnQsIGZ1bmRlZDogZmFsc2UgfSk7CiAgICBleHBlY3Qoc3R1YlNlcnZlci5nZXRBY2NvdW50KS50b0hhdmVCZWVuQ2FsbGVkVGltZXMoMSk7CiAgICBleHBlY3QoZmV0Y2hTcHkpLm5vdC50b0hhdmVCZWVuQ2FsbGVkKCk7CgogICAgZmV0Y2hTcHkubW9ja1Jlc3RvcmUoKTsKICB9KTsKCiAgaXQoInNraXBzIGZyaWVuZGJvdCBhbmQgdGhyb3dzIEFDQ09VTlRfTk9UX0ZPVU5EIHdoZW4gZnVuZCBpcyBmYWxzZSIsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IGZldGNoU3B5ID0gdmkuc3B5T24oZ2xvYmFsVGhpcywgImZldGNoIikubW9ja1Jlc29sdmVkVmFsdWUoewogICAgICBvazogdHJ1ZSwKICAgICAgc3RhdHVzOiAyMDAsCiAgICB9IGFzIFJlc3BvbnNlKTsKCiAgICBjb25zdCBzdHViU2VydmVyID0gewogICAgICBnZXRBY2NvdW50OiB2aQogICAgICAgIC5mbigpCiAgICAgICAgLm1vY2tSZWplY3RlZFZhbHVlKE9iamVjdC5hc3NpZ24obmV3IEVycm9yKCJBY2NvdW50IG5vdCBmb3VuZCIpLCB7IHN0YXR1czogNDA0IH0pKSwKICAgIH07CgogICAgYXdhaXQgZXhwZWN0KAogICAgICBsb2FkQWNjb3VudChzdHViU2VydmVyIGFzIG5ldmVyLCBkdW1teVB1YmxpY0tleSwgeyBmdW5kOiBmYWxzZSB9KQogICAgKS5yZWplY3RzLnRvTWF0Y2hPYmplY3QoewogICAgICBuYW1lOiAiV2FsbGV0RXJyb3IiLAogICAgICBjb2RlOiAiQUNDT1VOVF9OT1RfRk9VTkQiLAogICAgICBtZXNzYWdlOiBleHBlY3Quc3RyaW5nQ29udGFpbmluZygiRnVuZCBpdCB3aXRoIFhMTSBiZWZvcmUgcGF5aW5nIiksCiAgICB9KTsKICAgIGV4cGVjdChmZXRjaFNweSkubm90LnRvSGF2ZUJlZW5DYWxsZWQoKTsKICAgIGV4cGVjdChzdHViU2VydmVyLmdldEFjY291bnQpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygxKTsKCiAgICBmZXRjaFNweS5tb2NrUmVzdG9yZSgpOwogIH0pOwoKICBpdCgic3VyZmFjZXMgYW4gSFRUUCBmYWlsdXJlIGZyb20gZnJpZW5kYm90IGFzIEZSSUVOREJPVF9FUlJPUiBhbmQgbmV2ZXIgcmUtbG9hZHMiLCBhc3luYyAoKSA9PiB7CiAgICBjb25zdCBmZXRjaFNweSA9IHZpLnNweU9uKGdsb2JhbFRoaXMsICJmZXRjaCIpLm1vY2tSZXNvbHZlZFZhbHVlKHsKICAgICAgb2s6IGZhbHNlLAogICAgICBzdGF0dXM6IDQwMCwKICAgIH0gYXMgUmVzcG9uc2UpOwoKICAgIGNvbnN0IHN0dWJTZXJ2ZXIgPSB7CiAgICAgIGdldEFjY291bnQ6IHZpLmZuKCkubW9ja1JlamVjdGVkVmFsdWUobmV3IEVycm9yKCJBY2NvdW50IG5vdCBmb3VuZCAoNDA0KSIpKSwKICAgIH07CgogICAgY29uc3QgZXJyID0gYXdhaXQgbG9hZEFjY291bnQoc3R1YlNlcnZlciBhcyBuZXZlciwgZHVtbXlQdWJsaWNLZXksIHsgZnVuZDogdHJ1ZSB9KS5jYXRjaCgKICAgICAgKGUpID0+IGUKICAgICk7CgogICAgZXhwZWN0KGVycikudG9CZUluY3RhbmNlT2YoV2FsbGV0RXJyb3IpOwogICAgZXhwZWN0KGVycikudG9NYXRjaE9iamVjdCh7IGNvZGU6ICJGUklFTkRCT1RfRVJST1IiIH0pOwogICAgZXhwZWN0KGVyci5tZXNzYWdlKS50b0JlKCJDb3VsZCBub3QgZnVuZCB0ZXN0bmV0IGFjY291bnQgKGZyaWVuZGJvdCBIVFRQIDQwMCkuIik7CiAgICAvLyBUaGUgZnVuZGluZyBhdHRlbXB0IGZhaWxlZCwgc28gdGhlIGFjY291bnQgaXMgbmV2ZXIgcmUtbG9hZGVkIGEgc2Vjb25kIHRpbWUuCiAgICBleHBlY3QoZmV0Y2hTcHkpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygxKTsKICAgIGV4cGVjdChzdHViU2VydmVyLmdldEFjY291bnQpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygxKTsKICAgIC8vIEFuZCB0aGUgZmFpbHVyZSBtYXBzIHRvIHRoZSB1c2VyLWZhY2luZyBmcmllbmRib3QgZXJyb3IsIG5vdCBhIGdlbmVyaWMgb25lLgogICAgZXhwZWN0KHBhcnNlRXJyb3IoZXJyKSkudG9NYXRjaE9iamVjdCh7CiAgICAgIGNvZGU6ICJGUklFTkRCT1RfRlVORElOR19GQUlMRUQiLAogICAgICB1c2VyTWVzc2FnZTogZXhwZWN0LnN0cmluZ0NvbnRhaW5pbmcoIkZyaWVuZGJvdCIpLAogICAgICBhY3Rpb246ICJSZXRyeSIsCiAgICB9KTsKCiAgICBmZXRjaFNweS5tb2NrUmVzdG9yZSgpOwogIH0pOwoKICBpdCgic3VyZmFjZXMgYSBmcmllbmRib3QgbmV0d29yayBmYWlsdXJlIGFzIEZSSUVOREJPVF9FUlJPUiBpbnN0ZWFkIG9mIGEgcmF3IGZldGNoIGVycm9yIiwgYXN5bmMgKCkgPT4gewogICAgY29uc3QgZmV0Y2hTcHkgPSB2aS5zcHlPbihnbG9iYWxUaGlzLCAiZmV0Y2giKS5tb2NrUmVqZWN0ZWRWYWx1ZShuZXcgVHlwZUVycm9yKCJmZXRjaCBmYWlsZWQiKSk7CgogICAgY29uc3Qgc3R1YlNlcnZlciA9IHsKICAgICAgZ2V0QWNjb3VudDogdmkuZm4oKS5tb2NrUmVqZWN0ZWRWYWx1ZShuZXcgRXJyb3IoIkFjY291bnQgbm90IGZvdW5kICg0MDQpIikpLAogICAgfTsKCiAgICBjb25zdCBlcnIgPSBhd2FpdCBsb2FkQWNjb3VudChzdHViU2VydmVyIGFzIG5ldmVyLCBkdW1teVB1YmxpY0tleSwgeyBmdW5kOiB0cnVlIH0pLmNhdGNoKAogICAgICAoZSkgPT4gZQogICAgKTsKCiAgICBleHBlY3QoZXJyKS50b0JlSW5zdGFuY2VPZihXYWxsZXRFcnJvcik7CiAgICBleHBlY3QoZXJyKS50b01hdGNoT2JqZWN0KHsgY29kZTogIkZSSUVOREJPVF9FUlJPUiIgfSk7CiAgICBleHBlY3QoZXJyLm1lc3NhZ2UpLnRvQmUoCiAgICAgICJDb3VsZCBub3QgZnVuZCB0ZXN0bmV0IGFjY291bnQgKGZyaWVuZGJvdCB1bnJlYWNoYWJsZTogZmV0Y2ggZmFpbGVkKS4iCiAgICApOwogICAgZXhwZWN0KHN0dWJTZXJ2ZXIuZ2V0QWNjb3VudCkudG9IYXZlQmVlbkNhbGxlZFRpbWVzKDEpOwogICAgZXhwZWN0KHBhcnNlRXJyb3IoZXJyKS5jb2RlKS50b0JlKCJGUklFTkRCT1RfRlVORElOR19GQUlMRUQiKTsKCiAgICBmZXRjaFNweS5tb2NrUmVzdG9yZSgpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJnZXROYXRpdmVCYWxhbmNlIiwgKCkgPT4gewogIGNvbnN0IGR1bW15UHVibGljS2V5ID0gIkdCQkQ0N0lGNkxXSzdQN01ERVZTQ1dSN0RQQVVXVjNOWTNEVFFFVkZMNE5BVDRBUUgzWkxMRkxBNSI7CgogIGl0KCJyZXR1cm5zIGJhbGFuY2Ugd2hlbiBnZXRBY2NvdW50RW50cnkgc3VjY2VlZHMiLCBhc3luYyAoKSA9PiB7CiAgICBjb25zdCBzdHViU2VydmVyID0gewogICAgICBnZXRBY2NvdW50RW50cnk6IHZpLmZuKCkubW9ja1Jlc29sdmVkVmFsdWUoewogICAgICAgIGJhbGFuY2U6ICgpID0+ICI1MDAwMDAwMCIsCiAgICAgIH0pLAogICAgfTsKCiAgICBjb25zdCBiYWxhbmNlID0gYXdhaXQgZ2V0TmF0aXZlQmFsYW5jZShzdHViU2VydmVyIGFzIG5ldmVyLCBkdW1teVB1YmxpY0tleSk7CiAgICBleHBlY3QoYmFsYW5jZSkudG9CZSg1MDAwMDAwMG4pOwogIH0pOwoKICBpdCgic3VyZmFjZXMgUlBDIC8gbmV0d29yayByZWplY3Rpb25zIHJhdGhlciB0aGFuIHJldHVybmluZyAwbiIsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IHN0dWJTZXJ2ZXIgPSB7CiAgICAgIGdldEFjY291bnRFbnRyeTogdmkuZm4oKS5tb2NrUmVqZWN0ZWRWYWx1ZShuZXcgRXJyb3IoIjUwMyBTZXJ2aWNlIFVuYXZhaWxhYmxlOiBSUEMgdGltZW91dCIpKSwKICAgIH07CgogICAgYXdhaXQgZXhwZWN0KGdldE5hdGl2ZUJhbGFuY2Uoc3R1YlNlcnZlciBhcyBuZXZlciwgZHVtbXlQdWJsaWNLZXkpKS5yZWplY3RzLnRvVGhyb3coCiAgICAgIC9SUEMgZXJyb3IgcmV0cmlldmluZyBuYXRpdmUgYmFsYW5jZS8KICAgICk7CiAgfSk7CgogIGl0KCJyZXR1cm5zIDBuIHdoZW4gZ2V0QWNjb3VudEVudHJ5IGluZGljYXRlcyBhY2NvdW50IGRvZXMgbm90IGV4aXN0IChub3QgZm91bmQpIiwgYXN5bmMgKCkgPT4gewogICAgY29uc3Qgc3R1YlNlcnZlciA9IHsKICAgICAgZ2V0QWNjb3VudEVudHJ5OiB2aS5mbigpLm1vY2tSZWplY3RlZFZhbHVlKG5ldyBFcnJvcigiQWNjb3VudCBub3QgZm91bmQiKSksCiAgICB9OwoKICAgIGNvbnN0IGJhbGFuY2UgPSBhd2FpdCBnZXROYXRpdmVCYWxhbmNlKHN0dWJTZXJ2ZXIgYXMgbmV2ZXIsIGR1bW15UHVibGljS2V5KTsKICAgIGV4cGVjdChiYWxhbmNlKS50b0JlKDBuKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiZ2V0VHJ1c3RsaW5lIiwgKCkgPT4gewogIGNvbnN0IGR1bW15UHVibGljS2V5ID0gIkdCQkQ0N0lGNkxXSzdQN01ERVZTQ1dSN0RQQVVXVjNOWTNEVFFFVkZMNE5BVDRBUUgzWkxMRkxBNSI7CiAgY29uc3QgYXNzZXQgPSB7IGNvZGU6ICJVU0RDIiwgaXNzdWVyOiAiR0FUQUxCS0hLQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hXQ0hYIiB9OwoKICBpdCgicmVwb3J0cyBoYXNUcnVzdGxpbmU6IGZhbHNlIG9ubHkgd2hlbiB0aGUgYmFsYW5jZSBlbnRyeSBpcyBjb25maXJtZWQgbWlzc2luZyIsIGFzeW5jICgpID0+IHsKICAgIGNvbnN0IHN0dWJTZXJ2ZXIgPSB7CiAgICAgIGdldEFjY291bnRFbnRyeTogdmkKICAgICAgICAuZm4oKQogICAgICAgIC5tb2NrUmVqZWN0ZWRWYWx1ZShPYmplY3QuYXNzaWduKG5ldyBFcnJvcigiQWNjb3VudCBub3QgZm91bmQiKSwgeyBzdGF0dXM6IDQwNCB9KSksCiAgICB9OwoKICAgIGNvbnN0IHJlc3VsdCA9IGF3YWl0IGdldFRydXN0bGluZShzdHViU2VydmVyIGFzIG5ldmVyLCBkdW1teVB1YmxpY0tleSwgYXNzZXQpOwogICAgZXhwZWN0KHJlc3VsdCkudG9NYXRjaE9iamVjdCh7IGhhc1RydXN0bGluZTogZmFsc2UgfSk7CiAgfSk7CgogIGl0KCJyZS10aHJvd3MgdHJhbnNpZW50IFJQQyBlcnJvcnMgYXMgV2FsbGV0RXJyb3IoUlBDX0VSUk9SKSBpbnN0ZWFkIG9mIHJlcG9ydGluZyBubyB0cnVzdGxpbmUiLCBhc3luYyAoKSA9PiB7CiAgICBjb25zdCBzdHViU2VydmVyID0gewogICAgICBnZXRBY2NvdW50RW50cnk6IHZpLmZuKCkubW9ja1JlamVjdGVkVmFsdWUobmV3IEVycm9yKCI1MDMgU2VydmljZSBVbmF2YWlsYWJsZTogUlBDIHRpbWVvdXQiKSksCiAgICB9OwoKICAgIGNvbnN0IGVyciA9IGF3YWl0IGdldFRydXN0bGluZShzdHViU2VydmVyIGFzIG5ldmVyLCBkdW1teVB1YmxpY0tleSwgYXNzZXQpLmNhdGNoKAogICAgICAoZSkgPT4gZQogICAgKTsKCiAgICBleHBlY3QoZXJyKS50b0JlSW5zdGFuY2VPZihXYWxsZXRFcnJvcik7CiAgICBleHBlY3QoZXJyKS50b01hdGNoT2JqZWN0KHsgY29kZTogIlJQQ19FUlJPUiIgfSk7CiAgfSk7Cn0pOwo=
+import { describe, it, expect, vi } from "vitest";
+import {
+  formatAmount,
+  MIN_NATIVE_RESERVE,
+  loadAccount,
+  getNativeBalance,
+  getTrustline,
+  isAccountMissingError,
+} from "../../../lib/stellar/account";
+import { FRIENDBOT_URL } from "../../../lib/stellar/config";
+import { WalletError } from "../../../lib/stellar/freighter";
+import { parseError } from "../../../lib/errors";
+import { Asset } from "@stellar-stellar-base";
+
+describe("formatAmount", () => {
+  it("formats MIN_NATIVE_RESERVE with 7 decimals correctly", () => {
+    expect(formatAmount(MIN_NATIVE_RESERVE, 7)).toBe("1");
+  });
+
+  it("formats decimal amounts with fractional parts correctly", () => {
+    expect(formatAmount(123400000n, 7)).toBe("12.34");
+    expect(formatAmount(5n, 7)).toBe("0.0000005");
+  });
+
+  it("trims trailing zeros cleanly", () => {
+    expect(formatAmount(10000000n, 7)).toBe("1");
+    expect(formatAmount(10500000n, 7)).toBe("1.05");
+    expect(formatAmount(10000001n, 7)).toBe("1.0000001");
+  });
+
+  it("handles negative values with a leading minus sign", () => {
+    expect(formatAmount(-50000000n, 7)).toBe("-5");
+    expect(formatAmount(-123400000n, 7)).toBe("-12.34");
+    expect(formatAmount(-5n, 7)).toBe("0.0000005");
+  });
+
+  it("handles zero correctly", () => {
+    expect(formatAmount(0n, 7)).toBe("0");
+    expect(formatAmount(0n, 0)).toBe("0");
+  });
+
+  it("handles decimals = 0 without error", () => {
+    expect(formatAmount(42n, 0)).toBe("42");
+    expect(formatAmount(100n, 0)).toBe("100");
+    expect(formatAmount(-7n, 0)).toBe("-7");
+  });
+
+  it("handles integers exceeding Number.MAX_SAFE_INTEGER without precision loss", () => {
+    const huge = 1n << 80n;
+    const formatted = formatAmount(huge, 7);
+    const expectedInt = (huge / 10000000n .toString();
+    const expectedFrac = (huge % 10000000n).toString().padStart(7, "0").replace(/0+$/, "");
+    const expected = expectedFrac ? `${expectedInt}.${expectedFrac}` : expectedInt;
+    expect(formatted).toBe(expected);
+  });
+
+  it("preserves exact precision above 2^53 (Number.MAX_SAFE_INTEGER boundary) where Number() loses precision", () => {
+    // 2^53 + 1 = 9007199254740993n. In IEEE-754 double, Number(9007199254740993n() rounds down to 9007199254740992.
+    const aboveSafe = 9007199254740993n;
+    expect(formatAmount(aboveSafe, 0)).toBe("9007199254740993");
+    expect(formatAmount(aboveSafe, 7)).toBe("900719925.4740993");
+    expect(formatAmount(-aboveSafe, 7)).toBe("-900719925.4740993");
+
+    // 2^53 + 3 = 9007199254740995n
+    const aboveSafe2 = 9007199254740995n;
+    expect(formatAmount(aboveSafe2, 7)).toBe("900719925.4740995");
+  });
+
+  it("formats exact values across each decimal boundary for numbers above 2^53", () => {
+    const raw = 9007199254740993n;
+    expect(formatAmount(raw, 0)).toBe("9007199254740993");
+    expect(formatAmount(raw, 1)).toBe("900719925474099.3");
+    expect(formatAmount(raw, 2)).toBe("90071992547409.93");
+    expect(formatAmount(raw, 4)).toBe("900719925474.0993");
+    expect(formatAmount(raw, 7)).toBe("900719925.4740993");
+    expect(formatAmount(raw, 15)).toBe("9.007199254740993");
+    expect(formatAmount(raw, 16)).toBe("0.9007199254740993");
+    expect(formatAmount(raw, 18)).toBe("0.009007199254740993");
+  });
+
+  it("formats large Stellar i128 boundary amounts accurately without precision degradation", () => {
+    const I128_MAX = (1n << 127n) - 1n; // 170141183460469231731687303715884105727n
+    const I128_MIN = -(1n << 127n); // -170141183460469231731687303715884105728n
+
+    expect(formatAmount(I128_MAX, 7)).toBe("17014118346046923173168730371588.4105727");
+    expect(formatAmount(I128_MIN, 7)).toBe("-17014118346046923173168730371588.4105728");
+    expect(formatAmount(I128_MAX, 0)).toBe("170141183460469231731687303715884105727");
+    expect(formatAmount(I128_MIN, 0)).toBe("-170141183460469231731687303715884105728");
+  });
+});
+
+describe("isAccountMissingError", () => {
+  it("identifies 404 status and account not found messages", () => {
+    expect(isAccountMissingError({ status: 404 })).toBe(true);
+    expect(isAccountMissingError({ response: { status: 404 } })).toBe(true);
+    expect(isAccountMissingError(new Error("Account not found"))).toBe(true);
+    expect(isAccountMissingError(new Error("Resource not found"))).toBe(true);
+    expect(isAccountMissingError(new Error("Account does not exist"))).toBe(true);
+    expect(isAccountMissingError(new Error("Error code: 404"))).toBe(true);
+  });
+
+  it("identifies network and RPC outages as NOT account-missing", () => {
+    expect(isAccountMissingError(new Error("Network error"))).toBe(false);
+    expect(isAccountMissingError(new Error("fetch failed"))).toBe(false);
+    expect(isAccountMissingError(new Error("connect ECONNREFUSED"))).toBe(false);
+    expect(isAccountMissingError(new Error("request timeout"))).toBe(false);
+    expect(isAccountMissingError(new Error("500 Internal Server Error"))).toBe(false);
+    expect(isAccountMissingError(new Error("503 Service Unavailable"))).toBe(false);
+    expect(isAccountMissingError(null)).toBe(false);
+  });
+});
+
+describe("loadAccount", () => {
+  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
+  it("never calls friendbot and rejects when getAccount fails with a network error", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const stubServer = {
+      getAccount: vi.fn().mockRejectedValue(new Error("fetch failed: connection refused")),
+    };
+
+    await expect(loadAccount(stubServer as never, dummyPublicKey, { fund: true })).rejects.toThrow(
+      /RPC error loading account/
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("triggers friendbot funding and re-loads account when getAccount fails with account-missing error", async () => {
+    const dummyAccount = { id: dummyPublicKey, sequence: "1" };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+    } as Response);
+
+    const stubServer = {
+      getAccount: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Account not found (404)"))
+        .mockResolvedValueOnce(dummyAccount),
+    };
+
+    const result = await loadAccount(stubServer as never, dummyPublicKey, { fund: true });
+    expect(result.funded).toBe(true);
+    expect(result.account).toBe(dummyAccount);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    // Friendbot is asked for this exact public key (URL-encoded)…
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${FRIENDBOT_URL}?addr=${encodeURIComponent(dummyPublicKey)}`
+    );
+    // …exactly once, and it runs between the failed lookup and the re-load:
+    // a second getAccount without funding would just miss again.
+    expect(stubServer.getAccount).toHaveBeenCalledTimes(2);
+    expect(stubServer.getAccount).toHaveBeenNthCalledWith(1, dummyPublicKey);
+    expect(stubServer.getAccount).toHaveBeenNthCalledWith(2, dummyPublicKey);
+    expect(fetchSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      stubServer.getAccount.mock.invocationCallOrder[1]
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it("never funds an account that already exists", async () => {
+    const dummyAccount = { id: dummyPublicKey, sequence: "7" };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+    } as Response);
+
+    const stubServer = { getAccount: vi.fn().mockResolvedValue(dummyAccount) };
+
+    const result = await loadAccount(stubServer as never, dummyPublicKey, { fund: true });
+
+    expect(result).toEqual({ account: dummyAccount, funded: false });
+    expect(stubServer.getAccount).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
+  });
+
+  it("skips friendbot and throws ACCOUNT_NOT_FOUND when fund is false", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+    } as Response);
+
+    const stubServer = {
+      getAccount: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error("Account not found"), { status: 404 })),
+    };
+
+    await expect(
+      loadAccount(stubServer as never, dummyPublicKey, { fund: false })
+    ).rejects.toMatchObject({
+      name: "WalletError",
+      code: "ACCOUNT_NOT_FOUND",
+      message: expect.stringContaining("Fund it with XLM before paying"),
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(stubServer.getAccount).toHaveBeenCalledTimes(1);
+
+    fetchSpy.mockRestore();
+  });
+
+  it("surfaces an HTTP failure from friendbot as FRIENDBOT_ERROR and never re-loads", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 400,
+    } as Response);
+
+    const stubServer = {
+      getAccount: vi.fn().mockRejectedValue(new Error("Account not found (404)")),
+    };
+
+    const err = await loadAccount(stubServer as never, dummyPublicKey, { fund: true }).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(WalletError);
+    expect(err).toMatchObject({ code: "FRIENDBOT_ERROR" });
+    expect(err.message).toBe("Could not fund testnet account (friendbot HTTP 400).");
+    // The funding attempt failed, so the account is never re-loaded a second time.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(stubServer.getAccount).toHaveBeenCalledTimes(1);
+    // And the failure maps to the user-facing friendbot error, not a generic one.
+    expect(parseError(err)).toMatchObject({
+      code: "FRIENDBOT_FUNDING_FAILED",
+      userMessage: expect.stringContaining("Friendbot"),
+      action: "Retry",
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  it("surfaces a friendbot network failure as FRIENDBOT_ERROR instead of a raw fetch error", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"));
+
+    const stubServer = {
+      getAccount: vi.fn().mockRejectedValue(new Error("Account not found (404)")),
+    };
+
+    const err = await loadAccount(stubServer as never, dummyPublicKey, { fund: true }).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(WalletError);
+    expect(err).toMatchObject({ code: "FRIENDBOT_ERROR" });
+    expect(err.message).toBe(
+      "Could not fund testnet account (friendbot unreachable: fetch failed)."
+    );
+    expect(stubServer.getAccount).toHaveBeenCalledTimes(1);
+    expect(parseError(err).code).toBe("FRIENDBOT_FUNDING_FAILED");
+
+    fetchSpy.mockRestore();
+  });
+});
+
+describe("getNativeBalance", () => {
+  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
+  it("returns balance when getAccountEntry succeeds", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockResolvedValue({
+        balance: () => "50000000",
+      }),
+    };
+
+    const balance = await getNativeBalance(stubServer as never, dummyPublicKey);
+    expect(balance).toBe(50000000n);
+  });
+
+  it("surfaces RPC / network rejections rather than returning 0n", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockRejectedValue(new Error("503 Service Unavailable: RPC timeout")),
+    };
+
+    await expect(getNativeBalance(stubServer as never, dummyPublicKey)).rejects.toThrow(
+      /RPC error retrieving native balance/
+    );
+  });
+
+  it("returns 0n when getAccountEntry indicates account does not exist (not found)", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockRejectedValue(new Error("Account not found")),
+    };
+
+    const balance = await getNativeBalance(stubServer as never, dummyPublicKey);
+    expect(balance).toBe(0n");
+  });
+});
+
+describe("getTrustline", () => {
+  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const asset = new Asset("USDC", "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
+
+  it("reports hasTrustline: false when the balance entry is confirmed missing", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockResolvedValue({
+        balances: [],
+      }),
+    };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, asset);
+    expect(info).toEqual({ hasTrustline: false, balance: 0n });
+  });
+
+  it("reports hasTrustline: false when the account is confirmed missing", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockRejectedValue(new Error("Account not found")),
+    };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, asset);
+    expect(info).toEqual({ hasTrustline: false, balance: 0n });
+  });
+
+  it("returns the trustline balance and limit when the asset is present", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockResolvedValue({
+        balances: [
+          {
+            asset: () => asset,
+            balance: "1234567",
+            limit: "999999999",
+          },
+        ],
+      }),
+    };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, asset);
+    expect(info).toEqual({
+      hasTrustline: true,
+      balance: 1234567n,
+      limit: 999999999n,
+    });
+  });
+
+  it("re-throws transient RPC failures as WalletError(RPC_ERROR) instead of reporting no trustline", async () => {
+    const stubServer = {
+      getAccountEntry: vi.fn().mockRejectedValue(new Error("503 Service Unavailable: RPC timeout")),
+    };
+
+    const err = await getTrustline(stubServer as never, dummyPublicKey, asset).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(WalletError);
+    expect(err).toMatchObject({ code: "RPC_ERROR" });
+    expect(err.message).toContain("RPC error retrieving trustline");
+  });
+});
