@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 
-// The indexer's `order_id` topic is the already-hashed BytesN32> as hex. The
-// admin page must hand that value to dispatchOrder/refundOrder untouched — no
-// truncation, no re-hashing — or the contract call cannot find the order.
+// The indexer's order id topic is the already-hashed BytesN<32> as hex. The
+// admin page must hand that value to dispatchOrder/refundOrder untouched -- no
+// truncation, no re-hashing -- or the contract call cannot find the order.
+//
+// The real `decodeEvent` output for a `pay` event exposes the order id as the
+// `topic1` key. There is no `fields.order_id` in the indexer payload.
 const EVENT_DERIVED_ID = "3f".repeat(32); // 64 hex chars
 
 const dispatchOrder = vi.fn(async (_orderId: string) => ({ success: true, txHash: "abc" }));
@@ -14,8 +17,10 @@ vi.mock("../../lib/stellar/orders", () => ({
   dispatchOrder: (id: string) => dispatchOrder(id),
   refundOrder: (id: string) => refundOrder(id),
   eventToOrder: (event: { fields: Record<string, string>; ledger: number; txHash: string }) => ({
-    orderId: event.fields.order_id,
-    buyer: event.fields.buyer,
+    // Mirror the real decoder: the order id hash lives in topic1, not in
+    // a non-existent `fields.order_id` key.
+    orderId: event.fields.topic1,
+    buyer: event.fields.topic2,
     amount: "10.0000000",
     tokenSymbol: "USDC",
     status: "Paid",
@@ -34,8 +39,11 @@ vi.mock("../../lib/stellar/indexer", () => ({
       onEvent: (e: unknown) => void;
       onStatus: (s: { running: boolean; eventsSeen: number }) => void;
     }) {
+      // Real `pay` event layout from decodeEvent: the order id hash is topic1,
+      // the buyer address is topic2, and the amount is topic3. There is no
+      // `fields.order_id` in the indexer payload.
       onEvent({
-        fields: { order_id: EVENT_DERIVED_ID, buyer: "GBUYER", amount: "100000000" },
+        fields: { topic1: EVENT_DERIVED_ID, topic2: "GBUYER", topic3: "100000000" },
         symbol: "pay",
         ledger: 42,
         txHash: "tx-1",
