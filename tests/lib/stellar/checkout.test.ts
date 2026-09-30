@@ -38,19 +38,16 @@ describe("usdToRawUnits", () => {
     ["Infinity", Number.POSITIVE_INFINITY],
   ];
 
-  it.each(cases)(
-    "throws WalletError with code INVALID_AMOUNT for %s",
-    (_label, value) => {
-      let caught: unknown;
-      try {
-        usdToRawUnits(value);
-      } catch (err) {
-        caught = err;
-      }
-      expect(caught).toBeInstanceOf(WalletError);
-      expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  it.each(cases)("throws WalletError with code INVALID_AMOUNT for %s", (_label, value) => {
+    let caught: unknown;
+    try {
+      usdToRawUnits(value);
+    } catch (err) {
+      caught = err;
     }
-  );
+    expect(caught).toBeInstanceOf(WalletError);
+    expect((caught as WalletError).code).toBe("INVALID_AMOUNT");
+  });
 });
 
 describe("orderIdHash", () => {
@@ -79,7 +76,9 @@ describe("payWithStellar", () => {
   it("throws CONTRACT_NOT_CONFIGURED if CHECKOUT_CONTRACT_ID is empty", async () => {
     vi.resetModules();
     vi.doMock("../../../lib/stellar/config", async () => {
-      const actual = await vi.importActual<typeof import("../../../lib/stellar/config")>("../../../lib/stellar/config");
+      const actual = await vi.importActual<typeof import("../../../lib/stellar/config")>(
+        "../../../lib/stellar/config"
+      );
       return {
         ...actual,
         CHECKOUT_CONTRACT_ID: "",
@@ -168,6 +167,58 @@ describe("payWithStellar", () => {
     sendSpy.mockRestore();
     waitSpy.mockRestore();
     decodeSpy.mockRestore();
+  });
+
+  it("writes nothing to the console during a successful payment by default", async () => {
+    const tx = buildDummyTx();
+    const xdrString = tx.toXDR();
+
+    vi.spyOn(freighterMod, "ensureNetwork").mockResolvedValue();
+    vi.spyOn(accountMod, "assertPaymentReady").mockResolvedValue({
+      account: dummyAccount,
+      funded: true,
+      nativeBalanceRaw: 50_000_000n,
+      tokenBalanceRaw: 100_000_000n,
+      decimals: 7,
+      hasTrustline: true,
+      trustlineAuthorized: true,
+      requiredRaw: 10_000_000n,
+      sufficientBalance: true,
+      sufficientReserve: true,
+      issues: [],
+    });
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolvedValue({
+      tx,
+      report: { ok: true, minResourceFee: 100n, instructions: 10 },
+    });
+    vi.spyOn(simulateMod, "budgetFee").mockResolvedValue("50100");
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolvedValue(xdrString);
+    vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolvedValue({
+      status: "PENDING",
+      hash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "waitForTransaction").mockResolvedValue({
+      status: rpc.Api.GetTransactionStatus.SUCCESS,
+      ledger: 456,
+      txHash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "decodePaymentEvent").mockReturnValue(null);
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+
+    await payWithStellar({
+      amountUsd: 1,
+      orderId: "ORD-SILENT",
+      publicKey: dummyPublicKey,
+    });
+
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("[stellar]"));
+    expect(infoSpy).not.toHaveBeenCalledWith(expect.stringContaining("[stellar]"));
+    expect(debugSpy).not.toHaveBeenCalledWith(expect.stringContaining("[stellar]"));
+
+    vi.restoreAllMocks();
   });
 
   it("throws TX_SIMULATION_ERROR when simulation report fails", async () => {
