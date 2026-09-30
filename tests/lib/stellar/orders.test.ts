@@ -238,7 +238,7 @@ describe("dispatchOrder and refundOrder order ID resolution", () => {
   });
 
   it("resolves 64-hex order ID directly without double-hashing in dispatchOrder", async () => {
-    vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(DUMMY_PUBLIC_KEY);
+    vi.spyOn(freighterMod, "connectWallet").mockResolved(DUMMY_PUBLIC_KEY);
 
     // We can verify resolveOrderIdHash directly on the input passed to dispatchOrder
     const resolvedBytes = await resolveOrderIdHash(SAMPLE_64_HEX);
@@ -262,8 +262,8 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
         order_id: SAMPLE_64_HEX,
-        topic1: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNQU34T6TZMYMW2EVH34XOWMA",
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic1: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
         amount: "50000000",
       },
     };
@@ -277,7 +277,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
 
   it("handles event when order_id is in topic1 fallback", () => {
     const SAMPLE_64_HEX =
-      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     const indexedDispatchEvent = {
       symbol: "dispatch",
@@ -285,7 +285,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
         topic1: SAMPLE_64_HEX,
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
         amount: "50000000",
       },
     };
@@ -297,3 +297,80 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
   });
 });
 
+describe("Checkout contract configuration validation", () => {
+  const ORIGINAL_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+  const VALID_CONTRACT_ID =
+    "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = ORIGINAL_CONTRACT_ID;
+  });
+
+  it("throws a clear error from dispatchOrder when the contract id is missing", async () => {
+    delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+
+    const connectSpy = viSpyOn(freighterMod, "connectWallet").mockResolved(
+      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    );
+
+    await expect(
+      dispatchOrder(
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "GBDD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      ),
+    ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+
+    // Fail fast: no RPC/network call should have been attempted.
+    expect(connectSpy).not.toHaveBeenCalled();
+  });
+
+  it("throws a clear error from refundOrder when the contract id is missing", async () => {
+    delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+
+    const connectSpy = viSpyOn(freighterMod, "connectWallet").mockResolved(
+      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    );
+
+    await expect(
+      refundOrder(
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      ),
+    ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+
+    expect(connectSpy).not.toHaveBeenCalled();
+  });
+
+  it("throws a clear error when the contract id is blank", async () => {
+    process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = "   ";
+
+    const connectSpy = viSpyOn(freighterMod, "connectWallet").mockResolved(
+      "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    );
+
+    await expect(
+      dispatchOrder(
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      ),
+    ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+
+    expect(connectSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not throw the configuration error when the contract id is set", async () => {
+    process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = VALID_CONTRACT_ID;
+
+    vi.spyOn(freighterMod, "connectWallet").mockRejected(
+      new Error("connect failed"),
+    );
+
+    await expect(
+      dispatchOrder(
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      ),
+    ).rejects.toThrow("connect failed");
+  });
+});
