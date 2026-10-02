@@ -3,7 +3,7 @@ import { SiStellar } from "react-icons/si";
 
 import { payWithStellar } from "../lib/stellar/checkout";
 import { defaultToken } from "../lib/stellar/config";
-import { convertUsdToXlm } from "../lib/stellar/price";
+import { resolveXlmUsdRate, XlmRateUnavailableError } from "../lib/stellar/price";
 import {
   connectWallet,
   currentAddress,
@@ -22,6 +22,7 @@ const StellarCheckoutButton = ({
   disabled = false,
   token = defaultToken(),
   tokenAmount = null,
+  xlmUsdPrice = undefined,
 }) => {
   const [publicKey, setPublicKey] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,10 +34,23 @@ const StellarCheckoutButton = ({
   const generatedOrderId = useMemo(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, []);
   const effectiveOrderId = orderId || generatedOrderId;
 
+  const xlmRate = useMemo(
+    () => (token?.isNative ? resolveXlmUsdRate(xlmUsdPrice) : null),
+    [token, xlmUsdPrice]
+  );
+
   const effectiveXlmAmount = useMemo(() => {
-    if (!token?.isNative) return null;
-    return tokenAmount ?? convertUsdToXlm(amountUsd);
-  }, [token, tokenAmount, amountUsd]);
+    if (!token?.isNative || !xlmRate) return null;
+    return tokenAmount ?? amountUsd / xlmRate.usdPerXlm;
+  }, [token, xlmRate, tokenAmount, amountUsd]);
+
+  const xlmAmountLabel = token?.isNative
+    ? effectiveXlmAmount != null
+      ? `~${effectiveXlmAmount.toFixed(2)} XLM`
+      : tokenAmount != null
+        ? `~${tokenAmount.toFixed(2)} XLM`
+        : "XLM amount unavailable"
+    : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +91,12 @@ const StellarCheckoutButton = ({
     setBusy(true);
     setMessage("Connecting wallet…");
 
+    if (token?.isNative && !xlmRate && tokenAmount == null) {
+      setBusy(false);
+      setError(new XlmRateUnavailableError().message);
+      return;
+    }
+
     let key = publicKey;
     if (!key) {
       try {
@@ -112,6 +132,7 @@ const StellarCheckoutButton = ({
         orderId: effectiveOrderId,
         publicKey: key,
         token,
+        xlmUsdPrice: xlmRate?.usdPerXlm,
         onStatus: (msg) => setMessage(msg),
       });
       setResult(res);

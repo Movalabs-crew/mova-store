@@ -227,6 +227,14 @@ mockCurrentAddress.mockResolvedValue(ADDR);
       tokenSymbol: "XLM",
       hash: TX_HASH,
 
+render(
+      <StellarCheckoutButton
+        amountUsd={12}
+        orderId="SS-XLM-1"
+        token={xlmToken}
+        xlmUsdPrice={0.12}
+      />
+    );
 
     // 12 USD / 0.12 = 100 XLM
     expect(screen.getByText(/Pay with XLM/i)).toBeInTheDocument();
