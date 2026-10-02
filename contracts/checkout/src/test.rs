@@ -850,21 +850,22 @@ fn test_pay_with_a_different_token_than_create_order() {
     client.create_order(&buyer, &id, &token_a, &50_000);
     assert_eq!(client.order(&id).unwrap().token, token_a);
 
-    // `pay` settles with the whitelisted token presented in the call, so the
-    // registered intent is overwritten with the payment that actually happened.
-    client.pay(&token_b, &buyer, &id, &50_000);
+    // `pay` is bound to the token `create_order` recorded, so paying with a
+    // different one is rejected instead of overwriting the reservation.
+    let result = client.try_pay(&token_b, &buyer, &id, &50_000);
+    assert_eq!(result, Err(Ok(Error::OrderTokenMismatch)));
 
     let order = client.order(&id).unwrap();
-    assert_eq!(order.token, token_b);
+    assert_eq!(order.token, token_a);
     assert_eq!(order.amount, 50_000);
-    assert_eq!(order.status, Status::Paid);
-    assert!(client.is_paid(&id));
+    assert_eq!(order.status, Status::Pending);
+    assert!(!client.is_paid(&id));
 
-    // Nothing was ever moved in the token named by `create_order`.
+    // No funds moved in either token.
     assert_eq!(usdc_balance(&env, &token_a, &buyer), 1_000_000);
     assert_eq!(usdc_balance(&env, &token_a, &contract), 0);
-    assert_eq!(usdc_balance(&env, &token_b, &buyer), 950_000);
-    assert_eq!(usdc_balance(&env, &token_b, &contract), 50_000);
+    assert_eq!(usdc_balance(&env, &token_b, &buyer), 1_000_000);
+    assert_eq!(usdc_balance(&env, &token_b, &contract), 0);
 }
 
 #[test]
@@ -965,4 +966,28 @@ fn test_reads_on_uninitialized_contract() {
     assert_eq!(client.order(&id), None);
     assert_eq!(client.status(&id), None);
     assert!(!client.is_paid(&id));
+}
+
+#[test]
+fn test_pay_after_create_pending_rejects_second_buyer() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _merchant, buyer, contract) = setup_usdc(&env);
+    let other = Address::generate(&env);
+    MockTokenClient::new(&env, &token).mint(&other, &1_000_000);
+
+    let id = order_id(&env, 42);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    // A second party cannot take over another buyer's pending reservation.
+    let result = client.try_pay(&token, &other, &id, &50_000);
+    assert_eq!(result, Err(Ok(Error::OrderBuyerMismatch)));
+
+    // The original buyer's reservation is untouched and no funds moved.
+    assert_eq!(client.order(&id).unwrap().buyer, buyer);
+    assert_eq!(client.status(&id), Some(Status::Pending));
+    assert_eq!(usdc_balance(&env, &token, &buyer), 1_000_000);
+    assert_eq!(usdc_balance(&env, &token, &other), 1_000_000);
+    assert_eq!(usdc_balance(&env, &token, &contract), 0);
 }
