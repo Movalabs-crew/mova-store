@@ -249,27 +249,46 @@ describe("Buyer Orders Management", () => {
     expect(anonymous.orders.map((o) => o.orderId)).toEqual(["SS-GUEST"]);
   });
 
-  it("verifies order on-chain via readOrder", async () => {
-    vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({
-      orderId: "SS-101",
-      orderIdHash: "010203",
-      buyer: OWNER_ADDRESS,
-      amount: BigInt(899900000),
-      amountDisplay: "89.99",
-      token: "C...",
-      tokenSymbol: "USDC",
-      timestamp: 1725523200,
-      status: "Paid",
-    });
 
-    const verification = await verifyOrderOnChain("SS-101");
-    expect(verification.verified).toBe((true));
+    expect(verification.onChainStatus).toBe("Paid");
+    expect(verification.buyer).toBe("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
+  });
+
+  it("does not verify an order that belongs to another wallet", async () => {
+    vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({ ...ON_CHAIN_ORDER });
+
+    const verification = await verifyOrderOnChain("SS-101", "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF");
+
+    expect(verification.verified).toBe(false);
+    // The on-chain buyer is still surfaced so the UI can explain the mismatch.
+    expect(verification.buyer).toBe("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
     expect(verification.onChainStatus).toBe("Paid");
   });
 
-  it("returns verified false when on-chain order is not found or Unknown", async () => {
+  it("fails closed when the caller cannot supply a connected address", async () => {
+    vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({ ...ON_CHAIN_ORDER });
+
+    const verification = await verifyOrderOnChain("SS-101", "");
+
+    expect(verification.verified).toBe(false);
+    expect(verification.onChainStatus).toBe("Paid");
+  });
+
+  it("does not verify an order marked Unknown even for the owning wallet", async () => {
+    vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({
+      ...ON_CHAIN_ORDER,
+      status: "Unknown",
+    });
+
+    const verification = await verifyOrderOnChain("SS-101", "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
+
+    expect(verification.verified).toBe(false);
+    expect(verification.onChainStatus).toBe("Unknown");
+  });
+
+  it("returns verified false when on-chain order is not found", async () => {
     vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce(null);
-    const verification = await verifyOrderOnChain("UNKNOWN-1");
+    const verification = await verifyOrderOnChain("UNKNOWN-1", "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
     expect(verification.verified).toBe(false);
   });
 
