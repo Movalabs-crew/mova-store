@@ -14,10 +14,14 @@ const mockStop = vi.fn();
 
 vi.mock("../../lib/stellar/indexer", () => {
   return {
-    PaymentEventIndexer: vi.fn().mockImplementation(() => ({
-      start: mockStart,
-      stop: mockStop,
-    })),
+    // Must be a `function`, not an arrow: the component calls this with `new`,
+    // and arrow functions are not constructible.
+    PaymentEventIndexer: vi.fn().mockImplementation(function () {
+      return {
+        start: mockStart,
+        stop: mockStop,
+      };
+    }),
   };
 });
 

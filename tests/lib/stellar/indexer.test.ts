@@ -222,8 +222,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
   const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
   const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
   const MERCHANT = "GAIYNHCVTWL7MHEVQEJBZNXPPJRE5ELR6CJ5LTL74UISWA7T6BQ47HEU";
-  const ORDER_ID_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"; // 64 hex chars == 32 bytes
+  const ORDER_ID_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"; // 64 hex chars == 32 bytes
   const TX_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
   const LEDGER = 4242;
   const CLOSED_AT = "2026-09-07T01:00:00Z";
@@ -288,7 +287,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
       expect(callDecodeEvent(indexer, stringFirst)).toBeNull();
 
       const bytesFirst = makeRawEvent({
-        topic: [xdr.ScVal.scvBytes(Buffer.from("pay")), addressToScVal(TOKEN)],
+        topic: [xdr.ScVal.scvBytes(new Uint8Array(Buffer.from("pay"))), addressToScVal(TOKEN)],
         value: xdr.ScVal.scvVoid(),
       });
       expect(callDecodeEvent(indexer, bytesFirst)).toBeNull();
@@ -389,9 +388,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
 
       const decoded = callDecodeEvent(indexer, raw);
       expect(decoded).not.toBeNull();
-      const topicKeys = Object.keys(decoded?.fields ?? {}).filter((k) =>
-        k.startsWith("topic")
-      );
+      const topicKeys = Object.keys(decoded?.fields ?? {}).filter((k) => k.startsWith("topic"));
       expect(topicKeys).toHaveLength(0);
     });
   });
@@ -582,7 +579,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
           }),
           new xdr.ScMapEntry({
             key: symbolToScVal("timestamp"),
-            val: xdr.ScVal.scvU64(new xdr.Uint64(BigInt("1725700000"))),
+            val: xdr.ScVal.scvU64(BigInt("1725700000")),
           }),
         ]),
       });
@@ -600,11 +597,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
     it("decodes dispatch event matching Soroban OrderShipped contract event", () => {
       const indexer = new PaymentEventIndexer();
       const raw = makeRawEvent({
-        topic: [
-          symbolToScVal("dispatch"),
-          bytes32ToScVal(ORDER_ID_HEX),
-          addressToScVal(MERCHANT),
-        ],
+        topic: [symbolToScVal("dispatch"), bytes32ToScVal(ORDER_ID_HEX), addressToScVal(MERCHANT)],
         value: xdr.ScVal.scvMap([
           new xdr.ScMapEntry({
             key: symbolToScVal("amount"),
@@ -624,11 +617,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
     it("decodes refund event matching Soroban OrderRefunded contract event", () => {
       const indexer = new PaymentEventIndexer();
       const raw = makeRawEvent({
-        topic: [
-          symbolToScVal("refund"),
-          bytes32ToScVal(ORDER_ID_HEX),
-          addressToScVal(BUYER),
-        ],
+        topic: [symbolToScVal("refund"), bytes32ToScVal(ORDER_ID_HEX), addressToScVal(BUYER)],
         value: xdr.ScVal.scvMap([
           new xdr.ScMapEntry({
             key: symbolToScVal("amount"),
