@@ -30,12 +30,14 @@ import { i128ToScVal, hexToBytes } from "../../../lib/stellar/scval";
 const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const MERCHANT = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-const FOREIGN_CONTRACT_ID = StrKey.decodeContract("CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4");
+const FOREIGN_CONTRACT_ID = StrKey.decodeContract(
+  "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
+);
 const ORDER_ID_HEX = "a1" + "b2".repeat(31); // 64 hex chars == 32 bytes
 const TX_HASH = "0123456789abcdef".repeat(4);
 const LEDGER = 4242;
 
-const ext = () => new xdr.ExtensionPoint(0);
+const ext = () => xdr.ExtensionPoint.v0();
 
 function makeEvent(
   topics: xdr.ScVal[],
@@ -44,9 +46,11 @@ function makeEvent(
 ): xdr.ContractEvent {
   return new xdr.ContractEvent({
     ext: ext(),
-    contractId,
-    type: xdr.ContractEventType.contract(),
-    body: new xdr.ContractEventBody(0, new xdr.ContractEventV0({ topics, data })),
+    // SDK 17 requires a ContractId instance here, not a bare Uint8Array: the
+    // Wire form is only produced via `ContractId#toXdrObject`.
+    contractId: contractId ? new xdr.ContractId(contractId) : null,
+    type: xdr.ContractEventType.contract,
+    body: new xdr.ContractEventBodyV0(new xdr.ContractEventV0({ topics, data })),
   });
 }
 
@@ -60,7 +64,7 @@ function makeTx(events: xdr.ContractEvent[]): unknown {
 }
 
 const addressScVal = (strkey: string) =>
-  xdr.ScVal.scvAddress(new Address(strkey).toScVal().address());
+  xdr.ScVal.scvAddress(new Address(strkey).toScVal().address);
 
 const payTopics = () => [
   xdr.ScVal.scvSymbol("pay"),
