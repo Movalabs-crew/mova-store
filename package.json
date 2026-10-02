@@ -1,7 +1,7 @@
 {
   "name": "mova-store",
   "version": "1.0.0",
-  "description": "Mova Store — e-commerce with Stellar blockchain payments",
+  "description": "Mova Store \u2014 e-commerce with Stellar blockchain payments",
   "private": false,
   "license": "MIT",
   "repository": {
@@ -44,7 +44,7 @@
     "@stellar/stellar-sdk": "^16.2.0",
     "@supabase/supabase-js": "^2.117.2",
     "@vercel/og": "^0.6.2",
-    "next": "14.2.35",
+    "next": "15.5.27",
     "next-auth": "^4.24.15",
     "nextjs-toploader": "^1.6.12",
     "react": "^18",
@@ -63,9 +63,9 @@
     "@vitest/coverage-v8": "^1.2.0",
     "@vitest/ui": "^1.2.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35",
+    "eslint-config-next": "15.5.27",
     "jsdom": "^24.0.0",
-    "postcss": "^8",
+    "postcss": "^8.5.28",
     "prettier": "^3.9.9",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.0",
@@ -73,5 +73,8 @@
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }
