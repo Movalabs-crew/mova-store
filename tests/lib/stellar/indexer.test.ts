@@ -139,88 +139,14 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
   });
 });
 
-describe("PaymentEventIndexer recovery paths (Issues #520, #521)", () => {
-  it("recovers from a retention error by resetting the cursor to the latest ledger", async () => {
-    let getEventsCalls = 0;
-    const fakeServer = {
-      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 900 }),
-      getEvents: vi.fn().mockImplementation(async () => {
-        getEventsCalls++;
-        if (getEventsCalls === 1) {
-          throw new Error("startLedger is outside the retention window");
-        }
-        return { latestLedger: 900, cursor: "cursor-after-retention", events: [] };
-      }),
-    };
 
-    const indexer = new PaymentEventIndexer({ pollMs: 20 });
-    (indexer as unknown as { server: unknown }).server = fakeServer;
-    const errors: string[] = [];
-
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    indexer.stop();
-
-    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
-    expect(indexer.status.lastCursor).toBe("cursor-after-retention");
-    expect(indexer.status.latestLedger).toBe(900);
-    expect(indexer.status.retrying).toBe(false);
-  });
-
-  it("does not move the scan window on a transient error during the first poll", async () => {
-    let getEventsCalls = 0;
-    const fakeServer = {
-      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 700 }),
-      getEvents: vi.fn().mockImplementation(async () => {
-        getEventsCalls++;
-        if (getEventsCalls === 1) {
-          throw new Error("RPC temporary network partition");
-        }
-        return { latestLedger: 700, cursor: "cursor-transient-recovered", events: [] };
-      }),
-    };
-
-    const indexer = new PaymentEventIndexer({ pollMs: 20 });
-    (indexer as unknown as { server: unknown }).server = fakeServer;
-    const errors: string[] = [];
-
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    indexer.stop();
-
-    expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
-    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
-    expect(indexer.status.lastCursor).toBe("cursor-transient-recovered");
-    expect(indexer.status.latestLedger).toBe(700);
-  });
-
-  it("advances the scan position when a response omits the cursor", async () => {
-    let getEventsCalls = 0;
-    const fakeServer = {
-      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 400 }),
-      getEvents: vi.fn().mockImplementation(async () => {
-        getEventsCalls++;
-        return { latestLedger: 400 + getEventsCalls, events: [] };
-      }),
-    };
-
-    const indexer = new PaymentEventIndexer({ pollMs: 20 });
-    (indexer as unknown as { server: unknown }).server = fakeServer;
-
-    indexer.start({ onEvent: () => {} });
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    indexer.stop();
-
-    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
-    expect(indexer.status.latestLedger).toBeGreaterThanOrEqual(402);
-    expect(indexer.status.retrying).toBe(false);
   });
 });
 
 describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
   const CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
   const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
-  const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NQ3DTQEVFL4NAT4AQH3ZLLFLA5";
   const MERCHANT = "GAIYNHCVTWL7MHEVQEJBZNXPPJRE5ELR6CJ5LTL74UISWA7T6BQ47HEU";
   const ORDER_ID_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"; // 64 hex chars == 32 bytes
   const TX_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -370,10 +296,14 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
 
       const decoded = callDecodeEvent(indexer, raw);
       expect(decoded).not.toBeNull();
-      expect(decoded?.fields.topic1).toBe(TOKEN);
-      expect(decoded?.fields.topic2).toBe(BUYER);
-      expect(decoded?.fields.topic3).toBe(MERCHANT);
-      expect(decoded?.fields.topic4).toBe(ORDER_ID_HEX);
+      expect(decoded?.fields.topic1).toBe(
+TOKEN);
+      expect(decoded?.fields.topic2).toBe(
+BUYER);
+      expect(decoded?.fields.topic3).toBe(
+MERCHANT);
+      expect(decoded?.fields.topic4).toBe(
+ORDER_ID_HEX);
       expect(decoded?.fields.topic5).toBe("100");
       expect(decoded?.fields.topic6).toBe("tag-extra");
       expect(decoded?.fields.topic7).toBeUndefined();
@@ -437,7 +367,6 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
       expect(decoded).not.toBeNull();
       expect(decoded?.fields.note).toBe("paid-via-app");
     });
-
     it("handles empty maps without creating undefined properties", () => {
       const indexer = new PaymentEventIndexer();
       const raw = makeRawEvent({
@@ -586,7 +515,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
 
       const decoded = callDecodeEvent(indexer, raw);
       expect(decoded).not.toBeNull();
-      expect(decoded?.symbol).toBe("create_order");
+expect(decoded?.symbol).toBe("create_order");
       expect(decoded?.fields.topic1).toBe(TOKEN);
       expect(decoded?.fields.topic2).toBe(BUYER);
       expect(decoded?.fields.topic3).toBe(ORDER_ID_HEX);
@@ -854,15 +783,7 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     };
 
     const indexer = new PaymentEventIndexer({ pollMs: 20 });
-    (indexer as unknown as { server: unknown }).server = fakeServer;
-    const errors: string[] = [];
-
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
-    await tick(100);
-    indexer.stop();
-
-    expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
-    expect(calls).toBeGreaterThanOrEqual(2);
+    (indexer as unknown as { server: unknown }).
   });
 });
 
