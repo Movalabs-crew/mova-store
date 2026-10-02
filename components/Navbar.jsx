@@ -45,7 +45,7 @@ function Navbar() {
       }
     };
 
-    const links = document.querySelectorAll('a[href^x="#"]');
+    const links = document.querySelectorAll('a[href^="#"]');
     links.forEach((link) => link.addEventListener("click", handleLinkClick));
 
     return () => {
@@ -187,15 +187,17 @@ function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/profile/login">
-                  <button className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">
-                    Login
-                  </button>
+                <Link
+                  href="/profile/login"
+                  className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                >
+                  Login
                 </Link>
-                <Link href="/profile/login">
-                  <button className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">
-                    SignUp
-                  </button>
+                <Link
+                  href="/profile/login"
+                  className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                >
+                  SignUp
                 </Link>
               </>
             )}
@@ -301,15 +303,19 @@ function Navbar() {
                 </>
               ) : (
                 <div className="flex space-x-2">
-                  <Link href="/profile/login" onClick={closeNavOnClick}>
-                    <button className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none">
-                      Login
-                    </button>
+                  <Link
+                    href="/profile/login"
+                    onClick={closeNavOnClick}
+                    className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none"
+                  >
+                    Login
                   </Link>
-                  <Link href="/profile/login" onClick={closeNavOnClick}>
-                    <button className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none">
-                      SignUp
-                    </button>
+                  <Link
+                    href="/profile/login"
+                    onClick={closeNavOnClick}
+                    className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none"
+                  >
+                    SignUp
                   </Link>
                 </div>
               )}
