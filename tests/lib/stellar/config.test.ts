@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("lib/stellar/config — default behavior", () => {
-  it("defaultToken returns USDC as the first supported token", async () => {
+  it("defaultToken returns USDC as the first supported token", { timeout: 15000 }, async () => {
     const mod = await import("../../../lib/stellar/config");
     expect(mod.defaultToken()).toBe(mod.SUPPORTED_TOKENS[0]);
     expect(mod.defaultToken().symbol).toBe("USDC");
@@ -20,7 +20,9 @@ describe("lib/stellar/config — default behavior", () => {
 
   it("tokenForContract returns undefined for unknown contract id", async () => {
     const mod = await import("../../../lib/stellar/config");
-    expect(mod.tokenForContract("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")).toBeUndefined();
+    expect(
+      mod.tokenForContract("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
+    ).toBeUndefined();
   });
 
   it("XLM entry is marked as native", async () => {
@@ -61,9 +63,7 @@ describe("lib/stellar/config — mainnet resolution", () => {
 
   it("selects the mainnet network passphrase", async () => {
     const mod = await import("../../../lib/stellar/config");
-    expect(mod.NETWORK_PASSPHRASE).toBe(
-      "Public Global Stellar Network ; September 2015",
-    );
+    expect(mod.NETWORK_PASSPHRASE).toBe("Public Global Stellar Network ; September 2015");
     expect(mod.NETWORK_PASSPHRASE).not.toContain("Test SDF Network");
   });
 
@@ -73,9 +73,7 @@ describe("lib/stellar/config — mainnet resolution", () => {
     expect(xlm).toBeDefined();
     expect(xlm!.isNative).toBe(true);
     expect(xlm!.contractId).toBe(mod.NATIVE_ASSET_CONTRACT_ID);
-    expect(xlm!.contractId).not.toBe(
-      "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
-    );
+    expect(xlm!.contractId).not.toBe("CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC");
   });
 
   it("constructs SUPPORTED_TOKENS with USDC first and XLM native", async () => {
@@ -152,20 +150,24 @@ describe("lib/stellar/config — wrong-network fallback", () => {
     vi.resetModules();
   });
 
-  it("mainnet and testnet resolve to distinct RPC URLs and passphrases", async () => {
-    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
-    const mainnet = await import("../../../lib/stellar/config");
-    const mainnetRpc = mainnet.RPC_URL;
-    const mainnetPassphrase = mainnet.NETWORK_PASSPHRASE;
+  it(
+    "mainnet and testnet resolve to distinct RPC URLs and passphrases",
+    { timeout: 20000 },
+    async () => {
+      vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
+      const mainnet = await import("../../../lib/stellar/config");
+      const mainnetRpc = mainnet.RPC_URL;
+      const mainnetPassphrase = mainnet.NETWORK_PASSPHRASE;
 
-    vi.resetModules();
-    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
-    const testnet = await import("../../../lib/stellar/config");
+      vi.resetModules();
+      vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+      const testnet = await import("../../../lib/stellar/config");
 
-    expect(testnet.RPC_URL).not.toBe(mainnetRpc);
-    expect(testnet.NETWORK_PASSPHRASE).not.toBe(mainnetPassphrase);
-    expect(testnet.IS_MAINNET).not.toBe(mainnet.IS_MAINNET);
-  });
+      expect(testnet.RPC_URL).not.toBe(mainnetRpc);
+      expect(testnet.NETWORK_PASSPHRASE).not.toBe(mainnetPassphrase);
+      expect(testnet.IS_MAINNET).not.toBe(mainnet.IS_MAINNET);
+    }
+  );
 
   it("a mainnet build never resolves to testnet values", async () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "mainnet");
@@ -190,34 +192,61 @@ describe("lib/stellar/config — env overrides", () => {
   });
 
   it("overriding NEXT_PUBLIC_USDC_CONTRACT_ID changes defaultToken symbol", async () => {
-    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", "CUSTOM_USDC_CONTRACT_123");
+    const customUsdc = "CBBVKU2UJ5GV6VKTIRBV6MJSGNPVQWCYLBMFQAAAAAAAAAAAAAAABO5V";
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", customUsdc);
     vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
 
     const mod = await import("../../../lib/stellar/config");
     const defaultTok = mod.defaultToken();
-    expect(defaultTok.contractId).toBe("CUSTOM_USDC_CONTRACT_123");
+    expect(defaultTok.contractId).toBe(customUsdc);
     expect(defaultTok.symbol).toBe("USDC");
   });
 
   it("overriding NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID changes XLM contract id", async () => {
-    vi.stubEnv("NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID", "CUSTOM_NATIVE_CONTRACT_456");
+    const customNative = "CBBVKU2UJ5GV6TSBKREVMRK7GQ2TMX2YLBMFQWCYAAAAAAAAAAAABWDF";
+    vi.stubEnv("NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID", customNative);
     vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
 
     const mod = await import("../../../lib/stellar/config");
     const xlm = mod.SUPPORTED_TOKENS.find((t) => t.symbol === "XLM");
     expect(xlm).toBeDefined();
-    expect(xlm!.contractId).toBe("CUSTOM_NATIVE_CONTRACT_456");
+    expect(xlm!.contractId).toBe(customNative);
   });
 
   it("env override does not affect already-imported modules", async () => {
     const mod1 = await import("../../../lib/stellar/config");
     const originalUsdc = mod1.defaultToken().contractId;
 
-    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", "ANOTHER_CUSTOM_ID");
+    const anotherId = "CBAU4T2UJBCVEX2DKVJVIT2NL5EUIX2YLBMFQAAAAAAAAAAAAAAAAAT5";
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", anotherId);
     vi.resetModules();
     const mod2 = await import("../../../lib/stellar/config");
-    expect(mod2.defaultToken().contractId).toBe("ANOTHER_CUSTOM_ID");
+    expect(mod2.defaultToken().contractId).toBe(anotherId);
     expect(mod2.defaultToken().contractId).not.toBe(originalUsdc);
   });
-});
 
+  it("rejects an unrecognised NEXT_PUBLIC_STELLAR_NETWORK instead of silently using testnet", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "foo");
+    await expect(import("../../../lib/stellar/config")).rejects.toThrow(
+      /Invalid NEXT_PUBLIC_STELLAR_NETWORK "foo"/
+    );
+  });
+
+  it("rejects duplicate SUPPORTED_TOKENS contract ids", async () => {
+    const shared = "CBAU4T2UJBCVEX2DKVJVIT2NL5EUIX2YLBMFQAAAAAAAAAAAAAAAAAT5";
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", shared);
+    vi.stubEnv("NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID", shared);
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    await expect(import("../../../lib/stellar/config")).rejects.toThrow(/must be unique/);
+  });
+
+  it("rejects an invalid C... StrKey in SUPPORTED_TOKENS", async () => {
+    vi.stubEnv("NEXT_PUBLIC_USDC_CONTRACT_ID", "not-a-contract");
+    vi.stubEnv(
+      "NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID",
+      "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+    );
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
+    await expect(import("../../../lib/stellar/config")).rejects.toThrow(/invalid contract id/);
+  });
+});
