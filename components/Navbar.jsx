@@ -7,7 +7,7 @@ import { useAuth } from "../lib/AuthContext";
 import { logout } from "../lib/auth";
 import Toast from "../components/Toast";
 import useToast from "../hooks/useToast";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { TfiAngleRight } from "react-icons/tfi";
 import { trapFocus } from "../lib/accessibility";
 
@@ -29,6 +29,7 @@ function BrandMark() {
 
 function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleLinkClick = (event) => {
@@ -129,13 +130,18 @@ function Navbar() {
         <div className="hidden items-center justify-between px-3 py-2 sm:px-6 md:flex">
           <BrandMark />
           <div className="hidden md:flex md:gap-6">
-            <Link href="/" className={navLinkClass}>
+            <Link
+              href="/"
+              className={navLinkClass}
+              aria-current={pathname === "/" ? "page" : undefined}
+            >
               Home
             </Link>
             <Link
               href={user ? "/shop" : "/profile/login"}
               className={navLinkClass}
               onClick={(e) => handleProtectedLinkClick(e, "/shop")}
+              aria-current={pathname === "/shop" ? "page" : undefined}
             >
               Shop
             </Link>
@@ -143,20 +149,29 @@ function Navbar() {
               href={user ? "/collections" : "/profile/login"}
               className={navLinkClass}
               onClick={(e) => handleProtectedLinkClick(e, "/collections")}
+              aria-current={pathname === "/collections" ? "page" : undefined}
             >
               Collections
             </Link>
             <Link href="#aboutus" className={navLinkClass}>
               About Us
             </Link>
-            <Link href="/blog" className={navLinkClass}>
+            <Link
+              href="/blog"
+              className={navLinkClass}
+              aria-current={pathname === "/blog" ? "page" : undefined}
+            >
               Blog
             </Link>
             <Link href="#contact" className={navLinkClass}>
               Contact Us
             </Link>
             {user && (
-              <Link href="/orders" className={navLinkClass}>
+              <Link
+                href="/orders"
+                className={navLinkClass}
+                aria-current={pathname === "/orders" ? "page" : undefined}
+              >
                 Orders
               </Link>
             )}
@@ -268,6 +283,7 @@ function Navbar() {
                   href={item.href}
                   className="flex w-full items-center justify-between py-2 pr-4 text-md font-medium text-mova-ink transition-colors hover:text-purple-600"
                   onClick={item.onClick}
+                  aria-current={pathname === item.href ? "page" : undefined}
                 >
                   <span className="pl-2">{item.label}</span>
                   <TfiAngleRight size={20} />

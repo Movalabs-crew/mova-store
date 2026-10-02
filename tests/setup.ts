@@ -48,6 +48,28 @@ Object.defineProperty(globalThis, "crypto", {
 // `bytes32ToScVal(...).toXDR()` throws `TypeError: value.copy is not a function`.
 // JSDOM's `Uint8Array` and Node's `Buffer` interoperate correctly without it.
 
+// JSDOM's `TextEncoder` is Node's, so its output is a *Node-realm* Uint8Array,
+// while the global `Uint8Array` in this environment is JSDOM's. The two are not
+// `instanceof` each other across that boundary. stellar-sdk 17 validates byte
+// inputs strictly — `XdrString` encodes through `new TextEncoder().encode(...)`
+// and `@stellar/js-xdr` then asserts the result is a `Uint8Array` — so without
+// alignment every XDR containing an ScVal symbol or string fails to serialise
+// with `...: expected Uint8Array`.
+//
+// Re-wrap the encoder so it allocates with the realm's own `Uint8Array`. This is
+// deliberately not a global `Symbol.hasInstance` override; see the note above for
+// why that breaks `@stellar/js-xdr`'s writer.
+class RealmTextEncoder extends TextEncoder {
+  encode(input: string = ""): Uint8Array {
+    return new Uint8Array(super.encode(input));
+  }
+}
+Object.defineProperty(globalThis, "TextEncoder", {
+  value: RealmTextEncoder,
+  configurable: true,
+  writable: true,
+});
+
 // Mock environment variables
 vi.stubEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet");
 vi.stubEnv(

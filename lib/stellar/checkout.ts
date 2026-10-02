@@ -8,7 +8,7 @@ import {
   defaultToken,
   USDC_DECIMALS,
 } from "./config";
-import { convertUsdToXlm } from "./price";
+import { resolveXlmUsdRate, XlmRateUnavailableError } from "./price";
 import { ensureNetwork, signWithFreighter, WalletError } from "./freighter";
 import { decodePaymentEvent, PaymentReceipt, waitForTransaction } from "./events";
 import { addressToScVal, bytes32ToScVal, bytesToHex, hashOrderId, i128ToScVal } from "./scval";
@@ -28,6 +28,8 @@ export interface PayOptions {
   publicKey: string;
   /** Token to pay with (defaults to the first supported token, USDC, but can be native XLM). */
   token?: TokenConfig;
+  /** USD per 1 XLM. Required when paying with native XLM; ignored for stablecoins. */
+  xlmUsdPrice?: number;
   /** Called with human-readable progress updates. */
   onStatus?: (status: string) => void;
 }
@@ -105,9 +107,14 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
     );
   }
 
-  const effectiveTokenAmount = token.isNative
-    ? (options.tokenAmount ?? convertUsdToXlm(amountUsd))
-    : (options.tokenAmount ?? amountUsd);
+  let effectiveTokenAmount: number;
+  if (token.isNative) {
+    const rate = resolveXlmUsdRate(options.xlmUsdPrice);
+    if (!rate) throw new XlmRateUnavailableError();
+    effectiveTokenAmount = options.tokenAmount ?? amountUsd / rate.usdPerXlm;
+  } else {
+    effectiveTokenAmount = options.tokenAmount ?? amountUsd;
+  }
   const amountRaw = usdToRawUnits(effectiveTokenAmount);
   const orderBytes = await hashOrderId(orderId);
 
