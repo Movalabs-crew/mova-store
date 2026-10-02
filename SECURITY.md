@@ -126,13 +126,25 @@ Before submitting a PR, ensure:
 
 ## Known Security Considerations
 
-### Client-Side OTP Generation
+### Checkout OTP
 
-The current OTP implementation generates codes client-side for demonstration purposes. In production:
+Checkout OTPs are generated, stored and verified **server-side** by
+`app/api/otp/route.ts` using `lib/otp.ts`. The browser only asks for a code to
+be sent and asks for a submitted code to be checked:
 
-- Move OTP generation to a server-side API route
-- Implement rate limiting on OTP requests
-- Add OTP expiration (recommended: 5 minutes)
+- Codes are 6 digits drawn from a CSPRNG (`crypto.randomInt`), never `Math.random()`.
+- Only a SHA-256 hash of the code is kept; the plaintext string is returned once so
+  the server can email it, and never reaches the client bundle.
+- Codes expire after 5 minutes and are single-use.
+- A wrong guess consumes one of 5 attempts, after which the code is discarded.
+- Issue requests are throttled to 3 per minute per email address.
+
+EmailJS is called from the server route using the `EMAILJS_*` (server-only) names,
+falling back to the legacy `NEXT_PUBLIC_EMAILJS_*` names. Prefer the server-only
+names so the credentials stay out of the client bundle.
+
+The OTP store is in-process; a deployment with more than one serverless instance
+should back `OtpStore` with a shared store (e.g. Redis/Upstash).
 
 ### Card Payment Fields (threat model)
 
