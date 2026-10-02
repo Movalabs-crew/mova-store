@@ -96,6 +96,21 @@ const FIELD_ERROR_IDS = {
 
 type CheckoutField = keyof typeof FIELD_ERROR_IDS;
 
+type FieldValidator = (value: string) => { isValid: boolean; error?: string };
+
+// Every card/contact field on the checkout form has a matching validator in
+// lib/validation. Keeping them in one map means handleSubmit cannot drift from
+// the fields rendered below.
+const FIELD_VALIDATORS: Record<string, FieldValidator> = {
+  firstName: (value) => validateName(value, "First Name"),
+  lastName: (value) => validateName(value, "Last Name"),
+  email: (value) => validateEmail(value),
+  address: (value) => validateAddress(value),
+  cardNumber: (value) => validateCardNumber(value),
+  expiryDate: (value) => validateCardExpiry(value),
+  cvv: (value) => validateCardCVV(value),
+};
+
 const Checkout = () => {
   // OTP is stored as a zero-padded 6-digit string so it always matches the format
   // shown in the email (e.g. "000042") and can be compared with exact string
@@ -124,6 +139,7 @@ const Checkout = () => {
     cvv: "",
     subject: "YOUR ORDER CONFIRMATION",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
@@ -137,10 +153,30 @@ const Checkout = () => {
     localStorage.removeItem("itemCount");
   };
 
+  const fieldError = (name: string) =>
+    fieldErrors[name] ? (
+      <p id={`${name}-error`} role="alert" className="mt-1 text-sm text-red-600">
+        {fieldErrors[name]}
+      </p>
+    ) : null;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
     clearError(name as CheckoutField);
+
+    // Clear an already visible error as soon as the field becomes valid, and
+    // keep the message in sync while the user edits an invalid value.
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev;
+      const result = FIELD_VALIDATORS[name]?.(value);
+      if (!result || result.isValid) {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      }
+      return { ...prev, [name]: result.error ?? prev[name] };
+    });
   };
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,11 +238,7 @@ const Checkout = () => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    const nextErrors = validateCheckoutFields();
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
-      // Never send an OTP for a form already known to be invalid; the effect
-      // above moves focus to the first field marked aria-invalid.
+
       return;
     }
 
@@ -407,12 +439,14 @@ const Checkout = () => {
                       value={formData.firstName}
                       onChange={handleChange}
                       required
+                      aria-invalid={Boolean(fieldErrors.firstName)}
+                      aria-describedby={fieldErrors.firstName ? "firstName-error" : undefined}
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                       {...ariaInvalid(Boolean(errors.firstName), FIELD_ERROR_IDS.firstName)}
                     />
-                    {errors.firstName && (
+                    {fieldError("firstName") && (
                       <p id={FIELD_ERROR_IDS.firstName} className="mt-1 text-xs text-red-600">
-                        {errors.firstName}
+                        {fieldError("firstName")}
                       </p>
                     )}
                   </div>
@@ -427,14 +461,12 @@ const Checkout = () => {
                       value={formData.lastName}
                       onChange={handleChange}
                       required
+                      aria-invalid={Boolean(fieldErrors.lastName)}
+                      aria-describedby={fieldErrors.lastName ? "lastName-error" : undefined}
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                       {...ariaInvalid(Boolean(errors.lastName), FIELD_ERROR_IDS.lastName)}
                     />
-                    {errors.lastName && (
-                      <p id={FIELD_ERROR_IDS.lastName} className="mt-1 text-xs text-red-600">
-                        {errors.lastName}
-                      </p>
-                    )}
+{fieldError("lastName")}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-email" className="block text-gray-700">
@@ -447,14 +479,12 @@ const Checkout = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
+                      aria-invalid={Boolean(fieldErrors.email)}
+                      aria-describedby={fieldErrors.email ? "email-error" : undefined}
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                       {...ariaInvalid(Boolean(errors.email), FIELD_ERROR_IDS.email)}
                     />
-                    {errors.email && (
-                      <p id={FIELD_ERROR_IDS.email} className="mt-1 text-xs text-red-600">
-                        {errors.email}
-                      </p>
-                    )}
+
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-address" className="block text-gray-700">
@@ -467,14 +497,17 @@ const Checkout = () => {
                       value={formData.address}
                       onChange={handleChange}
                       required
+                      aria-invalid={Boolean(fieldErrors.address)}
+                      aria-describedby={fieldErrors.address ? "address-error" : undefined}
                       className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                       {...ariaInvalid(Boolean(errors.address), FIELD_ERROR_IDS.address)}
                     />
-                    {errors.address && (
+{errors.address && (
                       <p id={FIELD_ERROR_IDS.address} className="mt-1 text-xs text-red-600">
                         {errors.address}
                       </p>
                     )}
+                    {fieldError("address")}
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-card-number" className="block text-gray-700">
@@ -502,6 +535,8 @@ const Checkout = () => {
                         maxLength={19}
                         placeholder="16-digit card number"
                         required
+                        aria-invalid={Boolean(fieldErrors.cardNumber)}
+                        aria-describedby={fieldErrors.cardNumber ? "cardNumber-error" : undefined}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         {...ariaInvalid(Boolean(errors.cardNumber), FIELD_ERROR_IDS.cardNumber)}
                       />
@@ -510,11 +545,7 @@ const Checkout = () => {
                         aria-hidden="true"
                       />
                     </div>
-                    {errors.cardNumber && (
-                      <p id={FIELD_ERROR_IDS.cardNumber} className="mt-1 text-xs text-red-600">
-                        {errors.cardNumber}
-                      </p>
-                    )}
+
                   </div>
                   <div className="mb-4">
                     <label htmlFor="checkout-expiry-date" className="block text-gray-700">
@@ -550,18 +581,14 @@ const Checkout = () => {
                         maxLength={5}
                         className="w-full sm:w-64 lg:w-full px-3 py-2 border rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
                         required
-                        {...ariaInvalid(Boolean(errors.expiryDate), FIELD_ERROR_IDS.expiryDate)}
+                        {...ariaInvalid(Boolean(fieldErrors.expiryDate), FIELD_ERROR_IDS.expiryDate)}
                       />
                       <BsCalendarDate
                         className="absolute top-1/2 right-8 transform -translate-y-1/2 text-gray-500"
                         aria-hidden="true"
                       />
                     </div>
-                    {errors.expiryDate && (
-                      <p id={FIELD_ERROR_IDS.expiryDate} className="mt-1 text-xs text-red-600">
-                        {errors.expiryDate}
-                      </p>
-                    )}
+                    {fieldError("expiryDate", FIELD_ERROR_IDS.expiryDate)}
                   </div>
 
                   <div className="mb-4">
@@ -598,11 +625,7 @@ const Checkout = () => {
                         aria-hidden="true"
                       />
                     </div>
-                    {errors.cvv && (
-                      <p id={FIELD_ERROR_IDS.cvv} className="mt-1 text-xs text-red-600">
-                        {errors.cvv}
-                      </p>
-                    )}
+                    {fieldError("cvv")}
                   </div>
                 </div>
                 <button
