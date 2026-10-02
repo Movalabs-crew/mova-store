@@ -17,7 +17,29 @@ const ProductPage = ({ params }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const { id } = params;
+  const [id, setId] = useState(null);
+
+  // Next 15 types the `params` prop as `Promise<SegmentParams>` — see the
+  // generated route types at .next/types/app/shop/[id]/page.ts. Next 14 and the
+  // component tests pass a plain object. `Promise.resolve` accepts both, so a
+  // single code path covers either version.
+  //
+  // Reading `params.id` directly is the trap here: under Next 15 `params` is a
+  // promise, so the destructure silently yields `undefined`, every product page
+  // renders "Product not found", and nothing fails — not the build, not `tsc`
+  // (this file is plain JS, so it is not type-checked), and not the test suite,
+  // which passes a plain object and never asserts the fetch.
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.resolve(params).then((resolved) => {
+      if (!cancelled) setId(resolved?.id ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
 
   useEffect(() => {
     const fetchProduct = async () => {

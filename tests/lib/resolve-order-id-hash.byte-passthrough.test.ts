@@ -156,8 +156,8 @@ describe("resolveOrderIdHash — 64-hex passthrough is byte-for-byte", () => {
 
     for (const bytes of [viaPassthrough, viaHash]) {
       const scVal = bytes32ToScVal(bytes);
-      expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
-      expect(Array.from(scVal.bytes())).toEqual(Array.from(stored));
+      expect(scVal.type).toBe("scvBytes");
+      expect(Array.from(scVal.bytes.toBytes())).toEqual(Array.from(stored));
       // Same ABI encoding as building the argument straight from the oracle bytes.
       expect(scVal.toXDR("base64")).toBe(bytes32ToScVal(stored).toXDR("base64"));
     }

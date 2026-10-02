@@ -74,10 +74,14 @@ describe("fetchBuyerOrders fallback paths", () => {
   it("returns the mapped rows when Supabase has a hit", async () => {
     supabaseState.result = { data: [{ ...DB_ROW }], error: null };
 
-    const orders = await fetchBuyerOrders("buyer@example.com");
+    const result = await fetchBuyerOrders("buyer@example.com");
 
-    expect(orders).toHaveLength(1);
-    const [order] = orders;
+    // Rows came from the server, so this is current state, not a fallback.
+    expect(result.source).toBe("server");
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
+    expect(result.orders).toHaveLength(1);
+    const [order] = result.orders;
     expect(order).toMatchObject({
       id: "db-1",
       orderId: "SS-DB-1",
@@ -96,14 +100,17 @@ describe("fetchBuyerOrders fallback paths", () => {
     expect(order.items).toEqual([{ name: "Nike Air Max", price: 120.5, quantity: 1 }]);
   });
 
-  it("falls back to the local cache when the Supabase query fails", async () => {
+  it("falls back to the local cache when the Supabase query fails, flagged stale", async () => {
     await saveBuyerOrder(cachedOrder);
     supabaseState.reject = true;
 
-    const orders = await fetchBuyerOrders("buyer@example.com");
+    const result = await fetchBuyerOrders("buyer@example.com");
 
-    expect(orders.map((order) => order.orderId)).toEqual(["SS-CACHED"]);
-    expect(orders[0]).toMatchObject({
+    expect(result.source).toBe("cache");
+    expect(result.stale).toBe(true);
+    expect(result.error).toBeTruthy();
+    expect(result.orders.map((order) => order.orderId)).toEqual(["SS-CACHED"]);
+    expect(result.orders[0]).toMatchObject({
       id: "ord-cached",
       orderId: "SS-CACHED",
       userEmail: "buyer@example.com",
@@ -112,21 +119,28 @@ describe("fetchBuyerOrders fallback paths", () => {
       paymentMethod: "stellar",
       tokenSymbol: "XLM",
     });
-    expect(orders[0].items).toEqual([{ name: "Trail Runner", price: 55, quantity: 1 }]);
+    expect(result.orders[0].items).toEqual([{ name: "Trail Runner", price: 55, quantity: 1 }]);
   });
 
   it("does not fall back across accounts when Supabase fails", async () => {
     await saveBuyerOrder(cachedOrder);
     supabaseState.reject = true;
 
-    const orders = await fetchBuyerOrders("someone-else@example.com");
+    const result = await fetchBuyerOrders("someone-else@example.com");
 
-    expect(orders).toEqual([]);
+    expect(result.orders).toEqual([]);
+    // Still a failure — the empty list is "no cache for this account", not
+    // "this account has no orders".
+    expect(result.stale).toBe(true);
   });
 
-  it("returns an empty array when Supabase is empty and nothing is cached", async () => {
-    const orders = await fetchBuyerOrders("buyer@example.com");
+  it("reports no orders and nothing stale when Supabase is empty and nothing is cached", async () => {
+    const result = await fetchBuyerOrders("buyer@example.com");
 
-    expect(orders).toEqual([]);
+    expect(result.orders).toEqual([]);
+    // The server answered, so the empty history is confirmed rather than a
+    // degraded read.
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
   });
 });

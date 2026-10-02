@@ -71,6 +71,33 @@ describe("Accessibility - Color Contrast & Luminance (#39)", () => {
     expect(meetsContrastRequirement("#ffffff", "#000000")).toBe(true);
     expect(meetsContrastRequirement("#828282", "#ffffff", true)).toBe(true);
   });
+  it("rejects trailing garbage in hex colours (#accessibility-contrast)", () => {
+    expect(Number.isNaN(getRelativeLuminance("#12345g"))).toBe(true);
+    expect(Number.isNaN(getRelativeLuminance("#ffffffzz"))).toBe(true);
+    expect(getRelativeLuminance("#ffffff ")).toBeCloseTo(1, 5); // padded input is trimmed
+    expect(meetsContrastRequirement("#12345g", "#ffffff")).toBe(false);
+  });
+
+  it("parses rgb() and rgba() colours (#accessibility-contrast)", () => {
+    expect(getRelativeLuminance("rgb(0, 0, 0)")).toBe(0);
+    expect(getRelativeLuminance("rgb(255, 255, 255)")).toBeCloseTo(1, 5);
+    expect(getRelativeLuminance("rgb(255,255,255)")).toBeCloseTo(1, 5);
+    expect(getRelativeLuminance("rgba(0, 0, 0, 0.5)")).toBe(0);
+    expect(meetsContrastRequirement("rgb(0, 0, 0)", "rgb(255, 255, 255)")).toBe(true);
+  });
+
+  it("parses 8-digit hex colours (#accessibility-contrast)", () => {
+    expect(getRelativeLuminance("#00000000")).toBe(0);
+    expect(getRelativeLuminance("#ffffffff")).toBeCloseTo(1, 5);
+    expect(getRelativeLuminance("#ffffff00")).toBeCloseTo(1, 5);
+    expect(meetsContrastRequirement("#00000000", "#ffffffff")).toBe(true);
+  });
+
+  it("rejects malformed rgb() colours (#accessibility-contrast)", () => {
+    expect(Number.isNaN(getRelativeLuminance("rgb(255, 255)"))).toBe(true);
+    expect(Number.isNaN(getRelativeLuminance("rgb(255, 255, 255, 255)"))).toBe(true);
+    expect(Number.isNaN(getRelativeLuminance("rgb(255, 255, 255) garbage"))).toBe(true);
+  });
 });
 
 describe("Accessibility - DOM and ARIA Helpers", () => {

@@ -399,8 +399,8 @@ this.recoverFromRetentionError(err);
 
   private decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
     const first = raw.topic[0];
-    if (!first || first.switch() !== xdr.ScValType.scvSymbol()) return null;
-    const symbol = first.sym().toString();
+    if (!first || first.type !== "scvSymbol") return null;
+    const symbol = first.sym.toString();
     if (!this.watchedSymbols.includes(symbol)) return null;
 
     const fields: Record<string, string> = {};
@@ -409,16 +409,14 @@ this.recoverFromRetentionError(err);
     });
 
     const data = raw.value;
-    if (data.switch() === xdr.ScValType.scvMap()) {
-      for (const entry of data.map() ?? []) {
+    if (data.type === "scvMap") {
+      for (const entry of data.map ?? []) {
         const key =
-          entry.key().switch() === xdr.ScValType.scvSymbol()
-            ? entry.key().sym().toString()
-            : scValToString(entry.key());
-        fields[key] = scValToString(entry.val());
+          entry.key.type === "scvSymbol" ? entry.key.sym.toString() : scValToString(entry.key);
+        fields[key] = scValToString(entry.val);
       }
-    } else if (data.switch() === xdr.ScValType.scvVec()) {
-      fields.value = (data.vec() ?? []).map(scValToString).join(",");
+    } else if (data.type === "scvVec") {
+      fields.value = (data.vec ?? []).map(scValToString).join(",");
     } else {
       fields.value = scValToString(data);
     }

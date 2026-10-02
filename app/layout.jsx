@@ -71,9 +71,9 @@ const RootLayout = ({ children }) => {
         <AuthProvider>
           <div className="flex flex-col min-h-screen">
             <Navbar />
-            <ErrorBoundary>
-              <main id="main-content" className="app flex-grow pt-10">{children}</main>
-            </ErrorBoundary>
+            <main id="main-content" className="app flex-grow pt-10">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
             <Whatsapp />
             <ScrollToTop />
             <Footer />
