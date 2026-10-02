@@ -25,13 +25,8 @@ import { requestOtp, verifyOtp } from "../../lib/otp-client";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
-import {
-  SUPPORTED_TOKENS,
-  defaultToken,
-  TokenConfig,
-  NETWORK,
-} from "../../lib/stellar/config";
-import { convertUsdToXlm, DEFAULT_XLM_USD_PRICE } from "../../lib/stellar/price";
+import { SUPPORTED_TOKENS, defaultToken, TokenConfig, NETWORK } from "../../lib/stellar/config";
+import { resolveXlmUsdRate, TESTNET_REFERENCE_XLM_USD_PRICE } from "../../lib/stellar/price";
 import {
   validateOTP,
   validateEmail,
@@ -58,8 +53,7 @@ const CART_STORAGE_KEY = "cartItems";
  */
 export const deriveTotal = (items: any[]): number =>
   items.reduce(
-    (sum: number, item: any) =>
-      sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+    (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
     0
   );
 
@@ -393,19 +387,25 @@ const Checkout = () => {
           </div>
           <div className="w-full md:w-1/2 px-4 p-4 rounded-md">
             {stage === 1 && (
-              <form ref={formRef} onSubmit={handleSubmit} noValidate className="bg-white p-4 rounded shadow-md">
+              <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                noValidate
+                className="bg-white p-4 rounded shadow-md"
+              >
                 <h2 className="text-2xl mb-4 text-center">Checkout</h2>
                 <p
                   role="note"
                   className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"
                 >
-                  Demo checkout — the card fields below are placeholders. Card values are
-                  never transmitted or stored. Use the Stellar payment option to place a
-                  real order.
+                  Demo checkout — the card fields below are placeholders. Card values are never
+                  transmitted or stored. Use the Stellar payment option to place a real order.
                 </p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="mb-4">
-                    <label htmlFor="checkout-first-name" className="block text-gray-700">First Name</label>
+                    <label htmlFor="checkout-first-name" className="block text-gray-700">
+                      First Name
+                    </label>
                     <input
                       id="checkout-first-name"
                       type="text"
@@ -423,7 +423,9 @@ const Checkout = () => {
                     )}
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-last-name" className="block text-gray-700">Last Name</label>
+                    <label htmlFor="checkout-last-name" className="block text-gray-700">
+                      Last Name
+                    </label>
                     <input
                       id="checkout-last-name"
                       type="text"
@@ -441,7 +443,9 @@ const Checkout = () => {
                     )}
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-email" className="block text-gray-700">Email</label>
+                    <label htmlFor="checkout-email" className="block text-gray-700">
+                      Email
+                    </label>
                     <input
                       id="checkout-email"
                       type="email"
@@ -459,7 +463,9 @@ const Checkout = () => {
                     )}
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-address" className="block text-gray-700">Address</label>
+                    <label htmlFor="checkout-address" className="block text-gray-700">
+                      Address
+                    </label>
                     <input
                       id="checkout-address"
                       type="text"
@@ -477,7 +483,9 @@ const Checkout = () => {
                     )}
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-card-number" className="block text-gray-700">Card Number</label>
+                    <label htmlFor="checkout-card-number" className="block text-gray-700">
+                      Card Number
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
                         id="checkout-card-number"
@@ -515,7 +523,9 @@ const Checkout = () => {
                     )}
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="checkout-expiry-date" className="block text-gray-700">Expiry Date</label>
+                    <label htmlFor="checkout-expiry-date" className="block text-gray-700">
+                      Expiry Date
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
                         id="checkout-expiry-date"
@@ -561,7 +571,9 @@ const Checkout = () => {
                   </div>
 
                   <div className="mb-4">
-                    <label htmlFor="checkout-cvv" className="block text-gray-700">Cvv</label>
+                    <label htmlFor="checkout-cvv" className="block text-gray-700">
+                      Cvv
+                    </label>
                     <div className="relative flex justify-center items-center">
                       <input
                         id="checkout-cvv"
@@ -660,12 +672,27 @@ const Checkout = () => {
                       );
                     })}
                   </div>
-                  {selectedToken.isNative && totalPrice > 0 && (
-                    <div className="mt-1 flex items-center justify-between text-xs bg-purple-50 border border-purple-100 rounded px-2.5 py-1.5 text-purple-800">
-                      <span>Rate: 1 XLM ≈ ${DEFAULT_XLM_USD_PRICE} USD</span>
-                      <span className="font-semibold">≈ {convertUsdToXlm(totalPrice)} XLM</span>
-                    </div>
-                  )}
+                  {selectedToken.isNative &&
+                    totalPrice > 0 &&
+                    (() => {
+                      const rate = resolveXlmUsdRate();
+                      if (!rate) {
+                        return (
+                          <div className="mt-1 flex items-center justify-between text-xs bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5 text-amber-800">
+                            <span>XLM rate not configured</span>
+                            <span className="font-semibold">Set NEXT_PUBLIC_XLM_USD_PRICE</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="mt-1 flex items-center justify-between text-xs bg-purple-50 border border-purple-100 rounded px-2.5 py-1.5 text-purple-800">
+                          <span>Rate: 1 XLM ≈ ${rate.usdPerXlm.toFixed(4)} USD</span>
+                          <span className="font-semibold">
+                            ≈ {(totalPrice / rate.usdPerXlm).toFixed(4)} XLM
+                          </span>
+                        </div>
+                      );
+                    })()}
                 </div>
 
                 <StellarWalletButton />
