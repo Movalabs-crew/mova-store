@@ -1,7 +1,7 @@
 {
   "name": "mova-store",
   "version": "1.0.0",
-  "description": "Mova Store \u2014 e-commerce with Stellar blockchain payments",
+  "description": "Mova Store — e-commerce with Stellar blockchain payments",
   "private": false,
   "license": "MIT",
   "repository": {
@@ -36,7 +36,8 @@
     "test:naming": "node scripts/check-test-names.mjs",
     "triage": "node scripts/triage-prs.mjs",
     "deploy:testnet": "./scripts/deploy-testnet.sh",
-    "prepare": "node scripts/setup-git-hooks.mjs"
+    "prepare": "node scripts/setup-git-hooks.mjs",
+    "type-check:tests": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -73,12 +74,9 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
-    "glob": "^10.5.0"
+    "postcss": "$postcss"
   },
   "engines": {
     "node": ">=22.0.0"
-  },
-  "overrides": {
-    "postcss": "$postcss"
   }
 }

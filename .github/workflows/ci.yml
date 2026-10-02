@@ -64,6 +64,9 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Type check tests
+        run: npm run type-check:tests
+
       # "vitest run --coverage" executes the whole suite once and collects v8
       # coverage in the same pass, so a separate "npm run test" step would run
       # every test a second time for no extra signal. The coverage thresholds in
@@ -110,8 +113,7 @@ jobs:
 
       - name: Enforce test file naming convention
         run: node scripts/check-test-names.mjs
-
-  # Formatting.
+# Formatting.
   #
   # Also NOT one of ci-success's needs. Prettier drifted across 76 files while
   # this step sat behind the ESLint failure at the end of the frontend job, so
@@ -139,7 +141,6 @@ jobs:
 
       - name: Check code formatting
         run: npm run format:check
-
   # Soroban contract checks
   contracts:
     name: Soroban Contracts (Build, Test, Format, Clippy)
