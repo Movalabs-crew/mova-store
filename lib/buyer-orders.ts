@@ -221,7 +221,7 @@ export function getCachedBuyerOrders(): BuyerOrder[] {
 }
 
 /**
- * Removes every cached buyer order from localStorage.
+* Removes every cached buyer order from localStorage.
  *
  * Sign-out must not leave a previous buyer's order history behind on a shared
  * browser: `getCachedBuyerOrders()` is a public read used by the orders pages,
@@ -237,57 +237,115 @@ export function clearCachedBuyerOrders(): void {
 }
 
 /**
- * Fetches past orders for an authenticated user.
+ * Which source the returned orders came from.
+ *
+ * `server` is the Supabase query; `cache` is localStorage, which is the only
+ * source for a guest and the fallback when the query failed.
  */
-export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrder[]> {
-  let orders: BuyerOrder[] = [];
+export type BuyerOrdersSource = "server" | "cache";
 
-  // Try querying Supabase first
+export interface BuyerOrdersResult {
+  /** The rows the caller should render. */
+  orders: BuyerOrder[];
+  /** Where those rows came from. */
+  source: BuyerOrdersSource;
+  /**
+   * True only when `orders` is cache content served because the query failed:
+   * the list may be incomplete and the cache is not current server state.
+   */
+  stale: boolean;
+  /** The failure reported by the server; set only on a stale result. */
+  error: string | null;
+}
+
+/** Maps one Supabase `orders` row onto the shape the orders page renders. */
+function mapOrderRow(row: any): BuyerOrder {
+  return {
+    id: row.id || row.order_id,
+    orderId: row.order_id || row.id,
+    userId: row.user_id,
+    userEmail: row.user_email,
+    createdAt: row.created_at || new Date().toISOString(),
+    total: Number(row.total) || 0,
+    status: row.status || "Paid",
+    paymentMethod: row.payment_method || "stellar",
+    tokenSymbol: row.token_symbol || "USDC",
+    tokenAmount: row.token_amount ? Number(row.token_amount) : undefined,
+    txHash: row.tx_hash,
+    ledger: row.ledger,
+    items: Array.isArray(row.items) ? row.items : [],
+  };
+}
+
+/**
+ * Reads the cached orders a caller is allowed to see.
+ *
+ * The cache is shared by every account that has ever used this browser, so
+ * matching is strict: an order is only surfaced when the identifier matches
+ * exactly, and a caller without an identifier only ever sees the anonymous
+ * (guest) entries.
+ */
+function readCachedOrders(userEmailOrId?: string): BuyerOrder[] {
+  const cached = getCachedBuyerOrders();
+  if (userEmailOrId) {
+    return cached.filter((o) => o.userEmail === userEmailOrId || o.userId === userEmailOrId);
+  }
+  return cached.filter((o) => !o.userEmail && !o.userId);
+}
+
+/**
+ * Fetches past orders for an authenticated user.
+ *
+ * Three outcomes are distinguished, because they are three different facts:
+ * rows returned by the server, a query that failed (cache content, flagged
+ * `stale`), and an empty history (not flagged). The cache keeps the page usable
+ * in the failure case without being presented as current server state.
+ */
+export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrdersResult> {
+  const fromCache = (error: string | null): BuyerOrdersResult => ({
+    orders: readCachedOrders(userEmailOrId),
+    source: "cache",
+    stale: error !== null,
+    error,
+  });
+
+  // A guest has no identifier to query for and a deployment without Supabase
+  // configured has no client to query with: no query was attempted, so nothing
+  // that comes back from the cache is stale.
+  if (!supabase || !userEmailOrId) return fromCache(null);
+
   try {
-    if (supabase && userEmailOrId) {
-      const isEmail = userEmailOrId.includes("@");
-      const query = supabase.from("orders").select("*").order("created_at", { ascending: false });
+    const isEmail = userEmailOrId.includes("@");
+    const query = supabase.from("orders").select("*").order("created_at", { ascending: false });
 
-      const res = isEmail
-        ? await query.eq("user_email", userEmailOrId)
-        : await query.eq("user_id", userEmailOrId);
+    const res = isEmail
+      ? await query.eq("user_email", userEmailOrId)
+      : await query.eq("user_id", userEmailOrId);
 
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        orders = res.data.map((row: any) => ({
-          id: row.id || row.order_id,
-          orderId: row.order_id || row.id,
-          userId: row.user_id,
-          userEmail: row.user_email,
-          createdAt: row.created_at || new Date().toISOString(),
-          total: Number(row.total) || 0,
-          status: row.status || "Paid",
-          paymentMethod: row.payment_method || "stellar",
-          tokenSymbol: row.token_symbol || "USDC",
-          tokenAmount: row.token_amount ? Number(row.token_amount) : undefined,
-          txHash: row.tx_hash,
-          ledger: row.ledger,
-          items: Array.isArray(row.items) ? row.items : [],
-        }));
-      }
+    // supabase-js reports a query-level failure (an RLS denial, a column that
+    // does not exist, a bad filter) in the resolved value rather than by
+    // rejecting, so `res.error` has to be read before `res.data` is trusted.
+    // Ignoring it made a failed query indistinguishable from an empty history:
+    // the cache was returned as though it were current server state.
+    if (res.error) {
+      console.warn("Supabase query failed, falling back to cached orders:", res.error.message);
+      return fromCache(res.error.message || "Orders query failed");
     }
+
+    const rows = Array.isArray(res.data) ? res.data : [];
+    if (rows.length === 0) {
+      // The server answered and had no rows, so this is a confirmed empty
+      // history; the cache can still fill the gap with an order saved on this
+      // browser, and `stale: false` records that the server was reached.
+      return fromCache(null);
+    }
+
+    return { orders: rows.map(mapOrderRow), source: "server", stale: false, error: null };
   } catch (err) {
-    console.warn("Supabase query failed, falling back to cached orders:", err);
+    const message = err instanceof Error ? err.message : "Orders query failed";
+    console.warn("Supabase query threw, falling back to cached orders:", message);
+    return fromCache(message);
   }
-
-  // Fallback to localStorage cached orders. The cache is shared by every account
-  // that has ever used this browser, so matching is strict: an order is only
-  // surfaced when the identifier matches exactly, and a caller without an
-  // identifier only ever sees the anonymous (guest) entries.
-  if (orders.length === 0) {
-    const cached = getCachedBuyerOrders();
-    if (userEmailOrId) {
-      orders = cached.filter((o) => o.userEmail === userEmailOrId || o.userId === userEmailOrId);
-    } else {
-      orders = cached.filter((o) => !o.userEmail && !o.userId);
-    }
-  }
-
-  return orders;
 }
 
 /**
