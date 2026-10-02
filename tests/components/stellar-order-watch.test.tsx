@@ -40,7 +40,7 @@ describe("StellarOrderWatch", () => {
       await Promise.resolve();
     });
 
-    expect(mockIndexerInstance).not.toBeNull();
+expect(mockIndexerInstance).not.toBeNull();
     expect(mockIndexerInstance.start).toHaveBeenCalled();
     capturedCallbacks = mockIndexerInstance.start.mock.calls[0][0];
 

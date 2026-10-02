@@ -1,4 +1,4 @@
-import { rpc, TransactionBuilder } from "@stellar/stellar-sdk";
+import { rpc, TransactionBuilder } from  @stellar/stellar-sdk";
 
 import {
   CHECKOUT_CONTRACT_ID,
