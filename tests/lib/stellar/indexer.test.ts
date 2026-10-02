@@ -9,23 +9,6 @@ import {
   symbolToScVal,
 } from "../../../lib/stellar/scval";
 
-/**
- * Advance fake timers and let any pending microtasks (promise chains) settle.
- * Using fake timers keeps these tests independent of wall-clock margins, so
- * they stay deterministic even on a loaded CI runner.
- */
-async function tick(ms: number): Promise<void> {
-  await vi.advanceTimersByTimeAsync(ms);
-}
-
-describe("PaymentEventIndexer startup retry (Issue #68)", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
 
   it("retries getLatestLedger when initial call fails and recovers without 'no cursor' error", async () => {
     let getLatestLedgerAttempts = 0;
@@ -714,7 +697,6 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
   const setDocumentHidden = (value: boolean) => {
     Object.defineProperty(document, "hidden", { configurable: true, get: () => value });
   };
@@ -765,7 +747,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     // Hide the tab: the interval must be cleared so no further poll fires.
     setDocumentHidden(true);
     document.dispatchEvent(new Event("visibilitychange"));
-    await tick(60);
+await tick(60);
     expect(indexer.status.paused).toBe(true);
     expect(calls).toBe(beforeHide);
 
@@ -793,6 +775,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
 
     indexer.start({ onEvent: () => {} });
     await tick(0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     indexer.stop();
 
     expect(removeSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
@@ -809,7 +792,6 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
   it("keeps at most one poll in flight when a response outruns the interval", async () => {
     let active = 0;
     let maxActive = 0;
@@ -865,7 +847,6 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     expect(calls).toBeGreaterThanOrEqual(2);
   });
 });
-
 describe("PaymentEventIndexer durable start ledger & persisted cursor (Issue #715)", () => {
   const STORAGE_KEY = "mova:test:admin-orders:cursor";
 
