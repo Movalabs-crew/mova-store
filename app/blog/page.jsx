@@ -28,23 +28,23 @@ const posts = [
   },
   {
     id: 4,
-    title: "How to Care for Your Shoes",
+    title: "How to Break In New Shoes Without Pain",
     excerpt:
-      "Tips and tricks for maintaining your shoes to keep them looking new and lasting longer.",
+      "Simple strategies to soften stiff materials and avoid blisters while your shoes adjust to your feet.",
     image: shoe1,
   },
   {
     id: 5,
-    title: "How to Care for Your Shoes",
+    title: "How to Pick the Right Shoes for Trail Running",
     excerpt:
-      "Tips and tricks for maintaining your shoes to keep them looking new and lasting longer.",
+      "What to look for in grip, cushioning, and weather protection before you hit the trails.",
     image: shoe2,
   },
   {
     id: 6,
-    title: "How to Care for Your Shoes",
+    title: "Sustainable Shoes: How to Spot Greener Options",
     excerpt:
-      "Tips and tricks for maintaining your shoes to keep them looking new and lasting longer.",
+      "A practical guide to eco-friendly materials, repairable designs, and longer-lasting footwear.",
     image: shoe3,
   },
 ];
@@ -79,7 +79,7 @@ export default function Blog() {
                     href={`/blog/${post.id}`}
                     className="text-purple-700 hover:text-purple-500 font-semibold"
                   >
-                      Read More
+                    Read More
                   </Link>
                 </div>
               </div>
