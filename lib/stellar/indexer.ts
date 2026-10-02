@@ -139,6 +139,15 @@ export class PaymentEventIndexer {
     void this.tick(callbacks);
   }
 
+  /**
+   * Trigger an immediate poll on the existing indexer without tearing down
+   * state. Safe to call while running; skips if a poll is already in flight.
+   */
+  refresh(callbacks: IndexerCallbacks): void {
+    if (!this.running || this.paused) return;
+    void this.tick(callbacks);
+  }
+
   stop(): void {
     this.running = false;
     this.paused = false;

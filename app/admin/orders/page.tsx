@@ -181,6 +181,8 @@ const OrdersManagementContent = () => {
     running: boolean;
     eventsSeen: number;
   }>({ running: false, eventsSeen: 0 });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const indexerRef = React.useRef<PaymentEventIndexer | null>(null);
 
   // Initialize event indexer
   useEffect(() => {
@@ -223,6 +225,8 @@ const OrdersManagementContent = () => {
       },
     });
 
+    indexerRef.current = indexer;
+
     // Stop after 2 seconds of loading to show UI
     const loadingTimeout = setTimeout(() => {
       setIsLoading(false);
@@ -230,42 +234,12 @@ const OrdersManagementContent = () => {
 
     return () => {
       indexer.stop();
+      indexerRef.current = null;
       clearTimeout(loadingTimeout);
     };
   }, []);
 
-  // Confirmation dialog state for irreversible escrow actions.
-  const [confirmAction, setConfirmAction] = useState<{
-    type: "dispatch" | "refund";
-    orderId: string;
-    amount: string;
-    tokenSymbol: string;
-  } | null>(null);
-  const confirmResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
 
-  // Ask the admin to explicitly confirm an irreversible value transfer.
-  // Resolves true only when the admin clicks the confirm button.
-  const requestConfirmation = useCallback(
-    (action: {
-      type: "dispatch" | "refund";
-      orderId: string;
-      amount: string;
-      tokenSymbol: string;
-    }) => {
-      return new Promise<boolean>((resolve) => {
-        confirmResolverRef.current = resolve;
-        setConfirmAction(action);
-      });
-    },
-    []
-  );
-
-  const resolveConfirmation = useCallback((confirmed: boolean) => {
-    const resolver = confirmResolverRef.current;
-    confirmResolverRef.current = null;
-    setConfirmAction(null);
-    if (resolver) {
-      resolver(confirmed);
     }
   }, []);
 
@@ -496,10 +470,11 @@ const OrdersManagementContent = () => {
         <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-800">Orders</h2>
           <button
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <MdRefresh /> Refresh
+            <MdRefresh className={isRefreshing ? "animate-spin" : ""} /> Refresh
           </button>
         </div>
 
