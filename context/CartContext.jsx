@@ -175,24 +175,29 @@ export const CartProvider = ({ children }) => {
   /**
    * Remove a single cart line.
    *
-   * `target` may be the line object itself or a `cartItemId` string. Lines are
-   * matched by `cartItemId` when one is supplied so that duplicate products are
-   * removed by identity instead of by array position (or by the shared product
-   * id, which would always drop the first duplicate).
+   * `target` may be the line object itself or a line id string. Lines are
+   * matched by `cartItemId`, or by the legacy `lineId` that the row keys and the
+   * duplicate-row tests already treat as a line identity, so duplicate products
+   * are removed by identity instead of by array position.
+   *
+   * Only when the caller supplies no line identity at all does this fall back to
+   * the product id, and then only if exactly one line matches: with duplicates
+   * the value-based fallback cannot tell the rows apart, so removing the first
+   * match would silently delete the wrong line.
    */
   const removeFromCart = useCallback((target) => {
-    const targetCartItemId =
-      typeof target === "string" ? target : target?.cartItemId || null;
+    const targetLineId =
+      typeof target === "string" ? target : target?.cartItemId || target?.lineId || null;
     const targetProductId =
       typeof target === "object" && target !== null ? target.id : null;
 
     const matchesLine = (item) => {
       if (!item) return false;
-      if (targetCartItemId) {
-        return item.cartItemId === targetCartItemId;
+      if (targetLineId) {
+        return item.cartItemId === targetLineId || item.lineId === targetLineId;
       }
       // Legacy callers pass a bare product without a line id: fall back to the
-      // product id (first match) exactly as before.
+      // product id, but only for an unambiguous match (guard below).
       return item.id === targetProductId;
     };
 
@@ -203,6 +208,15 @@ export const CartProvider = ({ children }) => {
     const index = source.findIndex(matchesLine);
     if (index === -1) return;
 
+    // A value-based fallback (no line identity supplied) is only safe when it
+    // identifies a single line; otherwise it would silently remove the first of
+    // several identical products.
+    if (!targetLineId) {
+      const valueMatches = source.filter((item) => item && item.id === targetProductId).length;
+      if (valueMatches !== 1) return;
+    }
+
+    const removedItem = source[index];
     const nextCartItems = [...source];
     nextCartItems.splice(index, 1);
 
