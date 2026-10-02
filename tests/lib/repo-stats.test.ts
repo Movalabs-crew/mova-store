@@ -13,7 +13,7 @@ function jsonResponse(body: unknown, init: { ok?: boolean; link?: string } = {})
     ok: init.ok ?? true,
     json: async () => body,
     headers: {
-      get: (name: string) => (name.toLowerCase() === "link" ? init.link ?? null : null),
+      get: (name: string) => (name.toLowerCase() === "link" ? (init.link ?? null) : null),
     },
   } as unknown as Response;
 }
@@ -44,7 +44,9 @@ describe("parseLastPage", () => {
     expect(parseLastPage(null)).toBe(null);
     expect(parseLastPage("")).toBe(null);
     expect(
-      parseLastPage('<https://api.github.com/repositories/1/contributors?per_page=1&page=2>; rel="next"')
+      parseLastPage(
+        '<https://api.github.com/repositories/1/contributors?per_page=1&page=2>; rel="next"'
+      )
     ).toBe(null);
   });
 });
@@ -83,7 +85,9 @@ describe("fetchRepoStats", () => {
   });
 
   it("fails closed when the API answers with an error status", async () => {
-    const fetcher = vi.fn().mockResolvedValue(jsonResponse({ message: "rate limited" }, { ok: false }));
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: "rate limited" }, { ok: false }));
 
     await expect(fetchRepoStats(fetcher as unknown as typeof fetch)).resolves.toEqual(
       UNAVAILABLE_REPO_STATS

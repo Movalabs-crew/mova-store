@@ -5,6 +5,8 @@ import { useProducts } from "../../hooks/useProducts";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
 import AdminGuard from "../../components/AdminGuard";
+import Toast from "../../components/Toast";
+import useToast from "../../hooks/useToast";
 import Link from "next/link";
 import { SiStellar } from "react-icons/si";
 import { MdInventory } from "react-icons/md";
@@ -18,6 +20,7 @@ const ProductsAdminContent = () => {
   // a double-click is de-duplicated synchronously.
   const [pendingDeletes, setPendingDeletes] = useState([]);
   const inFlightDeletes = useRef(new Set());
+  const { toast, showToast, hideToast } = useToast(6000);
 
   useEffect(() => {
     if (error) {
@@ -33,7 +36,7 @@ const ProductsAdminContent = () => {
     setSelectedProductId(null);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, name) => {
     // A delete that is already in flight for this id must not be issued twice;
     // the ref is read synchronously so a rapid double-click cannot race it.
     if (inFlightDeletes.current.has(id)) return;
@@ -42,13 +45,16 @@ const ProductsAdminContent = () => {
     // Functional update: the pending set is derived from its previous value, so
     // it cannot be clobbered by an interleaved add/refresh render.
     setPendingDeletes((prev) => (prev.includes(id) ? prev : [...prev, id]));
-
     try {
       // deleteProduct invalidates the shared cache, so the hook above
       // refetches the list with the row removed.
       await deleteProduct(id);
     } catch (error) {
       console.error("Error deleting product: ", error);
+      // The cache was not invalidated, so the row stays on screen. Say that the
+      // deletion failed instead of leaving the operator to guess why the
+      // product is still listed.
+      showToast(`Could not delete ${name ? `"${name}"` : "the product"}: ${error.message}`);
     } finally {
       inFlightDeletes.current.delete(id);
       setPendingDeletes((prev) => prev.filter((pendingId) => pendingId !== id));
@@ -124,7 +130,7 @@ const ProductsAdminContent = () => {
                       aria-label={`Delete ${product.name}`}
                       disabled={pendingDeletes.includes(product.id)}
                       className="text-red-600 hover:text-red-800 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 rounded px-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => handleDelete(product.id, product.name)}
                     >
                       Delete
                     </button>
@@ -135,6 +141,13 @@ const ProductsAdminContent = () => {
           </table>
         </div>
       </div>
+      <Toast
+        variant="error"
+        message={toast.message}
+        show={toast.show}
+        onClose={hideToast}
+        time={6000}
+      />
     </div>
   );
 };
