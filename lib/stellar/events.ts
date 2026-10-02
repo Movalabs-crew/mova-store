@@ -80,21 +80,22 @@ export function decodePaymentEvent(
   for (const event of contractEvents) {
     let v0: xdr.ContractEventV0;
     try {
-      v0 = event.body().v0();
+      v0 = event.body.v0;
     } catch {
       continue;
     }
-    const topics = v0.topics();
+    const topics = v0.topics;
     if (!topics || topics.length < 1) continue;
     const first = topics[0];
-    if (first.switch() !== xdr.ScValType.scvSymbol()) continue;
-    if (first.sym().toString() !== "pay") continue;
+    if (first.type !== "scvSymbol") continue;
+    if (first.sym.toString() !== "pay") continue;
 
     let eventContractId: string | undefined;
     try {
-      const contractId = event.contractId();
+      const contractId = event.contractId;
       if (contractId) {
-        eventContractId = StrKey.encodeContract(contractId as any);
+        // ContractId is a BytesValue wrapper in SDK 17, not a raw Buffer.
+        eventContractId = StrKey.encodeContract(contractId.toBytes());
       }
     } catch {
       // system events have no contract id
@@ -105,7 +106,7 @@ export function decodePaymentEvent(
       continue;
     }
 
-    const data = v0.data();
+    const data = v0.data;
     const receipt: PaymentReceipt = {
       txHash: tx.txHash,
       ledger: tx.ledger,
@@ -136,13 +137,13 @@ export function decodePaymentEvent(
       return null;
     }
     // data = Map { "amount": i128 }
-    if (data.switch() === xdr.ScValType.scvMap()) {
-      const entries = data.map();
+    if (data.type === "scvMap") {
+      const entries = data.map;
       for (const entry of entries ?? []) {
-        if (entry.key().switch() === xdr.ScValType.scvSymbol()) {
-          const key = entry.key().sym().toString();
+        if (entry.key.type === "scvSymbol") {
+          const key = entry.key.sym.toString();
           if (key === "amount") {
-            receipt.amount = scValToString(entry.val());
+            receipt.amount = scValToString(entry.val);
           }
         }
       }

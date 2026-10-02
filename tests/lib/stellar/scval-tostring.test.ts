@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { xdr, nativeToScVal } from "@stellar/stellar-sdk";
-import {
-  scValToString,
-  addressToScVal,
-  i128ToScVal,
-} from "../../../lib/stellar/scval";
+import { scValToString, addressToScVal, i128ToScVal } from "../../../lib/stellar/scval";
 
 // A well-known valid ed25519 account strkey used across the Stellar docs/tests.
 const KNOWN_ADDRESS = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
@@ -85,12 +81,7 @@ const cases: ScValCase[] = [
   },
   {
     type: "vec",
-    build: () =>
-      xdr.ScVal.scvVec([
-        xdr.ScVal.scvU32(1),
-        xdr.ScVal.scvU32(2),
-        xdr.ScVal.scvU32(3),
-      ]),
+    build: () => xdr.ScVal.scvVec([xdr.ScVal.scvU32(1), xdr.ScVal.scvU32(2), xdr.ScVal.scvU32(3)]),
     expected: "[1,2,3]",
   },
   {
@@ -137,7 +128,7 @@ describe("scValToString", () => {
       expect(() => scValToString(scVal)).not.toThrow();
       expect(typeof scValToString(scVal)).toBe("string");
       expect(scValToString(scVal)).toBe(expected);
-    },
+    }
   );
 
   it("covers every supported branch exactly once in the table", () => {
@@ -160,7 +151,7 @@ describe("scValToString", () => {
         "vec",
         "vec of i128 (bigint-safe JSON)",
         "map",
-      ]),
+      ])
     );
   });
 
@@ -168,7 +159,7 @@ describe("scValToString", () => {
     // Guards against a regression where the address branch is dropped and a
     // symbol/string accidentally matches first.
     const scVal = addressToScVal(KNOWN_ADDRESS);
-    expect(scVal.switch()).toBe(xdr.ScValType.scvAddress());
+    expect(scVal.type).toBe("scvAddress");
     expect(scValToString(scVal)).toBe(KNOWN_ADDRESS);
   });
 });

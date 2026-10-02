@@ -15,8 +15,13 @@ import { WalletError } from "./freighter";
 export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
   const v = BigInt(value);
   const mask = BigInt("0xffffffffffffffff");
-  const lo = new xdr.Uint64(BigInt.asUintN(64, v & mask));
-  const hi = new xdr.Int64(BigInt.asIntN(64, v >> BigInt(64)));
+  // SDK 17 declares `xdr.Uint64`/`xdr.Int64` as plain `bigint` and takes the
+  // halves as bigints, so the old js-xdr wrappers (`new xdr.Uint64(...)`) no
+  // longer exist. The split is kept hand-rolled rather than delegating to
+  // `nativeToScVal`, so the "byte-for-byte identical" test below stays an
+  // independent check instead of becoming tautological.
+  const lo = BigInt.asUintN(64, v & mask);
+  const hi = BigInt.asIntN(64, v >> BigInt(64));
   return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
 }
 
@@ -71,30 +76,29 @@ export function symbolToScVal(symbol: string): xdr.ScVal {
  * addresses, bytes (hex), numbers/bigints and maps/vecs (JSON).
  */
 export function scValToString(scVal: xdr.ScVal): string {
-  const typeName = scVal.switch();
-  if (typeName === xdr.ScValType.scvSymbol()) {
-    return scVal.sym().toString();
-  }
-  if (typeName === xdr.ScValType.scvString()) {
-    return scVal.str().toString();
-  }
-  if (typeName === xdr.ScValType.scvAddress()) {
-    return Address.fromScVal(scVal).toString();
-  }
-  if (
-    typeName === xdr.ScValType.scvI128() ||
-    typeName === xdr.ScValType.scvI64() ||
-    typeName === xdr.ScValType.scvU32() ||
-    typeName === xdr.ScValType.scvU64() ||
-    typeName === xdr.ScValType.scvI32()
-  ) {
-    return scValToNative(scVal).toString();
-  }
-  if (typeName === xdr.ScValType.scvBytes()) {
-    return bytesToHex(scVal.bytes());
-  }
-  if (typeName === xdr.ScValType.scvBool()) {
-    return String(scVal.b());
+  // SDK 17 replaces `ScVal.switch()` + accessor methods with a string
+  // discriminant on `type` and plain property accessors. The discriminant is
+  // read inline in the `switch`: assigning it to a local first (as SDK 16
+  // required) defeats TypeScript's narrowing, leaving the payload accessors
+  // unresolvable on the union.
+  switch (scVal.type) {
+    case "scvSymbol":
+      return scVal.sym.toString();
+    case "scvString":
+      return scVal.str.toString();
+    case "scvAddress":
+      return Address.fromScVal(scVal).toString();
+    case "scvI128":
+    case "scvI64":
+    case "scvU32":
+    case "scvU64":
+    case "scvI32":
+      return scValToNative(scVal).toString();
+    case "scvBytes":
+      // `bytes` is an ScBytes wrapper in SDK 17, not a bare Uint8Array.
+      return bytesToHex(scVal.bytes.toBytes());
+    case "scvBool":
+      return String(scVal.b);
   }
   try {
     return JSON.stringify(scValToNative(scVal), bigintSafeReplacer);
