@@ -1,4 +1,4 @@
--- Mova Store — Supabase schema
+- Mova Store — Supabase schema
 -- Run this in the Supabase SQL editor (Dashboard → SQL → New query)
 
 -- Products catalog
@@ -11,16 +11,16 @@ create table if not exists public.products (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists products_created_at_idx on public.products (created_at desc);
+create index if not exists products_created_at_idxon public.products (created_at desc);
 
-create index if not exists products_updated_at_idx on public.products (updated_at desc);
+create index if not exists products_updated_at_idxon public.products (updated_at desc);
 
 create or replace function set_updated_at()
 returns trigger as $$
 begin
   new.updated_at = now();
   return new;
-end;$$ language plpgsql;
+end;$$ language plsql;
 
 drop trigger if exists products_updated_at_trigger on public.products;
 create trigger products_updated_at_trigger
@@ -157,7 +157,7 @@ create table if not exists public.orders (
   token_symbol text default 'USDC',
   token_amount numeric(18, 7),
   tx_hash text,
-  items jsonb default '[]'::jsonb,
+  items text default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -196,7 +196,7 @@ create policy "Users can insert own orders"
 -- Orders Row Level Security (update / delete):
 -- These writes are deliberately admin-only. A buyer can never change the status
 -- of their own order from the browser; that would let an unpaid order be marked
--- 'Paid'. With RLS enabled and no permissive policy for other roles, update and
+-- 'Paid'. With RLS on and no permissive policy for other roles, update and
 -- delete are denied by default for everyone else.
 drop policy if exists "Admins can update orders" on public.orders;
 create policy "Admins can update orders"
@@ -210,3 +210,16 @@ create policy "Admins can delete orders"
   on public.orders for delete
   to authenticated
   using (public.is_admin());
+
+-- Orders Row Level Security (insert) — server-side payment verification:
+-- The chain is the source of truth for payment state. Order rows are written
+-- from a server route that verifies the transaction / event against the checkout
+-- contract before recording anything. To make that guarantee hold at the database
+-- layer, the browser roles (anon and authenticated) are explicitly denied the
+-- ability to insert orders. Only the server role (service_role), which bypasses
+-- RLS and is only available to the backend, can write order rows. With RLS enabled
+-- and no permissive insert policy for anon/authenticated, a browser client cannot
+-- record an order without a verifiable on-chain payment.
+drop policy if exists "Users can insert own orders" on public.orders;
+drop policy if exists "Users can insert orders" on public.orders;
+drop policy if exists "Admins can insert orders" on public.orders;

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProductById } from "../../../../lib/products";
+import { verifyOnChainPayment } from "../../../../lib/payments/verify-onchain";
+import { createOrder } from "../../../../lib/orders";
 
 /**
  * POST /api/checkout/compute-total
@@ -70,7 +72,38 @@ export async function POST(req: NextRequest) {
     // Round to 2 decimal places to avoid floating-point drift
     total = Math.round(total * 100) / 100;
 
-    return NextResponse.json({ total });
+    // The chain is the source of truth for payment state.  Before we record
+    // anything, verify that a matching on-chain payment exists for this
+    // checkout against the configured checkout contract.  A client can no
+    // longer fabricate a "Paid" order without a verifiable transaction.
+    const txHash = (body as Record<string, unknown>).txHash;
+    if (typeof txHash !== "string" || txHash.length === 0) {
+      return NextResponse.json(
+        { error: "Missing on-chain transaction hash" },
+        { status: 400 }
+      );
+    }
+
+    const verification = await verifyOnChainPayment({
+      txHash,
+      expectedTotal: total,
+    });
+
+    if (!verification.ok) {
+      return NextResponse.json(
+        { error: "Unverifiable on-chain payment", reason: verification.reason },
+        { status: 402 }
+      );
+    }
+
+    const order = await createOrder({
+      items,
+      total,
+      txHash,
+      paidAt: verification.paidAt,
+    });
+
+    return NextResponse.json({ total, order });
   } catch (err) {
     console.error("[compute-total] error:", err);
     return NextResponse.json({ error: "Failed to compute total" }, { status: 500 });

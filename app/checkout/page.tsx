@@ -118,6 +118,7 @@ const Checkout = () => {
   const [isOtpSending, setIsOtpSending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [enteredOtp, setEnteredOtp] = useState("");
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<CheckoutField, string>>>({});
   const formRef = useRef<HTMLFormElement>(null);
   const [formData, setFormData] = useState({
@@ -133,14 +134,54 @@ const Checkout = () => {
 
   const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
 
-  const handleStellarSuccess = (result: { amountUsd: number | string; tokenSymbol?: string }) => {
+  const handleStellarSuccess = async (result: {
+    amountUsd: number | string;
+    tokenSymbol?: string;
+    txHash?: string;
+  }) => {
     const symbol = result.tokenSymbol || selectedToken.symbol;
-    showToast(
-      `${symbol} payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
-    );
-    setStage(3);
-    localStorage.removeItem(CART_STORAGE_KEY);
-    localStorage.removeItem("itemCount");
+
+    // The chain is the source of truth. Never mark the order paid from the
+    // browser: hand the tx hash to the server route, which re-verifies the
+    // payment against the checkout contract before recording the order row.
+    if (!result.txHash) {
+      showToast("Payment could not be verified. No order was recorded.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/checkout/record-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          txHash: result.txHash,
+          tokenSymbol: symbol,
+          amountUsd: Number(result.amountUsd),
+          items: cartItems.map((item: any) => ({
+            id: item.id,
+            quantity: item.quantity ?? 1,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `record-order: HTTP ${res.status}`);
+      }
+
+      setPendingOrderId(orderId);
+      showToast(
+        `${symbol} payment verified ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
+      );
+      setStage(3);
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem("itemCount");
+      localStorage.removeItem("totalPrice");
+    } catch (err) {
+      console.error("Order recording rejected:", err);
+      showToast("Payment could not be verified. No order was recorded.");
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
