@@ -34,6 +34,7 @@
     "test:ui": "vitest --ui",
     "verify": "npm run lint && npm run type-check && npm run test:coverage && npm run build && npm run format:check",
     "test:naming": "node scripts/check-test-names.mjs",
+    "triage": "node scripts/triage-prs.mjs",
     "deploy:testnet": "./scripts/deploy-testnet.sh",
     "prepare": "node scripts/setup-git-hooks.mjs"
   },
