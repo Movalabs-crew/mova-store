@@ -51,14 +51,7 @@ export interface IndexerCallbacks {
 
 const RETENTION_RETRY_LEDGER_DELTA = 5;
 
-/**
- * Whether an RPC error means the requested position fell outside the retained
- * event window (as opposed to a transient network/transport failure).
- */
-function isRetentionError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  return /retention|too old|older than|ledger range|out of range/i.test(message);
-}
+
 
 export class PaymentEventIndexer {
   private readonly server: rpc.Server;
@@ -231,14 +224,7 @@ export class PaymentEventIndexer {
     try {
       const latest = await this.server.getLatestLedger();
       this.latestLedger = latest.sequence;
-      const persistedCursor = this.readPersistedCursor();
-      if (persistedCursor) {
-        // Resume the position persisted by a previous visit instead of
-        // re-walking the backfill window from scratch.
-        this.cursor = persistedCursor;
-      } else {
-        this.startLedger = this.resolveStartLedger();
-      }
+      this.startLedger = Math.max(1, this.latestLedger - EVENT_START_LEDGER_BACKFILL);
       this.initialized = true;
       this.lastError = undefined;
       callbacks.onStatus?.(this.status);
@@ -313,6 +299,7 @@ export class PaymentEventIndexer {
         this.cursor = res.cursor;
         this.persistCursor();
         this.startLedger = undefined;
+        this.cursorExpired = false;
       }
 
       for (const raw of res.events) {
@@ -336,6 +323,8 @@ export class PaymentEventIndexer {
       this.lastError = String(err instanceof Error ? err.message : err);
       callbacks.onError?.(new Error(`getEvents failed: ${this.lastError}`));
       this.recoverFromRetentionError(err);
+      this.recoverFromCursorExpiry();
+      this.recoverFromRetentionError();
       callbacks.onStatus?.(this.status);
     }
   }
@@ -352,19 +341,52 @@ export class PaymentEventIndexer {
   }
 
   /**
-   * Keep the scan recoverable. A start ledger that predates the RPC's
-   * retention window is rolled forward toward the tip. A persisted cursor can
-   * outlive retention for the same reason, so on a retention error it is
-   * dropped and the window is re-derived — a view must not get permanently
-   * stuck on a stale resume point.
+   * If the cursor has fallen out of the RPC's retention window, drop it and
+   * re-derive a fresh start ledger near the tip so the next poll can proceed
+   * instead of replaying a dead cursor forever.
    */
-  private recoverFromRetentionError(error?: unknown): void {
+  private recoverFromCursorExpiry(): void {
+    if (!this.cursor) return;
+    const message = this.lastError ?? "";
+    if (!RETENTION_ERROR_PATTERNS.some((pattern) => pattern.test(message))) return;
+
+    this.cursor = undefined;
+    if (this.latestLedger !== undefined) {
+      this.startLedger = Math.max(1, this.latestLedger - RETENTION_RETRY_LEDGER_DELTA);
+    } else {
+      this.initialized = false;
+    }
+  }
+
+  /**
+   * If the requested start ledger predates the RPC's retention window, roll
+   * the window forward toward the tip so the next poll can proceed.
+   */
+  private recoverFromRetentionError(): void {
     if (this.startLedger !== undefined && this.latestLedger !== undefined) {
       this.startLedger = Math.max(
         this.startLedger,
         this.latestLedger - RETENTION_RETRY_LEDGER_DELTA
       );
-      return;
+    }
+  }
+
+  /**
+   * If the RPC rejects the cursor because it has fallen out of the retention
+   * window, clear it and re-derive a start ledger near the tip so the next
+   * poll can proceed instead of replaying the dead cursor forever.
+   */
+  private recoverFromCursorExpiry(): void {
+    if (this.cursor === undefined) return;
+    if (!this.isCursorExpiredError(this.lastError)) return;
+
+    this.cursor = undefined;
+    this.cursorExpired = true;
+    if (this.latestLedger !== undefined) {
+      this.startLedger = Math.max(
+        1,
+        this.latestLedger - EVENT_START_LEDGER_BACKFILL
+      );
     }
 
     if (this.cursor !== undefined && isRetentionError(error)) {
@@ -379,6 +401,18 @@ export class PaymentEventIndexer {
     return { cursor: this.cursor, startLedger: this.startLedger };
   }
 
+  private isCursorExpiredError(message: string | undefined): boolean {
+    if (!message) return false;
+    const lower = message.toLowerCase();
+    return (
+      lower.includes("cursor") &&
+      (lower.includes("expired") ||
+        lower.includes("retention") ||
+        lower.includes("out of range") ||
+        lower.includes("too old") ||
+        lower.includes("not found"))
+    );
+  }
   private decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
     const first = raw.topic[0];
     if (!first || first.switch() !== xdr.ScValType.scvSymbol()) return null;
