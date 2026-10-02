@@ -102,7 +102,7 @@ describe("toSdkBytes", () => {
   it("hands a plain Uint8Array to scvBytes unchanged", () => {
     const raw = new Uint8Array(32).fill(9);
     const scVal = xdr.ScVal.scvBytes(toSdkBytes(raw));
-    expect(bytesToHex(new Uint8Array(scVal.bytes()))).toBe(bytesToHex(raw));
+    expect(bytesToHex(scVal.bytes.toBytes())).toBe(bytesToHex(raw));
   });
 
   it("hands a plain Uint8Array to StrKey.encodeContract unchanged", () => {
@@ -114,14 +114,14 @@ describe("toSdkBytes", () => {
 describe("bytes32ToScVal", () => {
   it("accepts exactly 32-byte Uint8Array", () => {
     const scVal = bytes32ToScVal(new Uint8Array(32).fill(7));
-    expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
-    expect(scVal.bytes().length).toBe(32);
+    expect(scVal.type).toBe("scvBytes");
+    expect(scVal.bytes.toBytes().length).toBe(32);
   });
 
   it("accepts 64-character hex string", () => {
     const scVal = bytes32ToScVal("ab".repeat(32));
-    expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
-    expect(scVal.bytes().length).toBe(32);
+    expect(scVal.type).toBe("scvBytes");
+    expect(scVal.bytes.toBytes().length).toBe(32);
   });
 
   it("accepts a hex string with or without an 0x prefix", () => {
@@ -140,16 +140,16 @@ describe("bytes32ToScVal", () => {
     expect(fromHex.toXDR("base64")).toBe(fromBytes.toXDR("base64"));
     expect(fromHex.toXDR("hex")).toBe(fromBytes.toXDR("hex"));
     expect(fromHex.toXDR()).toEqual(fromBytes.toXDR());
-    expect(fromHex.bytes()).toEqual(fromBytes.bytes());
+    expect(fromHex.bytes.toBytes()).toEqual(fromBytes.bytes.toBytes());
   });
 
   it("round-trips the exact bytes into the ScVal", () => {
-    expect(bytesToHex(new Uint8Array(bytes32ToScVal(HEX32).bytes()))).toBe(HEX32);
+    expect(bytesToHex(bytes32ToScVal(HEX32).bytes.toBytes())).toBe(HEX32);
   });
 
   it("preserves all 32 input bytes", () => {
     const bytes = Uint8Array.from({ length: 32 }, (_, index) => index);
-    expect(Array.from(bytes32ToScVal(bytes).bytes())).toEqual(Array.from(bytes));
+    expect(Array.from(bytes32ToScVal(bytes).bytes.toBytes())).toEqual(Array.from(bytes));
   });
 
   it("preserves the constructed value when the caller later changes its input", () => {
@@ -160,7 +160,7 @@ describe("bytes32ToScVal", () => {
 
     bytes.fill(0);
 
-    expect(bytesToHex(new Uint8Array(scVal.bytes()))).toBe(REPEATED_HEX32);
+    expect(bytesToHex(scVal.bytes.toBytes())).toBe(REPEATED_HEX32);
     expect(scVal.toXDR("base64")).toBe(originalXdr);
   });
 
@@ -182,20 +182,16 @@ describe("bytes32ToScVal", () => {
   });
 
   it("rejects non-hex input before it can reach the length check", () => {
-    expect(() => bytes32ToScVal("g".repeat(64))).toThrow(
-      'invalid hex character "g" at index 0'
-    );
+    expect(() => bytes32ToScVal("g".repeat(64))).toThrow('invalid hex character "g" at index 0');
     expect(() => bytes32ToScVal("gg".repeat(32))).toThrow(/invalid hex character/);
   });
 
   it("works without a Node Buffer global", () => {
     withoutBuffer(() => {
-      expect(bytes32ToScVal(HEX32).toXDR("base64")).toBe(
-        bytes32ToScVal(BYTES32).toXDR("base64")
-      );
+      expect(bytes32ToScVal(HEX32).toXDR("base64")).toBe(bytes32ToScVal(BYTES32).toXDR("base64"));
       const scVal = bytes32ToScVal(BYTES32);
-      expect(scVal.switch()).toBe(xdr.ScValType.scvBytes());
-      expect(scVal.bytes().length).toBe(32);
+      expect(scVal.type).toBe("scvBytes");
+      expect(scVal.bytes.toBytes().length).toBe(32);
     });
   });
 });
@@ -206,14 +202,14 @@ describe("addressToScVal", () => {
 
   it("builds an scvAddress for a G... account address", () => {
     const scVal = addressToScVal(account);
-    expect(scVal.switch()).toBe(xdr.ScValType.scvAddress());
+    expect(scVal.type).toBe("scvAddress");
     expect(Address.fromScVal(scVal).toString()).toBe(account);
     expect(scValToString(scVal)).toBe(account);
   });
 
   it("builds an scvAddress for a C... contract address", () => {
     const scVal = addressToScVal(contract);
-    expect(scVal.switch()).toBe(xdr.ScValType.scvAddress());
+    expect(scVal.type).toBe("scvAddress");
     expect(Address.fromScVal(scVal).toString()).toBe(contract);
     expect(scValToString(scVal)).toBe(contract);
   });
@@ -231,8 +227,8 @@ describe("addressToScVal", () => {
 describe("symbolToScVal", () => {
   it("builds an scvSymbol ScVal", () => {
     const scVal = symbolToScVal("pay");
-    expect(scVal.switch()).toBe(xdr.ScValType.scvSymbol());
-    expect(scVal.sym().toString()).toBe("pay");
+    expect(scVal.type).toBe("scvSymbol");
+    expect(scVal.sym.toString()).toBe("pay");
   });
 
   it("round-trips through scValToString", () => {
@@ -255,10 +251,10 @@ describe("scValToString", () => {
 
   it("decodes every supported integer width", () => {
     expect(scValToString(i128ToScVal(42n))).toBe("42");
-    expect(scValToString(xdr.ScVal.scvI64(new xdr.Int64(-5n)))).toBe("-5");
+    expect(scValToString(xdr.ScVal.scvI64(-5n))).toBe("-5");
     expect(scValToString(xdr.ScVal.scvI32(-3))).toBe("-3");
     expect(scValToString(xdr.ScVal.scvU32(7))).toBe("7");
-    expect(scValToString(xdr.ScVal.scvU64(new xdr.Uint64(9n)))).toBe("9");
+    expect(scValToString(xdr.ScVal.scvU64(9n))).toBe("9");
   });
 
   it("decodes bytes to a lowercase hex string", () => {
@@ -412,9 +408,7 @@ describe("resolveOrderIdHash", () => {
   });
 
   it("tolerates the 0x-prefixed form", async () => {
-    expect(bytesToHex(await resolveOrderIdHash("0x" + EVENT_DERIVED_ID))).toBe(
-      EVENT_DERIVED_ID
-    );
+    expect(bytesToHex(await resolveOrderIdHash("0x" + EVENT_DERIVED_ID))).toBe(EVENT_DERIVED_ID);
   });
 
   it("does NOT re-hash an already-hashed id — the bug this guards", async () => {
