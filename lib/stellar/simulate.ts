@@ -201,9 +201,11 @@ export async function prepareAndReport(
 export async function recommendedInclusionFee(server: rpc.Server): Promise<bigint> {
   try {
     const stats = await server.getFeeStats();
-    const max = stats.sorobanInclusionFee?.max;
-    if (typeof max === "string" && /^\d+$/.test(max)) {
-      return BigInt(max);
+    const dist = stats.sorobanInclusionFee;
+    for (const candidate of [dist?.max, dist?.p99, dist?.mode]) {
+      if (typeof candidate === "string" && /^\d+$/.test(candidate)) {
+        return BigInt(candidate);
+      }
     }
   } catch {
     // ignore and fall through
@@ -221,7 +223,8 @@ export async function budgetFee(
 ): Promise<string> {
   const inclusion = await recommendedInclusionFee(server);
   const minResource = report.ok ? (report.minResourceFee ?? BigInt(0)) : BigInt(0);
-  const total = (inclusion > minResource ? inclusion : minResource) + FEE_BUFFER_STROOPS;
+  const base = inclusion > minResource ? inclusion : minResource;
+  const total = base + FEE_BUFFER_STROOPS;
   return total.toString();
 }
 

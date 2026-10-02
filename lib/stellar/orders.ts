@@ -26,6 +26,8 @@ import {
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
 import { hashOrderId, bytesToHex, hexToBytes, resolveOrderIdHash } from "./scval";
+import { budgetFee, recommendedInclusionFee } from "./simulate";
+import { prepareAndReport, confirmTransaction } from "./submit";
 
 // `resolveOrderIdHash` is used by dispatchOrder/refundOrder below and is part of
 // this module's public API, so keep it exported for callers and the test suite.
@@ -213,53 +215,25 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
 
     const account = await server.getAccount(publicKey);
 
+    const fee = await budgetFee(server, publicKey);
+
     const tx = new TransactionBuilder(account, {
-      fee: "100000",
+      fee: fee.toString(),
       networkPassphrase: NETWORK_PASSPHRASE,
     })
       .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
-    // Simulate to get resource fees
-    const simResult = await server.simulateTransaction(tx);
-
-    if (rpc.Api.isSimulationError(simResult)) {
-      return {
-        success: false,
-        error: `Simulation failed: ${simResult.error}`,
-      };
+    const preparedTx = await prepareAndReport(server, tx, publicKey);
+    if (!preparedTx.success) {
+      return { success: false, error: preparedTx.error };
     }
 
-    if (!rpc.Api.isSimulationSuccess(simResult)) {
-      return {
-        success: false,
-        error: "Simulation did not succeed",
-      };
-    }
-
-    // Prepare transaction with simulation results
-    const preparedTx = rpc.assembleTransaction(tx, simResult).build();
-
-    // Sign with Freighter
-    const signedXdr = await signWithFreighter(preparedTx.toXDR(), publicKey);
+    const signedXdr = await signWithFreighter(preparedTx.xdr, publicKey);
     const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
-    // Submit
-    const sendResult = await server.sendTransaction(signedTx);
-
-    if (sendResult.status === "ERROR") {
-      return {
-        success: false,
-        error: `Send failed: ${sendResult.errorResult?.toXDR("base64")}`,
-      };
-    }
-
-    // Poll for result
-    const txHash = sendResult.hash;
-    const result = await pollTransaction(server, txHash);
-
-    return result;
+    return confirmTransaction(server, signedTx);
   } catch (err) {
     return {
       success: false,
@@ -286,51 +260,25 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
 
     const account = await server.getAccount(publicKey);
 
+    const fee = await budgetFee(server, publicKey);
+
     const tx = new TransactionBuilder(account, {
-      fee: "100000",
+      fee: fee.toString(),
       networkPassphrase: NETWORK_PASSPHRASE,
     })
       .addOperation(contract.call("refund", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
-    // Simulate
-    const simResult = await server.simulateTransaction(tx);
-
-    if (rpc.Api.isSimulationError(simResult)) {
-      return {
-        success: false,
-        error: `Simulation failed: ${simResult.error}`,
-      };
+    const preparedTx = await prepareAndReport(server, tx, publicKey);
+    if (!preparedTx.success) {
+      return { success: false, error: preparedTx.error };
     }
 
-    if (!rpc.Api.isSimulationSuccess(simResult)) {
-      return {
-        success: false,
-        error: "Simulation did not succeed",
-      };
-    }
-
-    // Prepare and sign
-    const preparedTx = rpc.assembleTransaction(tx, simResult).build();
-    const signedXdr = await signWithFreighter(preparedTx.toXDR(), publicKey);
+    const signedXdr = await signWithFreighter(preparedTx.xdr, publicKey);
     const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
 
-    // Submit
-    const sendResult = await server.sendTransaction(signedTx);
-
-    if (sendResult.status === "ERROR") {
-      return {
-        success: false,
-        error: `Send failed: ${sendResult.errorResult?.toXDR("base64")}`,
-      };
-    }
-
-    // Poll for result
-    const txHash = sendResult.hash;
-    const result = await pollTransaction(server, txHash);
-
-    return result;
+    return confirmTransaction(server, signedTx);
   } catch (err) {
     return {
       success: false,
