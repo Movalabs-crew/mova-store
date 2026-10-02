@@ -173,8 +173,8 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   }
   if (sendResponse.status === "TRY_AGAIN_LATER") {
     throw new WalletError(
-      "Transaction was not accepted by the network (submission congestion or fee too low). Please retry the payment.",
-      "TX_TRY_AGAIN_LATER"
+"Transaction was not accepted by the network (submission congestion or fee too low). Please retry the payment.",
+      "TRY_AGAIN_LATER"
     );
   }
   if (sendResponse.status === "PENDING" || sendResponse.status === "DUPLICATE") {
@@ -182,6 +182,12 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   }
 
   // 7. Wait for final state and decode the payment event.
+  if (!sendResponse.hash) {
+    throw new WalletError(
+      "Transaction submission did not return a hash.",
+      "TRY_AGAIN_LATER"
+    );
+  }
   const txResult = await waitForTransaction(sendResponse.hash);
   const receipt = decodePaymentEvent(txResult);
 
