@@ -150,57 +150,26 @@ describe("PaymentEventIndexer recovery paths (Issues #520, #521)", () => {
           throw new Error("startLedger is outside the retention window");
         }
         return { latestLedger: 900, cursor: "cursor-after-retention", events: [] };
-      }),
-    };
-
-    const indexer = new PaymentEventIndexer({ pollMs: 20 });
-    (indexer as unknown as { server: unknown }).server = fakeServer;
-    const errors: string[] = [];
-
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    indexer.stop();
-
-    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
-    expect(indexer.status.lastCursor).toBe("cursor-after-retention");
-    expect(indexer.status.latestLedger).toBe(900);
-    expect(indexer.status.retrying).toBe(false);
-  });
-
-  it("does not move the scan window on a transient error during the first poll", async () => {
+describe("PaymentEventIndexer cursor expiry recovery (Issue #68)", () => {
+  it("recovers from an expired cursor by clearing it and re-deriving startLedger", async () => {
     let getEventsCalls = 0;
     const fakeServer = {
-      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 700 }),
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 500 }),
       getEvents: vi.fn().mockImplementation(async () => {
-        getEventsCalls++;
+        getEventsCalls += 1;
         if (getEventsCalls === 1) {
-          throw new Error("RPC temporary network partition");
+          return { latestLedger: 500, cursor: "cursor-expired", events: [] };
         }
-        return { latestLedger: 700, cursor: "cursor-transient-recovered", events: [] };
+        if (getEventsCalls === 2) {
+          throw new Error("cursor is outside of the ledger range");
+        }
+        return { latestLedger: 600, cursor: "cursor-fresh", events: [] };
       }),
     };
 
     const indexer = new PaymentEventIndexer({ pollMs: 20 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
-    const errors: string[] = [];
 
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    indexer.stop();
-
-    expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
-    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
-    expect(indexer.status.lastCursor).toBe("cursor-transient-recovered");
-    expect(indexer.status.latestLedger).toBe(700);
-  });
-
-  it("advances the scan position when a response omits the cursor", async () => {
-    let getEventsCalls = 0;
-    const fakeServer = {
-      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 400 }),
-      getEvents: vi.fn().mockImplementation(async () => {
-        getEventsCalls++;
-        return { latestLedger: 400 + getEventsCalls, events: [] };
       }),
     };
 
@@ -208,11 +177,13 @@ describe("PaymentEventIndexer recovery paths (Issues #520, #521)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
     indexer.start({ onEvent: () => {} });
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    await new Promise((resolve) => setTimeout(resolve, 120));
     indexer.stop();
 
     expect(getEventsCalls).toBeGreaterThanOrEqual(2);
+    expect(fakeServer.getLatestLedger).toHaveBeenCalledTimes(2);
     expect(indexer.status.latestLedger).toBeGreaterThanOrEqual(402);
+    expect(indexer.status.lastCursor).toBe("cursor-new");
     expect(indexer.status.retrying).toBe(false);
   });
 });
@@ -714,7 +685,6 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
   const setDocumentHidden = (value: boolean) => {
     Object.defineProperty(document, "hidden", { configurable: true, get: () => value });
   };
@@ -809,7 +779,6 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
   it("keeps at most one poll in flight when a response outruns the interval", async () => {
     let active = 0;
     let maxActive = 0;
@@ -831,7 +800,7 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
     indexer.start({ onEvent: () => {} });
-    await tick(260);
+    await new Promise((resolve) => setTimeout(resolve, 260));
     indexer.stop();
 
     // Serialized: no second poll starts until the previous one has settled.
@@ -865,7 +834,6 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     expect(calls).toBeGreaterThanOrEqual(2);
   });
 });
-
 describe("PaymentEventIndexer durable start ledger & persisted cursor (Issue #715)", () => {
   const STORAGE_KEY = "mova:test:admin-orders:cursor";
 

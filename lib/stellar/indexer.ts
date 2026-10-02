@@ -208,7 +208,6 @@ export class PaymentEventIndexer {
     }
     callbacks.onStatus?.(this.status);
   }
-
   /**
    * Resume polling and run one catch-up tick immediately. The cursor is kept
    * across the pause, so the catch-up reads every event that landed while the
@@ -335,7 +334,8 @@ export class PaymentEventIndexer {
     } catch (err) {
       this.lastError = String(err instanceof Error ? err.message : err);
       callbacks.onError?.(new Error(`getEvents failed: ${this.lastError}`));
-      this.recoverFromRetentionError(err);
+this.recoverFromRetentionError(err);
+      await this.recoverFromCursorExpiry();
       callbacks.onStatus?.(this.status);
     }
   }
@@ -377,6 +377,24 @@ export class PaymentEventIndexer {
   /** Exposed for tests: current scan position (cursor or start ledger). */
   get scanPosition(): { cursor?: string; startLedger?: number } {
     return { cursor: this.cursor, startLedger: this.startLedger };
+  }
+
+  /**
+   * If the cursor has fallen outside the RPC's retention window, the RPC
+   * rejects it and `startLedger` is already undefined, so the indexer would
+   * replay the dead cursor forever. Clear the cursor and re-derive a valid
+   * `startLedger` from the latest ledger so the next poll can proceed.
+   */
+  private async recoverFromCursorExpiry(): Promise<void> {
+    if (this.cursor === undefined) return;
+    this.cursor = undefined;
+    try {
+      const latest = await this.server.getLatestLedger();
+      this.latestLedger = latest.sequence;
+      this.startLedger = Math.max(1, this.latestLedger - EVENT_START_LEDGER_BACKFILL);
+    } catch {
+      // Leave startLedger undefined; the next poll will retry initialization.
+    }
   }
 
   private decodeEvent(raw: rpc.Api.EventResponse): IndexedEvent | null {
