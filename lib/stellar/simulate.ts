@@ -10,10 +10,7 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 
-import {
-  FEE_BUFFER_STROOPS,
-  NETWORK_PASSPHRASE,
-} from "./config";
+import { FEE_BUFFER_STROOPS, NETWORK_PASSPHRASE } from "./config";
 import { addressToScVal } from "./scval";
 
 // ---------------------------------------------------------------------------
@@ -69,9 +66,7 @@ export function buildInvocationTransaction(
     fee,
     networkPassphrase: NETWORK_PASSPHRASE,
   })
-    .addOperation(
-      Operation.invokeContractFunction({ contract: contractId, function: fn, args })
-    )
+    .addOperation(Operation.invokeContractFunction({ contract: contractId, function: fn, args }))
     .setTimeout(0)
     .build();
 }
@@ -148,9 +143,7 @@ export async function preflight(server: rpc.Server, tx: Transaction): Promise<Si
 
   if (rpc.Api.isSimulationError(sim)) {
     const diagnostics =
-      sim.events
-        ?.filter((d) => d.inSuccessfulContractCall())
-        .map((d) => d.event().toString()) ?? [];
+      sim.events?.filter((d) => d.inSuccessfulContractCall).map((d) => d.event.toString()) ?? [];
     return {
       ok: false,
       latestLedger: sim.latestLedger,
@@ -163,15 +156,16 @@ export async function preflight(server: rpc.Server, tx: Transaction): Promise<Si
   }
 
   const data = sim.transactionData.build();
-  const resources = data.resources();
+  // SDK 17 exposes the Soroban resource XDR fields as properties, not accessors.
+  const resources = data.resources;
   const minResourceFee = BigInt(sim.minResourceFee);
 
   return {
     ok: true,
     latestLedger: sim.latestLedger,
-    instructions: resources.instructions(),
-    diskReadBytes: resources.diskReadBytes(),
-    writeBytes: resources.writeBytes(),
+    instructions: resources.instructions,
+    diskReadBytes: resources.diskReadBytes,
+    writeBytes: resources.writeBytes,
     minResourceFee,
     authCount: sim.result?.auth?.length ?? 0,
     retval: sim.result?.retval ?? undefined,
@@ -215,10 +209,7 @@ export async function recommendedInclusionFee(server: rpc.Server): Promise<bigin
  * Total fee the final transaction should carry: max(recommended inclusion
  * fee, simulated min resource fee) plus a safety buffer.
  */
-export async function budgetFee(
-  server: rpc.Server,
-  report: SimulationReport
-): Promise<string> {
+export async function budgetFee(server: rpc.Server, report: SimulationReport): Promise<string> {
   const inclusion = await recommendedInclusionFee(server);
   const minResource = report.ok ? (report.minResourceFee ?? BigInt(0)) : BigInt(0);
   const total = (inclusion > minResource ? inclusion : minResource) + FEE_BUFFER_STROOPS;
