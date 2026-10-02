@@ -22,7 +22,6 @@ import {
   NETWORK_PASSPHRASE,
   TX_TIMEOUT_SECONDS,
   TX_POLL_INTERVAL_MS,
-  FEE_BUFFER_STROOPS,
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
