@@ -45,7 +45,7 @@ function Navbar() {
       }
     };
 
-    const links = document.querySelectorAll('a[href^x="#"]');
+    const links = document.querySelectorAll('a[href^="#"]');
     links.forEach((link) => link.addEventListener("click", handleLinkClick));
 
     return () => {
