@@ -1,4 +1,4 @@
-#{!no_std]
+#![no_std]
 
 mod errors;
 mod events;
@@ -7,7 +7,7 @@ mod storage;
 mod test;
 
 use soroban_sdk::token::TokenClient;
-use soroban_sdk::{contract, contractimpl, Address, BytesN32, Env, MuxedAddress};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, MuxedAddress};
 
 use crate::errors::Error;
 use crate::events::{OrderCreated, OrderRefunded, OrderShipped, PaymentReceived};
@@ -29,7 +29,7 @@ impl Checkout {
         }
         merchant.require_auth();
         set_admin(&env, &merchant);
-        Ok(()
+        Ok(())
     }
 
     /// Change the merchant wallet that owns the contract.
@@ -38,7 +38,7 @@ impl Checkout {
         let admin = get_admin(&env)?;
         admin.require_auth();
         set_admin(&env, &new_merchant);
-        Ok(()
+        Ok(())
     }
 
     /// Read the merchant wallet that owns the contract.
@@ -53,7 +53,7 @@ impl Checkout {
         let admin = get_admin(&env)?;
         admin.require_auth();
         set_token_allowed(&env, &token, true);
-        Ok(()
+        Ok(())
     }
 
     /// Remove a token from the approved list. Only the merchant can call this.
@@ -61,7 +61,7 @@ impl Checkout {
         let admin = get_admin(&env)?;
         admin.require_auth();
         set_token_allowed(&env, &token, false);
-        Ok(()
+        Ok(())
     }
 
     /// Query whether a token contract is accepted for payments.
@@ -80,7 +80,7 @@ impl Checkout {
     pub fn create_order(
         env: Env,
         buyer: Address,
-        order_id: BytesN32,
+        order_id: BytesN<32>,
         token: Address,
         amount: i128,
     ) -> Result<(), Error> {
@@ -115,7 +115,7 @@ impl Checkout {
         }
         .publish(&env);
 
-        Ok(()
+        Ok(())
     }
 
     /// Pay for an order. The buyer authorizes the transfer.
@@ -136,7 +136,7 @@ impl Checkout {
         env: Env,
         token: Address,
         buyer: Address,
-        order_id: BytesN32,
+        order_id: BytesN<32>,
         amount: i128,
     ) -> Result<(), Error> {
         buyer.require_auth();
@@ -186,14 +186,14 @@ impl Checkout {
         }
         .publish(&env);
 
-        Ok(()
+        Ok(())
     }
 
     /// Release a paid order's escrow to the merchant. Only the merchant can
     /// call this. Once dispatched the order cannot be refunded.
     ///
     /// Emits `dispatch`.
-    pub fn dispatch(env: Env, order_id: BytesN32) -> Result<(), Error> {
+    pub fn dispatch(env: Env, order_id: BytesN<32>) -> Result<(), Error> {
         let merchant = get_admin(&env)?;
         merchant.require_auth();
 
@@ -228,14 +228,14 @@ impl Checkout {
         }
         .publish(&env);
 
-        Ok(()
+        Ok(())
     }
 
     /// Refund a paid order's escrow back to the buyer. Only the merchant can
     /// call this (e.g. the goods could not be dispatched).
     ///
     /// Emits `refund`.
-    pub fn refund(env: Env, order_id: BytesN32) -> Result<(), Error> {
+    pub fn refund(env: Env, order_id: BytesN<32>) -> Result<(), Error> {
         let merchant = get_admin(&env)?;
         merchant.require_auth();
 
@@ -270,21 +270,21 @@ impl Checkout {
         }
         .publish(&env);
 
-        Ok(()
+        Ok(())
     }
 
     /// Read a full order record, if it exists.
-    pub fn order(env: Env, order_id: BytesN32) -> Option<Order> {
+    pub fn order(env: Env, order_id: BytesN<32>) -> Option<Order> {
         get_order(&env, &order_id)
     }
 
     /// Read the lifecycle status of an order, if it exists.
-    pub fn status(env: Env, order_id: BytesN32) -> Option<Status> {
+    pub fn status(env: Env, order_id: BytesN<32>) -> Option<Status> {
         get_order(&env, &order_id).map(|order| order.status)
     }
 
     /// Query whether an order has received funds (Paid or Shipped).
-    pub fn is_paid(env: Env, order_id: BytesN32) -> bool {
+    pub fn is_paid(env: Env, order_id: BytesN<32>) -> bool {
         match get_order(&env, &order_id) {
             Some(order) => order.is_paid(),
             None => false,
