@@ -134,7 +134,9 @@ describe("Checkout OTP flow (server-side verification)", () => {
     seedCart();
     const { container } = render(<Checkout />);
 
-
+    const form = formOf(container);
+    fillValidForm(container);
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /confirm/i })).toBeInTheDocument();
@@ -145,9 +147,13 @@ describe("Checkout OTP flow (server-side verification)", () => {
     });
     fireEvent.submit(screen.getByRole("button", { name: /confirm/i }).closest("form")!);
 
+    // The server rejected the code, so the shopper must stay on the OTP stage
+    // and never reach the completion panel.
     await waitFor(() => {
-      expect(screen.getByText(/order completed/i)).toBeInTheDocument();
+      expect(verifyOtp).toHaveBeenCalledWith("ada@example.com", "123456");
     });
+    expect(screen.queryByText(/order completed/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/please confirm otp/i)).toBeInTheDocument();
   });
 });
 
@@ -178,7 +184,7 @@ describe("Checkout form error identification (#603)", () => {
     expect(
       container.querySelector<HTMLParagraphElement>("#checkout-expiry-date-error")
     ).toHaveTextContent("Expiry date is required");
-    expect(sendMail).not.toHaveBeenCalled();
+    expect(requestOtp).not.toHaveBeenCalled();
   });
 
   it("focuses the first invalid field in the form and sends no OTP", async () => {
@@ -199,7 +205,7 @@ describe("Checkout form error identification (#603)", () => {
       expect(container.querySelectorAll('[aria-invalid="true"]')).toHaveLength(2);
     });
     // A form already known to be invalid never requests an OTP.
-    expect(sendMail).not.toHaveBeenCalled();
+    expect(requestOtp).not.toHaveBeenCalled();
     // Focus lands on the first failure in document order (the card), not the
     // last one that was validated.
     await waitFor(() => {
