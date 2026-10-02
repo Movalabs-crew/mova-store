@@ -335,7 +335,9 @@ export class PaymentEventIndexer {
     } catch (err) {
       this.lastError = String(err instanceof Error ? err.message : err);
       callbacks.onError?.(new Error(`getEvents failed: ${this.lastError}`));
-      this.recoverFromRetentionError(err);
+      if (this.isRetentionError(err)) {
+        this.recoverFromRetentionError(err);
+      }
       callbacks.onStatus?.(this.status);
     }
   }
@@ -352,11 +354,32 @@ export class PaymentEventIndexer {
   }
 
   /**
+   * Distinguish a retention/startLedger error (the requested window has aged
+   * out of the RPC's history) from a transient failure (timeout, 5xx, network
+   * blip). Only the former may advance the scan window; a transient error must
+   * retry the same window so no events are skipped.
+   */
+  private isRetentionError(err: unknown): boolean {
+    const message = String(err instanceof Error ? err.message : err).toLowerCase();
+    return (
+      message.includes("startledger") ||
+      message.includes("start ledger") ||
+      message.includes("retention") ||
+      message.includes("oldest ledger") ||
+      message.includes("out of range") ||
+      message.includes("ledger range")
+    );
+  }
+
+  /**
    * Keep the scan recoverable. A start ledger that predates the RPC's
    * retention window is rolled forward toward the tip. A persisted cursor can
    * outlive retention for the same reason, so on a retention error it is
    * dropped and the window is re-derived — a view must not get permanently
    * stuck on a stale resume point.
+   *
+   * If the requested start ledger predates the RPC's retention window, roll
+   * the window forward toward the tip so the next poll can proceed.
    */
   private recoverFromRetentionError(error?: unknown): void {
     if (this.startLedger !== undefined && this.latestLedger !== undefined) {
