@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Toast from "../../components/Toast";
 import useToast from "../../hooks/useToast";
 import { createProduct, uploadProductImage } from "../../lib/products";
+import { validatePrice, validateProductName } from "../../lib/validation";
 
 const AddProductForm = ({ onProductAdded }) => {
   const [productName, setProductName] = useState("");
@@ -16,16 +17,29 @@ const AddProductForm = ({ onProductAdded }) => {
     setLoading(true);
 
     try {
+      // Validate in the form as well as the data layer so the user gets an
+      // immediate, visible error and no invalid value is ever submitted.
+      const nameResult = validateProductName(productName);
+      if (!nameResult.isValid) {
+        showToast(nameResult.error || "Please enter a valid product name");
+        return;
+      }
+
+      const priceResult = validatePrice(productPrice);
+      if (!priceResult.isValid) {
+        showToast(priceResult.error || "Please enter a valid price");
+        return;
+      }
+
       if (!productImage) {
         showToast("Please select an image file");
-        setLoading(false);
         return;
       }
 
       const imageUrl = await uploadProductImage(productImage);
       await createProduct({
-        name: productName,
-        price: parseFloat(productPrice),
+        name: nameResult.sanitized,
+        price: Number(priceResult.sanitized),
         img: imageUrl,
       });
 
