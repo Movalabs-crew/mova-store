@@ -1,4 +1,4 @@
-import { rpc, TransactionBuilder } from "@stellar/stellar-sdk";
+import { rpc, TransactionBuilder } from  @stellar/stellar-sdk";
 
 import {
   CHECKOUT_CONTRACT_ID,
@@ -6,7 +6,6 @@ import {
   RPC_URL,
   TokenConfig,
   defaultToken,
-  USDC_DECIMALS,
 } from "./config";
 import { convertUsdToXlm } from "./price";
 import { ensureNetwork, signWithFreighter, WalletError } from "./freighter";
@@ -71,14 +70,17 @@ function status(s: string): void {
 }
 
 /**
- * Convert a USD amount to raw token units (7 decimals).
- * e.g. 12.34 -> 123_400_000
+ * Convert a USD amount to raw token units using the token's decimals.
+ * e.g. 12.34 with 7 decimals -> 123_.400_000
  */
-export function usdToRawUnits(amountUsd: number): bigint {
+export function usdToRawUnits(amountUsd: number, decimals: number): bigint {
   if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
     throw new WalletError("Invalid amount to pay.", "INVALID_AMOUNT");
   }
-  const raw = Math.round(amountUsd * 10 ** USDC_DECIMALS);
+  if (!Number.isInteger(decimals) || decimals < 0) {
+    throw new WalletError("Invalid token decimals.", "INVALID_DECIMALS");
+  }
+  const raw = Math.round(amountUsd * 10 ** decimals);
   return BigInt(raw);
 }
 
@@ -108,17 +110,17 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   const effectiveTokenAmount = token.isNative
     ? (options.tokenAmount ?? convertUsdToXlm(amountUsd))
     : (options.tokenAmount ?? amountUsd);
-  const amountRaw = usdToRawUnits(effectiveTokenAmount);
+  const amountRaw = usdToRawUnits(effectiveTokenAmount, token.decimals);
   const orderBytes = await hashOrderId(orderId);
 
   // 1. Network guard.
-  onStatus("Checking Freighter network...");
+  onStatus("Checking Freighter network…");
   await ensureNetwork();
 
   const server = new rpc.Server(RPC_URL);
 
   // 2. Account readiness: funded, trustline present, balance sufficient.
-  onStatus("Checking account readiness...");
+  onStatus("Checking account readiness…");
   const readiness = await assertPaymentReady(server, publicKey, {
     token,
     requiredRaw: amountRaw,
@@ -126,7 +128,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   });
 
   // 3. Build the invocation.
-  onStatus("Building payment transaction...");
+  onStatus("Building payment transaction…");
   const args = [
     addressToScVal(token.contractId),
     addressToScVal(publicKey),
@@ -136,7 +138,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   const tx = buildInvocationTransaction(readiness.account!, CHECKOUT_CONTRACT_ID, "pay", args);
 
   // 4. Pre-flight simulation (surfaces errors early) + prepare.
-  onStatus("Simulating transaction...");
+  onStatus("Simulating transaction…");
   const { tx: prepared, report } = await prepareAndReport(server, tx);
   if (!report.ok || !readiness.account) {
     throw new WalletError(
