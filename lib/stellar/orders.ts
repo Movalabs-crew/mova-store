@@ -199,14 +199,35 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Resolve the deployed checkout contract id, failing fast when it is absent.
+ *
+ * Read from the environment at call time rather than from the import-time
+ * snapshot in `./config`, so a misconfigured deployment says so plainly instead
+ * of surfacing later as an opaque simulation error. Thrown rather than returned
+ * so it cannot be mistaken for a transient RPC failure, and raised outside the
+ * operation's try/catch for the same reason.
+ */
+function requireCheckoutContractId(): string {
+  const contractId = (process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID ?? "").trim();
+  if (!contractId) {
+    throw new Error(
+      "NEXT_PUBLIC_CHECKOUT_CONTRACT_ID is not configured. Set it to the deployed checkout contract id (C...) before dispatching or refunding orders.",
+    );
+  }
+  return contractId;
+}
+
+/**
  * Dispatches an order, releasing the escrowed funds to the merchant.
  * Requires the connected wallet to be the merchant.
  */
 export async function dispatchOrder(orderId: string): Promise<OrderActionResult> {
+  // Fail fast on a missing contract id, before any wallet or RPC call.
+  const contractId = requireCheckoutContractId();
   try {
     const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
-    const contract = new Contract(CHECKOUT_CONTRACT_ID);
+    const contract = new Contract(contractId);
 
     const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
@@ -276,10 +297,12 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
  * Requires the connected wallet to be the merchant.
  */
 export async function refundOrder(orderId: string): Promise<OrderActionResult> {
+  // Fail fast on a missing contract id, before any wallet or RPC call.
+  const contractId = requireCheckoutContractId();
   try {
     const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
-    const contract = new Contract(CHECKOUT_CONTRACT_ID);
+    const contract = new Contract(contractId);
 
     const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
