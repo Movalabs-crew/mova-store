@@ -145,8 +145,11 @@ const StellarCheckoutButton = ({
     }
   };
 
+  const confirmedTokenAmount = result?.tokenAmount ?? (effectiveXlmAmount ?? null);
+  const confirmedAmountUsd = result?.amountUsd ?? amountUsd;
+
   return (
-    <div className="w-full flex flex-col items-stretch gap-2">
+    <div className="w-full flex flex-col flex-items-stretch gap-2">
       <button
         type="button"
         onClick={handlePay}
@@ -171,9 +174,9 @@ const StellarCheckoutButton = ({
           <>
             <span className="font-semibold">Payment confirmed ✓</span>
             <span className="text-xs text-white/80">
-              {token?.isNative && effectiveXlmAmount
-                ? `~${effectiveXlmAmount.toFixed(2)} XLM ($${Number(result.amountUsd).toFixed(2)})`
-                : `$${Number(result.amountUsd).toFixed(2)} ${token?.symbol || "USDC"}`}{" "}
+              {token?.isNative && confirmedTokenAmount !== null
+                ? `~${Number(confirmedTokenAmount).toFixed(2)} XLM (${N][[typeof confirmedAmountUsd === "number" ? "$" + Number(confirmedAmountUsd).toFixed(2) : "—"})` 
+                : `${typeof confirmedAmountUsd === "number" ? "$" + Number(confirmedAmountUsd).toFixed(2) : "—"} ${token?.symbol || "USDC"}`}${" "}
               · order {effectiveOrderId}
             </span>
           </>
@@ -182,7 +185,7 @@ const StellarCheckoutButton = ({
             <span className="flex items-center justify-center gap-2 font-semibold">
               {token?.isNative && <SiStellar className="inline-block" size={16} />}
               {token?.isNative
-                ? `Pay with XLM · ~${effectiveXlmAmount?.toFixed(2)} XLM ($${Number(amountUsd).toFixed(2)})`
+                ? `Pay with XLM · ~${effectiveXlmAmount?.toFixed(2)} XLM (${amountUsd ? "$" + Number(amountUsd).toFixed(2) : "—"})`
                 : `Pay with USDC${amountUsd ? ` · $${Number(amountUsd).toFixed(2)}` : ""}`}
             </span>
             <span className="text-xs text-white/80">From your Stellar wallet (Freighter)</span>

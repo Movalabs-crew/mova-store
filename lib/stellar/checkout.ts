@@ -93,8 +93,58 @@ export async function orderIdHash(orderId: string): Promise<string> {
 }
 
 /**
+ * Normalize a bytes32 hex string for comparison (lowercase, optional 0x prefix).
+ */
+function normalizeHex(value: string): string {
+  return value.trim().toLowerCase().replace(/^0x/, "");
+}
+
+/**
+ * Compare the decoded on-chain receipt against the requested payment.
+ * Throws a WalletError naming the field that disagreed.
+ */
+export function verifyReceipt(
+  receipt: PaymentReceipt,
+  expected: {
+    orderIdHash: string;
+    buyer: string;
+    tokenContractId: string;
+    amountRaw: bigint;
+  }
+): void {
+  const expectedOrderHash = normalizeHex(expected.orderIdHash);
+  if (normalizeHex(receipt.orderId) !== expectedOrderHash) {
+    throw new WalletError(
+      `Payment verification failed: order id mismatch (expected ${expectedOrderHash}, got ${normalizeHex(receipt.orderId)}).`,
+      "PAYMENT_VERIFICATION_FAILED"
+    );
+  }
+
+  if (receipt.buyer !== expected.buyer) {
+    throw new WalletError(
+      `Payment verification failed: buyer mismatch (expected ${expected.buyer}, got ${receipt.buyer}).`,
+      "PAYMENT_VERIFICATION_FAILED"
+    );
+  }
+
+  if (receipt.token !== expected.tokenContractId) {
+    throw new WalletError(
+      `Payment verification failed: token mismatch (expected ${expected.tokenContractId}, got ${receipt.token}).`,
+      "PAYMENT_VERIFICATION_FAILED"
+    );
+  }
+
+  if (receipt.amount !== expected.amountRaw) {
+    throw new WalletError(
+      `Payment verification failed: amount mismatch (expected ${expected.amountRaw.toString()}, got ${receipt.amount.toString()}).`,
+      "PAYMENT_VERIFICATION_FAILED"
+    );
+  }
+}
+
+/**
  * Main flow: connect wallet -> readiness checks -> simulate -> prepare ->
- * sign -> submit -> wait -> decode event.
+ * sign -> submit -> wait -> decode event -> verify against request.
  */
 export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   const { amountUsd, orderId, publicKey, onStatus = status } = options;
@@ -117,6 +167,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   }
   const amountRaw = usdToRawUnits(effectiveTokenAmount);
   const orderBytes = await hashOrderId(orderId);
+  const orderIdHex = bytesToHex(orderBytes);
 
   // 1. Network guard.
   onStatus("Checking Freighter network...");
@@ -159,7 +210,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   // 5. Sign with Freighter.
   onStatus("Waiting for Freighter signature…");
   const signedXdr = await signWithFreighter(prepared.toXDR(), publicKey);
-  const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+  const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSTHRASE);
 
   // 6. Submit.
   onStatus("Submitting transaction…");
@@ -185,14 +236,31 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   const txResult = await waitForTransaction(sendResponse.hash);
   const receipt = decodePaymentEvent(txResult);
 
+  // 8. Verify the decoded receipt against the request before reporting success.
+  if (!receipt) {
+    throw new WalletError(
+      "Payment verification failed: no payment event was found in the transaction result.",
+      "PAYMENT_VERIFICATION_FAILED"
+    );
+  }
+  verifyReceipt(receipt, {
+    orderIdHash: orderIdHex,
+    buyer: publicKey,
+    tokenContractId: token.contractId,
+    amountRaw: amountRaw,
+  });
+
+  // Report the escrowed amount from the receipt, not from the inputs.
+  const receiptTokenAmount = Number(receipt.amount) / 10 ** USDC_DECIMALS;
+
   return {
     hash: sendResponse.hash,
     status: txResult.status,
     receipt,
-    amountUsd,
-    tokenAmount: effectiveTokenAmount,
+    amountUsd: receiptTokenAmount,
+    tokenAmount: receiptTokenAmount,
     tokenSymbol: token.symbol,
-    amountRaw,
+    amountRaw: receipt.amount,
     simulation: {
       minResourceFeeStroops: report.minResourceFee?.toString() ?? "0",
       recommendedInclusionFeeStroops: fee,
