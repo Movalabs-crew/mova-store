@@ -7,6 +7,7 @@ import {
   formatOrderAmount,
   formatOrderRow,
   DEFAULT_DECIMALS,
+  readOrder,
 } from "../../../lib/stellar/orders";
 import { bytesToHex, hashOrderId, hexToBytes } from "../../../lib/stellar/scval";
 import * as freighterMod from "../../../lib/stellar/freighter";
@@ -231,14 +232,14 @@ describe("resolveOrderIdHash (Issue #67)", () => {
 describe("dispatchOrder and refundOrder order ID resolution", () => {
   const SAMPLE_64_HEX =
     "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
-  const DUMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const DuMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("resolves 64-hex order ID directly without double-hashing in dispatchOrder", async () => {
-    vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(DUMMY_PUBLIC_KEY);
+    vi.spyOn(freighterMod, "connectWallet").mockResolved(DUMMY_PUBLIC_KEY);
 
     // We can verify resolveOrderIdHash directly on the input passed to dispatchOrder
     const resolvedBytes = await resolveOrderIdHash(SAMPLE_64_HEX);
@@ -262,8 +263,8 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
         order_id: SAMPLE_64_HEX,
-        topic1: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNQU34T6TZMYMW2EVH34XOWMA",
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic1: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBMLNUQ34T6TZMYMW2EVH34XOWMA",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
         amount: "50000000",
       },
     };
@@ -277,7 +278,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
 
   it("handles event when order_id is in topic1 fallback", () => {
     const SAMPLE_64_HEX =
-      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     const indexedDispatchEvent = {
       symbol: "dispatch",
@@ -285,7 +286,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
         topic1: SAMPLE_64_HEX,
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
         amount: "50000000",
       },
     };
@@ -297,3 +298,86 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
   });
 });
 
+describe("readOrder (mocked RDP)", () => {
+  const ORDER_ID =
+    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const SELLER = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+  const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const TOKEN = "CCGAOHCNTCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNCNNC";
+  const TIMESTAMP = 1700000000;
+
+  function buildScValString(value: string) {
+    return xdr.ScVal.scvString(new xdr.SctString(value));
+  }
+
+  function buildScValSymbol(value: string) {
+    return xdr.ScVal.scvSymbol(new xdr.SctSymbol(value));
+  }
+
+  function buildScValI128(value: bigint) {
+    return xdr.ScVal.scvI128(new xdr.Int128(xdr.ScVal.scvI128.lo(value), xdr.ScVal.scvI128.hi(value)));
+  }
+
+  function buildScvalU64(value: bigint) {
+    return xdr.ScVal.scvU64(new xdr.Uint64(value));
+  }
+
+  function buildScvalMap(entries: Array<[string, xdr.ScVal]>) {
+    return xdr.ScVal.scvMap(
+      new xdr.ScMap(
+        entries.map(
+          ([key, value]) =>
+            new xdr.ScMapEntry(buildScvalSymbol(key), value),
+        ),
+      ),
+    );
+  }
+
+  function buildOrderScVal() {
+    return buildScvalMap([
+      ["buyer", buildScValString(BUYER)],
+      ["seller", buildScvalString(SELLER]),
+      ["token", buildScValString(TOKEN),
+      ["amount", buildScValI128(BigInt("50000000"))],
+      ["status", buildScValSymbol("Shipped")],
+      ["timestamp", buildScvalU64(BigInt(TIMESTAMP))],
+    ]);
+  }
+
+  function mockRPC(impl: (address: string, key: xdr.ScVal) => Promise<xdr.ScVal | null>) {
+    const getContractData = vi.fn(impl);
+    const server = { getContractData } as unknown as rpc.Server;
+    return { server, getContractData };
+  }
+
+  it("returns the order fields when the order exists", async () => {
+    const { server, getContractData } = mockRPC(async () => buildOrderScVal());
+
+    const order = await readOrder(ORDER_ID, { server });
+
+    expect(order).not.toBeNull();
+    expect(order?.status).toBe("Shipped");
+    expect(order?.amount).toBe("50000000");
+    expect(order?.token).toBe(TOKEN);
+    expect(order?.buyer).toBe(BUYER);
+    expect(order?.timestamp).toBe(TIMESTAMP);
+    expect(getContractData).toHaveBeenCalledOnce();
+  });
+
+  it("returns null when the order is absent", async () => {
+    const { server, getContractData } = mockRPC(async () => null);
+
+    const order = await readOrder(ORDER_ID, { server });
+
+    expect(order).toBeNull();
+    expect(getContractData).toHaveBeenCalledOnce();
+  });
+
+  it("propagates RPC errors", async () => {
+    const { server } = mockRPC(async () => {
+      throw new Error("RPC failure");
+    });
+
+    await expect(readOrder(ORDER_ID, { server })).rejects.toThrow("RPC failure");
+  });
+});
