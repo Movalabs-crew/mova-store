@@ -37,7 +37,7 @@ function stubServer(opts: { nativeBalanceRaw: bigint; trustline?: TrustlineStub 
   return {
     getAccount: vi.fn().mockResolvedValue(ACCOUNT),
     getAccountEntry: vi.fn().mockResolvedValue({
-      balance: () => opts.nativeBalanceRaw.toString(),
+      balance: opts.nativeBalanceRaw,
     }),
     getAssetBalance: vi.fn().mockResolvedValue({
       balanceEntry: opts.trustline
@@ -320,7 +320,7 @@ describe("assertPaymentReady — non-strict report (issue #547)", () => {
         .fn()
         .mockRejectedValueOnce(Object.assign(new Error("Account not found"), { status: 404 }))
         .mockResolvedValueOnce(ACCOUNT),
-      getAccountEntry: vi.fn().mockResolvedValue({ balance: () => "20000000" }),
+      getAccountEntry: vi.fn().mockResolvedValue({ balance: 20000000n }),
       getAssetBalance: vi.fn().mockResolvedValue({
         balanceEntry: { amount: "500000000", authorized: true },
       }),

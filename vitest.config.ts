@@ -22,6 +22,10 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // The first dynamic `import()` in a file pays Vite's transform cost for
+    // that whole module graph. Under Vite 8 that cold start approaches the 5s
+    // default, which made the config/supabase suites time out intermittently.
+    testTimeout: 15000,
     env: {
       NODE_ENV: "development",
     },
