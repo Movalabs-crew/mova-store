@@ -90,6 +90,13 @@ export function decodePaymentEvent(
     if (first.type !== "scvSymbol") continue;
     if (first.sym.toString() !== "pay") continue;
 
+    // The checkout contract emits exactly 5 topics for a `pay` event:
+    //   [Symbol("pay"), token, buyer, merchant, order_id]
+    // Any other layout is not a payment event we can decode; skipping it
+    // ensures fixtures that fabricate fields (e.g. order_id in data) do
+    // not silently produce a receipt.
+    if (topics.length !== 5) continue;
+
     let eventContractId: string | undefined;
     try {
       const contractId = event.contractId;
@@ -113,7 +120,7 @@ export function decodePaymentEvent(
       contractId: eventContractId,
     };
 
-    // topics[1..] = [token, buyer, merchant, order_id]
+    // topics[1..4] = [token, buyer, merchant, order_id]
     for (let i = 1; i < topics.length; i++) {
       const str = scValToString(topics[i]);
       switch (i) {
