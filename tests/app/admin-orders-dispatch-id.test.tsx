@@ -2,10 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 
-// The indexer's `order_id` topic is the already-hashed BytesN32> as hex. The
+// The indexer's `order_id` topic is the already-hashed BytesN<32> as hex. The
 // admin page must hand that value to dispatchOrder/refundOrder untouched — no
 // truncation, no re-hashing — or the contract call cannot find the order.
+//
+// The contract's `pay` event topics are (pay, token, buyer, merchant, order_id),
+// so the order id is topic4 and the buyer is topic2. The `create_order` event
+// topics are (create_order, token, buyer, order_id), so the order id is topic3
+// and the buyer is topic2. The `dispatch` / `refund` events carry the order id
+// in topic1. The fixtures below mirror those real topic layouts and deliberately
+// do not inject a `fields.order_id` that the indexer never emits for `pay`.
 const EVENT_DERIVED_ID = "3f".repeat(32); // 64 hex chars
+const TOKEN_ADDRESS = "C".repeat(56);
 
 const dispatchOrder = vi.fn(async (_orderId: string) => ({ success: true, txHash: "abc" }));
 const refundOrder = vi.fn(async (_orderId: string) => ({ success: true, txHash: "def" }));
@@ -13,9 +21,15 @@ const refundOrder = vi.fn(async (_orderId: string) => ({ success: true, txHash: 
 vi.mock("../../lib/stellar/orders", () => ({
   dispatchOrder: (id: string) => dispatchOrder(id),
   refundOrder: (id: string) => refundOrder(id),
-  eventToOrder: (event: { fields: Record<string, string>; ledger: number; txHash: string }) => ({
-    orderId: event.fields.order_id,
-    buyer: event.fields.buyer,
+  // Mirror the real `eventToOrder` contract-documented topic decoding:
+  // order id from `fields.order_id || fields.topic4` and buyer from topic2.
+  eventToOrder: (event: {
+    fields: Record<string, string>;
+    ledger: number;
+    txHash: string;
+  }) => ({
+    orderId: event.fields.order_id || event.fields.topic4,
+    buyer: event.fields.buyer || event.fields.topic2,
     amount: "10.0000000",
     tokenSymbol: "USDC",
     status: "Paid",
@@ -34,8 +48,17 @@ vi.mock("../../lib/stellar/indexer", () => ({
       onEvent: (e: unknown) => void;
       onStatus: (s: { running: boolean; eventsSeen: number }) => void;
     }) {
+      // Real `pay` topic layout: (pay, token, buyer, merchant, order_id).
+      // No `fields.order_id` — the id lives in topic4.
       onEvent({
-        fields: { order_id: EVENT_DERIVED_ID, buyer: "GBUYER", amount: "100000000" },
+        fields: {
+          topic0: "pay",
+          topic1: TOKEN_ADDRESS,
+          topic2: "GBUYER",
+          topic3: "GMERCHANT",
+          topic4: EVENT_DERIVED_ID,
+          amount: "100000000",
+        },
         symbol: "pay",
         ledger: 42,
         txHash: "tx-1",
@@ -96,6 +119,8 @@ describe("admin orders page — order id passed to dispatch/refund", () => {
     const passed = dispatchOrder.mock.calls[0][0];
     expect(passed).toHaveLength(64);
     expect(passed).not.toContain("...");
+    // Must not be the token SAC address from topic1.
+    expect(passed).not.toBe(TOKEN_ADDRESS);
   });
 
   it("passes the event-derived hex order id to refundOrder unmodified", async () => {

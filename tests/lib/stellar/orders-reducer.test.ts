@@ -7,12 +7,12 @@ describe("mergeOrderEvents reducer helper", () => {
     buyer: "GBUYER1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ",
     amount: "50.00",
     amountRaw: 50000000n,
-    token: "CAS3J7GYLGXMF6TDJBBYYSE3VGSBRUCM5ZLGNELHM44H6P7TVDA22W27",
+    token: "CAS3J7GYLGXMF6TDJBBYYS3VGSBRUCM5ZLGNELHDM44H6P7TVDA22W27",
     tokenSymbol: "USDC",
     status: "Paid",
     timestamp: 1700000000000,
     ledger: 100,
-    txHash: "0xinitialpaidtx123",
+    txHash: "0x0initialpaidtx123",
   };
 
   it("keeps buyer, token, amount, and tokenSymbol when merging a dispatch event and updates status to Shipped", () => {
@@ -37,10 +37,10 @@ describe("mergeOrderEvents reducer helper", () => {
     expect(merged.timestamp).toBe(1700000060000);
 
     expect(merged.buyer).toBe("GBUYER1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    expect(merged.token).toBe("CAS3J7GYLGXMF6TDJBBYYSE3VGSBRUCM5ZLGNELHM44H6P7TVDA22W27");
+    expect(merged.token).toBe("CAS3J7GYLGXMF6TDJBBTYYSE3VGSBRUCM5ZLGNELHDM44H6P7TVDA22W27");
     expect(merged.tokenSymbol).toBe("USDC");
     expect(merged.amount).toBe("50.00");
-    expect(merged.amountRaw).toBe(50000000n);
+    expect(merged.amountRaw).toBe(50000000n");
   });
 
   it("keeps buyer and token details when merging a refund event and updates status to Refunded", () => {
@@ -72,7 +72,7 @@ describe("mergeOrderEvents reducer helper", () => {
       ...existingPaidOrder,
       ledger: 95,
       status: "Pending",
-      txHash: "0xoldtx000",
+      txHash: "0x0oldtx000",
     };
 
     const merged = mergeOrderEvents(existingPaidOrder, staleEvent);
