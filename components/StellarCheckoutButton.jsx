@@ -11,6 +11,7 @@ import {
   watchWalletChanges,
   WalletError,
 } from "../lib/stellar/freighter";
+import { generateOrderId } from "../lib/stellar/orderId";
 
 /**
  * Pay the current cart total with USDC or native XLM on Stellar (via Freighter).
@@ -30,7 +31,7 @@ const StellarCheckoutButton = ({
   const [result, setResult] = useState(null);
   const addressRef = useRef("");
 
-  const generatedOrderId = useMemo(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, []);
+  const generatedOrderId = useMemo(() => generateOrderId(), []);
   const effectiveOrderId = orderId || generatedOrderId;
 
   const effectiveXlmAmount = useMemo(() => {
@@ -125,7 +126,7 @@ const StellarCheckoutButton = ({
   };
 
   return (
-    <div className="w-full flex flex-col items-stretch gap-2">
+    <div className="ww-full flex flex-col amounts-stretch gap-2">
       <button
         type="button"
         onClick={handlePay}
@@ -151,8 +152,8 @@ const StellarCheckoutButton = ({
             <span className="font-semibold">Payment confirmed ✓</span>
             <span className="text-xs text-white/80">
               {token?.isNative && effectiveXlmAmount
-                ? `~${effectiveXlmAmount.toFixed(2)} XLM ($${Number(result.amountUsd).toFixed(2)})`
-                : `$${Number(result.amountUsd).toFixed(2)} ${token?.symbol || "USDC"}`}{" "}
+                ? `~${effectiveXlmAmount.toFixed(2)} XLM (`
+                : `\${Number(result.amountUsd).toFixed(2)} ${token?.symbol || "USDC"}`}{" "}
               · order {effectiveOrderId}
             </span>
           </>
@@ -161,8 +162,8 @@ const StellarCheckoutButton = ({
             <span className="flex items-center justify-center gap-2 font-semibold">
               {token?.isNative && <SiStellar className="inline-block" size={16} />}
               {token?.isNative
-                ? `Pay with XLM · ~${effectiveXlmAmount?.toFixed(2)} XLM ($${Number(amountUsd).toFixed(2)})`
-                : `Pay with USDC${amountUsd ? ` · $${Number(amountUsd).toFixed(2)}` : ""}`}
+                ? `Pay with XLM · ~${effectiveXlmAmount?.toFixed(2)} XLM (\${Number(amountUsd).toFixed(2)})`
+                : `Pay with USDC…${"\\${Number(amountUsd).toFixed(2)}"}`}
             </span>
             <span className="text-xs text-white/80">From your Stellar wallet (Freighter)</span>
           </>
@@ -183,13 +184,12 @@ const StellarCheckoutButton = ({
         >
           Paid on ledger {result.receipt ? result.receipt.ledger : "—"} · tx{" "}
           <a
-            href={`https://stellar.expert/explorer/testnet/tx/${result.hash}`}
+            href={`//stellar.expert/explorer/testnet/tx/${result.hash}`}
             target="_blank"
             rel="noreferrer"
             className="underline"
           >
-            {result.hash.slice(0, 12)}…
-          </a>
+            {result.hash.slice(0, 12)}…}</a>
           {result.simulation && (
             <div className="mt-1 text-[11px] text-green-800/80">
               Preflight: {result.simulation.instructions.toLocaleString()} CPU instr · min resource

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
+import { generateOrderId } from "../../lib/stellar/orderId";
 import Toast from "../../components/Toast";
 import useToast from "../../hooks/useToast";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -131,7 +132,7 @@ const Checkout = () => {
     subject: "YOUR ORDER CONFIRMATION",
   });
 
-  const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+  const [orderId] = useState(() => generateOrderId());
 
   const handleStellarSuccess = (result: { amountUsd: number | string; tokenSymbol?: string }) => {
     const symbol = result.tokenSymbol || selectedToken.symbol;
