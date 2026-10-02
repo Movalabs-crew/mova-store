@@ -1,4 +1,4 @@
-import { rpc, xdr } from "@stellar/stellar-sdk";
+import { rpc, xdr, StrKey } from "@stellar/stellar-sdk";
 
 import {
   CHECKOUT_CONTRACT_ID,
@@ -100,6 +100,9 @@ export class PaymentEventIndexer {
   ) {
     this.server = new rpc.Server(opts.rpcUrl ?? RPC_URL);
     this.contractId = opts.contractId ?? CHECKOUT_CONTRACT_ID;
+    if (!this.contractId || !StrKey.isValidContract(this.contractId)) {
+      throw new Error(`Invalid or missing checkout contract ID: "${this.contractId || ""}"`);
+    }
     this.pollMs = opts.pollMs ?? EVENT_POLL_INTERVAL_MS;
     this.watchedSymbols = opts.watchedSymbols ?? ["pay", "create_order", "dispatch", "refund"];
     this.durableStartLedger =

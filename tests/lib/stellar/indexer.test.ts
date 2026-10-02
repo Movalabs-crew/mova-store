@@ -2,6 +2,14 @@ import { Address, rpc, xdr } from "@stellar/stellar-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentEventIndexer, type IndexedEvent } from "../../../lib/stellar/indexer";
+
+vi.mock("../../../lib/stellar/config", async (importOriginal) => {
+  const mod = await importOriginal<any>();
+  return {
+    ...mod,
+    CHECKOUT_CONTRACT_ID: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+  };
+});
 import {
   addressToScVal,
   bytes32ToScVal,
@@ -17,6 +25,17 @@ import {
 async function tick(ms: number): Promise<void> {
   await vi.advanceTimersByTimeAsync(ms);
 }
+
+describe("PaymentEventIndexer configuration", () => {
+  it("throws an error when constructed with an empty or invalid contract ID", () => {
+    expect(() => new PaymentEventIndexer({ contractId: "" })).toThrow(
+      /Invalid or missing checkout contract ID/
+    );
+    expect(() => new PaymentEventIndexer({ contractId: "INVALID_ID" })).toThrow(
+      /Invalid or missing checkout contract ID/
+    );
+  });
+});
 
 describe("PaymentEventIndexer startup retry (Issue #68)", () => {
   beforeEach(() => {
