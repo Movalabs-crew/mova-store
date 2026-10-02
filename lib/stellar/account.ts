@@ -146,7 +146,8 @@ export async function fundTestnetAccount(publicKey: string): Promise<void> {
 export async function getNativeBalance(server: rpc.Server, publicKey: string): Promise<bigint> {
   try {
     const entry = await server.getAccountEntry(publicKey);
-    return BigInt(entry.balance().toString());
+    // SDK 17 exposes `balance` as a bigint property instead of a `balance()` accessor.
+    return entry.balance;
   } catch (err) {
     if (isAccountMissingError(err)) {
       return BigInt(0);
@@ -277,9 +278,7 @@ export async function assertPaymentReady(
     );
   }
 
-  const minNativeRequired = token.isNative
-    ? requiredRaw + MIN_NATIVE_RESERVE
-    : MIN_NATIVE_RESERVE;
+  const minNativeRequired = token.isNative ? requiredRaw + MIN_NATIVE_RESERVE : MIN_NATIVE_RESERVE;
 
   if (nativeBalanceRaw < minNativeRequired) {
     issues.push(
