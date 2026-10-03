@@ -117,15 +117,18 @@ describe("AuthProvider lifecycle & session tests (Issue #95)", () => {
     expect(screen.getByTestId("is-admin")).toHaveTextContent("not-admin");
   });
 
-  it("recognizes admin users based on NEXT_PUBLIC_ADMIN_EMAILS whitelist", async () => {
+  it("recognizes admin users from the server-verified app_metadata.is_admin claim", async () => {
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: {
         session: {
           user: {
             id: "admin-456",
-            email: "admin@test.com",
+            email: "custom-admin@randomdomain.org",
             user_metadata: {
               name: "Admin User",
+            },
+            app_metadata: {
+              is_admin: true,
             },
           },
         },
@@ -144,7 +147,67 @@ describe("AuthProvider lifecycle & session tests (Issue #95)", () => {
 
     expect(screen.getByTestId("authenticated")).toHaveTextContent("authenticated");
     expect(screen.getByTestId("is-admin")).toHaveTextContent("admin");
-    expect(screen.getByTestId("user-email")).toHaveTextContent("admin@test.com");
+    expect(screen.getByTestId("user-email")).toHaveTextContent("custom-admin@randomdomain.org");
+  });
+
+  it("does not grant admin from an email address alone (no NEXT_PUBLIC allowlist)", async () => {
+    // `admin@test.com` used to be whitelisted through NEXT_PUBLIC_ADMIN_EMAILS
+    // in tests/setup.ts. The client must no longer consult any env allowlist:
+    // without the server-issued claim this account is not an admin.
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "admin-789",
+            email: "admin@test.com",
+            user_metadata: {
+              name: "Env Admin",
+            },
+            app_metadata: {},
+          },
+        },
+      },
+    } as any);
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading")).toHaveTextContent("loaded");
+    });
+
+    expect(screen.getByTestId("authenticated")).toHaveTextContent("authenticated");
+    expect(screen.getByTestId("is-admin")).toHaveTextContent("not-admin");
+  });
+
+  it("does not grant admin when the claim is explicitly false", async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "admin-false",
+            email: "admin@test.com",
+            user_metadata: {},
+            app_metadata: { is_admin: false },
+          },
+        },
+      },
+    } as any);
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading")).toHaveTextContent("loaded");
+    });
+
+    expect(screen.getByTestId("is-admin")).toHaveTextContent("not-admin");
   });
 
   it("handles null session on getSession resolution", async () => {
@@ -205,6 +268,7 @@ describe("AuthProvider lifecycle & session tests (Issue #95)", () => {
     expect(screen.getByTestId("user-id")).toHaveTextContent("new-user-789");
     expect(screen.getByTestId("user-email")).toHaveTextContent("signedin@example.com");
     expect(screen.getByTestId("user-name")).toHaveTextContent("Signed In User");
+    expect(screen.getByTestId("is-admin")).toHaveTextContent("not-admin");
 
     // Simulate SIGNED_OUT event
     await act(async () => {
@@ -215,6 +279,45 @@ describe("AuthProvider lifecycle & session tests (Issue #95)", () => {
     expect(screen.getByTestId("user-id")).toHaveTextContent("no-id");
     expect(screen.getByTestId("user-email")).toHaveTextContent("no-email");
     expect(screen.getByTestId("is-admin")).toHaveTextContent("not-admin");
+  });
+
+  it("promotes to admin mid-session when the refreshed token carries the claim", async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "upgraded-user",
+            email: "upgraded@example.com",
+            user_metadata: {},
+            app_metadata: {},
+          },
+        },
+      },
+    } as any);
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading")).toHaveTextContent("loaded");
+    });
+    expect(screen.getByTestId("is-admin")).toHaveTextContent("not-admin");
+
+    await act(async () => {
+      authStateCallback!("TOKEN_REFRESHED", {
+        user: {
+          id: "upgraded-user",
+          email: "upgraded@example.com",
+          user_metadata: {},
+          app_metadata: { is_admin: true },
+        },
+      });
+    });
+
+    expect(screen.getByTestId("is-admin")).toHaveTextContent("admin");
   });
 
   it("unsubscribes from onAuthStateChange on unmount", async () => {

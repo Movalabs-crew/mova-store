@@ -264,7 +264,7 @@ describe("getNativeBalance", () => {
   it("returns balance when getAccountEntry succeeds", async () => {
     const stubServer = {
       getAccountEntry: vi.fn().mockResolvedValue({
-        balance: () => "50000000",
+        balance: 50000000n,
       }),
     };
 
@@ -348,11 +348,9 @@ describe("getTrustline", () => {
   it("returns the native trustline trivially for the native asset without an RPC call", async () => {
     const stubServer = { getAssetBalance: vi.fn() };
 
-    const info = await getTrustline(
-      stubServer as never,
-      dummyPublicKey,
-      { isNative: true } as never
-    );
+    const info = await getTrustline(stubServer as never, dummyPublicKey, {
+      isNative: true,
+    } as never);
 
     expect(info).toEqual({ hasTrustline: true, balanceRaw: 0n, authorized: true });
     expect(stubServer.getAssetBalance).not.toHaveBeenCalled();

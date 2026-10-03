@@ -1,4 +1,4 @@
-import { Networks } from "@stellar/stellar-sdk";
+import { Networks, StrKey } from "@stellar/stellar-sdk";
 
 // ---------------------------------------------------------------------------
 // Network + contract configuration.
@@ -12,7 +12,27 @@ import { Networks } from "@stellar/stellar-sdk";
 //   NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID = native XLM SAC contract id (C...)
 // ---------------------------------------------------------------------------
 
-export const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? "testnet";
+/**
+ * Configuration enums fail closed (#706): only the documented network values
+ * are accepted. Unset (or empty) still defaults to testnet for local dev.
+ */
+export const ALLOWED_NETWORKS = ["testnet", "mainnet"] as const;
+export type StellarNetwork = (typeof ALLOWED_NETWORKS)[number];
+
+function resolveNetwork(raw: string | undefined): StellarNetwork {
+  if (raw === undefined || raw.trim() === "") return "testnet";
+  const trimmed = raw.trim();
+  if ((ALLOWED_NETWORKS as readonly string[]).includes(trimmed)) {
+    return trimmed as StellarNetwork;
+  }
+  throw new Error(
+    `Invalid NEXT_PUBLIC_STELLAR_NETWORK "${raw}". ` +
+      `Accepted values: ${ALLOWED_NETWORKS.join(", ")}. ` +
+      `Unset (or empty) falls back to "testnet".`
+  );
+}
+
+export const NETWORK: StellarNetwork = resolveNetwork(process.env.NEXT_PUBLIC_STELLAR_NETWORK);
 export const IS_MAINNET = NETWORK === "mainnet";
 
 // Mainnet default matches lib/env.ts STELLAR_DEFAULTS.mainnet and the endpoint
@@ -25,29 +45,24 @@ export const IS_MAINNET = NETWORK === "mainnet";
 // different RPCs depending on which module resolved it. Aligned to match.
 export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
-  (IS_MAINNET
-    ? "https://soroban-rpc.stellar.org"
-    : "https://soroban-testnet.stellar.org");
+  (IS_MAINNET ? "https://soroban-rpc.stellar.org" : "https://soroban-testnet.stellar.org");
 
 export const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ??
   (IS_MAINNET ? Networks.PUBLIC : Networks.TESTNET);
 
 // Deployed checkout contract (see contracts/checkout + README).
-export const CHECKOUT_CONTRACT_ID =
-  process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID ?? "";
+export const CHECKOUT_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID ?? "";
 
 // USDC via the Stellar Asset Contract.
-export const TESTNET_USDC_CONTRACT_ID =
-  "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+export const TESTNET_USDC_CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 // Set NEXT_PUBLIC_USDC_CONTRACT_ID to the mainnet USDC SAC contract id.
 export const USDC_CONTRACT_ID =
   process.env.NEXT_PUBLIC_USDC_CONTRACT_ID ?? TESTNET_USDC_CONTRACT_ID;
 
 // Testnet USDC is issued by Circle's classic testnet issuer (trustline only
 // needed for non-native assets; native XLM needs no trustline).
-export const TESTNET_USDC_ISSUER =
-  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+export const TESTNET_USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
 // Native XLM Stellar Asset Contract ids.
 //
@@ -61,9 +76,7 @@ export const MAINNET_NATIVE_ASSET_CONTRACT_ID =
   "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 export const NATIVE_ASSET_CONTRACT_ID =
   process.env.NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID ??
-  (IS_MAINNET
-    ? MAINNET_NATIVE_ASSET_CONTRACT_ID
-    : TESTNET_NATIVE_ASSET_CONTRACT_ID);
+  (IS_MAINNET ? MAINNET_NATIVE_ASSET_CONTRACT_ID : TESTNET_NATIVE_ASSET_CONTRACT_ID);
 
 // All tokens accepted by the checkout contract's whitelist. The merchant adds
 // each token on-chain via `add_token`; the frontend uses this registry for
@@ -80,7 +93,41 @@ export interface TokenConfig {
   assetIssuer?: string;
 }
 
-export const SUPPORTED_TOKENS: TokenConfig[] = [
+/**
+ * A lookup table keyed by identifier must be unique by construction (#705).
+ * Validates SUPPORTED_TOKENS at module load so a duplicate or empty contract
+ * id fails immediately instead of silently resolving payments to the wrong
+ * token.
+ */
+function validateSupportedTokens(tokens: TokenConfig[]): TokenConfig[] {
+  const seen = new Map<string, string>();
+  for (const token of tokens) {
+    const label = token.symbol || token.contractId || "<unnamed>";
+    if (!token.contractId || token.contractId.trim() === "") {
+      throw new Error(
+        `SUPPORTED_TOKENS entry "${label}" has an empty contractId. ` +
+          `Every token must declare a non-empty contract id.`
+      );
+    }
+    if (!StrKey.isValidContract(token.contractId)) {
+      throw new Error(
+        `SUPPORTED_TOKENS entry "${label}" has an invalid contract id: ${token.contractId}. ` +
+          `Contract ids must be valid C... StrKeys.`
+      );
+    }
+    const previous = seen.get(token.contractId);
+    if (previous !== undefined) {
+      throw new Error(
+        `SUPPORTED_TOKENS entries "${previous}" and "${label}" share contract id ` +
+          `${token.contractId}. Token registry contractIds must be unique.`
+      );
+    }
+    seen.set(token.contractId, label);
+  }
+  return tokens;
+}
+
+export const SUPPORTED_TOKENS: TokenConfig[] = validateSupportedTokens([
   {
     contractId: USDC_CONTRACT_ID,
     symbol: "USDC",
@@ -96,7 +143,7 @@ export const SUPPORTED_TOKENS: TokenConfig[] = [
     decimals: 7,
     isNative: true,
   },
-];
+]);
 
 /** Default payment token (used by the checkout flow unless overridden). */
 export function defaultToken(): TokenConfig {
@@ -146,4 +193,3 @@ export const ADMIN_ORDERS_CURSOR_STORAGE_KEY = "mova:admin-orders:cursor:v1";
 // Safety buffer added on top of the simulated resource fee so the tx has
 // headroom to cover fees that drift between simulation and inclusion.
 export const FEE_BUFFER_STROOPS = BigInt(500000);
-

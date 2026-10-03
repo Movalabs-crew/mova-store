@@ -966,3 +966,205 @@ fn test_reads_on_uninitialized_contract() {
     assert_eq!(client.status(&id), None);
     assert!(!client.is_paid(&id));
 }
+
+// ---------------------------------------------------------------------------
+// Pending-order binding
+// ---------------------------------------------------------------------------
+
+/// A pending order is a reservation: `pay` must match the buyer, token and
+/// amount recorded by `create_order`. A different buyer must not be able to
+/// silently replace the original buyer's intent.
+#[test]
+fn test_pay_with_different_buyer_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, _) = setup_usdc(&env);
+    let other_buyer = Address::generate(&env);
+
+    let id = order_id(&env, 30);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    let result = client.try_pay(&token, &other_buyer, &id, &50_000);
+    assert_eq!(result, Err(Ok(Error::OrderBuyerMismatch)));
+
+    // Neither the recorded intent nor the balances changed.
+    let order = client.order(&id).unwrap();
+    assert_eq!(order.buyer, buyer);
+    assert_eq!(client.status(&id), Some(Status::Pending));
+    assert_eq!(usdc_balance(&env, &token, &other_buyer), 0);
+}
+
+#[test]
+fn test_pay_with_different_amount_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, _) = setup_usdc(&env);
+
+    let id = order_id(&env, 32);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    let result = client.try_pay(&token, &buyer, &id, &60_000);
+    assert_eq!(result, Err(Ok(Error::OrderAmountMismatch)));
+
+    // The original reserved amount is intact and no funds moved.
+    assert_eq!(client.order(&id).unwrap().amount, 50_000);
+    assert_eq!(usdc_balance(&env, &token, &buyer), 1_000_000);
+    assert_eq!(client.status(&id), Some(Status::Pending));
+}
+
+/// Paying a pending order with the recorded buyer/token/amount still succeeds,
+/// so the binding does not break the happy path.
+#[test]
+fn test_pay_matching_pending_order_succeeds() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 33);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    client.pay(&token, &buyer, &id, &50_000);
+    assert_eq!(client.status(&id), Some(Status::Paid));
+    assert_eq!(usdc_balance(&env, &token, &checkout), 50_000);
+}
+
+// ---------------------------------------------------------------------------
+// Centralized TTL extension (#509)
+// ---------------------------------------------------------------------------
+
+/// Reading a whitelisted token must keep its entry alive, exactly as reading
+/// the admin or an order does. `is_token_allowed` is on the hot path for both
+/// `create_order` and `pay`, so a whitelist entry that is only ever read would
+/// otherwise age out from under a live deployment and start rejecting payments
+/// with `TokenNotAllowed` (#493).
+#[test]
+fn test_whitelist_read_refreshes_ttl_without_a_write() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, _, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+
+    // Normalise the entry to the contract's own ceiling so the decay below does
+    // not depend on the host's default entry TTLs.
+    env.as_contract(&checkout, || {
+        let persistent = env.storage().persistent();
+        persistent.extend_ttl(&key, LEDGER_TO_EXTEND_TO, LEDGER_TO_EXTEND_TO);
+        env.storage()
+            .instance()
+            .extend_ttl(LEDGER_TO_EXTEND_TO, LEDGER_TO_EXTEND_TO);
+    });
+
+    // Age it until it sits below the contract's extend threshold.
+    env.ledger().with_mut(|li| {
+        li.sequence_number += LEDGER_TO_EXTEND_TO - LEDGER_THRESHOLD / 2;
+    });
+
+    let before = persistent_ttl(&env, &checkout, &key);
+    assert!(
+        before < LEDGER_THRESHOLD,
+        "whitelist TTL should have decayed below the threshold, got {before}"
+    );
+
+    // A bare read of the whitelist keeps it alive with no intervening write.
+    assert!(client.is_token_allowed(&token));
+
+    assert_eq!(
+        persistent_ttl(&env, &checkout, &key),
+        LEDGER_TO_EXTEND_TO,
+        "reading a whitelisted token must extend its TTL"
+    );
+}
+
+/// Probing a token that was never whitelisted must not create an entry, and
+/// revoking a token must remove it outright. A miss or a removal that left a
+/// TTL-bearing entry behind would let `is_token_allowed` drift away from "was
+/// this token explicitly approved".
+#[test]
+fn test_whitelist_miss_and_removal_leave_no_entry() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, _, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+    let unlisted = env.register(MockToken, ());
+    let unlisted_key = DataKey::TokenAllowed(unlisted.clone());
+
+    // A miss reads as `false` and writes nothing.
+    assert!(!client.is_token_allowed(&unlisted));
+    assert!(!env.as_contract(&checkout, || env.storage().persistent().has(&unlisted_key)));
+
+    // Removal is a removal, not a tombstone.
+    assert!(client.is_token_allowed(&token));
+    client.remove_token(&token);
+    assert!(!client.is_token_allowed(&token));
+    assert!(!env.as_contract(&checkout, || env.storage().persistent().has(&key)));
+}
+
+// ---------------------------------------------------------------------------
+// Token whitelist TTL (#493)
+// ---------------------------------------------------------------------------
+
+/// Whitelisting a token must extend the entry's TTL to the policy target.
+/// `TokenAllowed` is written once at deployment and then only read, so without
+/// an explicit `extend_ttl` it keeps the default persistent TTL, can be
+/// archived, and every `create_order`/`pay` then fails with `TokenNotAllowed`
+/// even though nothing in the contract changed.
+#[test]
+fn test_add_token_extends_whitelist_ttl() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, _, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+
+    // setup_usdc whitelisted the token, so the entry exists at its initial TTL.
+    let initial = persistent_ttl(&env, &checkout, &key);
+    assert!(
+        initial > 0,
+        "the whitelist entry must carry a TTL after a write"
+    );
+    assert!(initial >= LEDGER_THRESHOLD);
+
+    // Age the entry until less than LEDGER_THRESHOLD remains, so the next write
+    // has to actually extend it rather than being a no-op.
+    env.ledger()
+        .set_sequence_number(initial - LEDGER_THRESHOLD + 1);
+
+    // Re-whitelisting rewrites the entry: set_token_allowed must extend the TTL.
+    // Without the fix the TTL would stay below the policy target and this fails.
+    client.add_token(&token);
+
+    assert_eq!(
+        persistent_ttl(&env, &checkout, &key),
+        LEDGER_TO_EXTEND_TO,
+        "whitelist TTL must be extended to the policy target on write"
+    );
+}
+
+/// A whitelist entry that has aged below the refresh threshold must still be
+/// live and usable: `is_token_allowed` only reads, so nothing would refresh it
+/// on the payment path, and an expired entry makes every `pay` fail with
+/// `TokenNotAllowed` (#493).
+#[test]
+fn test_whitelist_entry_stays_usable_past_the_refresh_threshold() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+
+    let initial = persistent_ttl(&env, &checkout, &key);
+    assert!(initial >= LEDGER_THRESHOLD);
+    env.ledger()
+        .set_sequence_number(initial - LEDGER_THRESHOLD + 1);
+
+    assert!(client.is_token_allowed(&token));
+
+    let id = order_id(&env, 51);
+    client.create_order(&buyer, &id, &token, &10_000);
+    client.pay(&token, &buyer, &id, &10_000);
+    assert_eq!(client.status(&id), Some(Status::Paid));
+}
