@@ -65,8 +65,17 @@ pub fn is_token_allowed(env: &Env, token: &Address) -> bool {
 pub fn set_token_allowed(env: &Env, token: &Address, allowed: bool) {
     let key = DataKey::TokenAllowed(token.clone());
     if allowed {
+        // Whitelisting is long-lived deployment state: `add_token` is normally
+        // called once at setup, so the entry must be extended here or it keeps
+        // the default persistent TTL and can eventually be archived — after
+        // which every `create_order`/`pay` fails with `TokenNotAllowed` with no
+        // code change (see #493). The `get_order`/`set_order` and admin paths
+        // already do this; `TokenAllowed` was the one key that did not.
         env.storage().persistent().set(&key, &true);
+        extend_ttl(env, &key);
     } else {
+        // Removal stays a removal: an entry that was never added, or one that
+        // has been revoked, must not be resurrected just to carry a TTL.
         env.storage().persistent().remove(&key);
     }
 }

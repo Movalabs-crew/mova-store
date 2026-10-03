@@ -1029,3 +1029,69 @@ fn test_pay_matching_pending_order_succeeds() {
     assert_eq!(client.status(&id), Some(Status::Paid));
     assert_eq!(usdc_balance(&env, &token, &checkout), 50_000);
 }
+
+// ---------------------------------------------------------------------------
+// Token whitelist TTL (#493)
+// ---------------------------------------------------------------------------
+
+/// Whitelisting a token must extend the entry's TTL to the policy target.
+/// `TokenAllowed` is written once at deployment and then only read, so without
+/// an explicit `extend_ttl` it keeps the default persistent TTL, can be
+/// archived, and every `create_order`/`pay` then fails with `TokenNotAllowed`
+/// even though nothing in the contract changed.
+#[test]
+fn test_add_token_extends_whitelist_ttl() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, _, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+
+    // setup_usdc whitelisted the token, so the entry exists at its initial TTL.
+    let initial = persistent_ttl(&env, &checkout, &key);
+    assert!(
+        initial > 0,
+        "the whitelist entry must carry a TTL after a write"
+    );
+    assert!(initial >= LEDGER_THRESHOLD);
+
+    // Age the entry until less than LEDGER_THRESHOLD remains, so the next write
+    // has to actually extend it rather than being a no-op.
+    env.ledger()
+        .set_sequence_number(initial - LEDGER_THRESHOLD + 1);
+
+    // Re-whitelisting rewrites the entry: set_token_allowed must extend the TTL.
+    // Without the fix the TTL would stay below the policy target and this fails.
+    client.add_token(&token);
+
+    assert_eq!(
+        persistent_ttl(&env, &checkout, &key),
+        LEDGER_TO_EXTEND_TO,
+        "whitelist TTL must be extended to the policy target on write"
+    );
+}
+
+/// A whitelist entry that has aged below the refresh threshold must still be
+/// live and usable: `is_token_allowed` only reads, so nothing would refresh it
+/// on the payment path, and an expired entry makes every `pay` fail with
+/// `TokenNotAllowed` (#493).
+#[test]
+fn test_whitelist_entry_stays_usable_past_the_refresh_threshold() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+
+    let initial = persistent_ttl(&env, &checkout, &key);
+    assert!(initial >= LEDGER_THRESHOLD);
+    env.ledger()
+        .set_sequence_number(initial - LEDGER_THRESHOLD + 1);
+
+    assert!(client.is_token_allowed(&token));
+
+    let id = order_id(&env, 51);
+    client.create_order(&buyer, &id, &token, &10_000);
+    client.pay(&token, &buyer, &id, &10_000);
+    assert_eq!(client.status(&id), Some(Status::Paid));
+}
