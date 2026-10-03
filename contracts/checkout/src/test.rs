@@ -966,3 +966,66 @@ fn test_reads_on_uninitialized_contract() {
     assert_eq!(client.status(&id), None);
     assert!(!client.is_paid(&id));
 }
+
+// ---------------------------------------------------------------------------
+// Pending-order binding
+// ---------------------------------------------------------------------------
+
+/// A pending order is a reservation: `pay` must match the buyer, token and
+/// amount recorded by `create_order`. A different buyer must not be able to
+/// silently replace the original buyer's intent.
+#[test]
+fn test_pay_with_different_buyer_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, _) = setup_usdc(&env);
+    let other_buyer = Address::generate(&env);
+
+    let id = order_id(&env, 30);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    let result = client.try_pay(&token, &other_buyer, &id, &50_000);
+    assert_eq!(result, Err(Ok(Error::OrderBuyerMismatch)));
+
+    // Neither the recorded intent nor the balances changed.
+    let order = client.order(&id).unwrap();
+    assert_eq!(order.buyer, buyer);
+    assert_eq!(client.status(&id), Some(Status::Pending));
+    assert_eq!(usdc_balance(&env, &token, &other_buyer), 0);
+}
+
+#[test]
+fn test_pay_with_different_amount_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, _) = setup_usdc(&env);
+
+    let id = order_id(&env, 32);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    let result = client.try_pay(&token, &buyer, &id, &60_000);
+    assert_eq!(result, Err(Ok(Error::OrderAmountMismatch)));
+
+    // The original reserved amount is intact and no funds moved.
+    assert_eq!(client.order(&id).unwrap().amount, 50_000);
+    assert_eq!(usdc_balance(&env, &token, &buyer), 1_000_000);
+    assert_eq!(client.status(&id), Some(Status::Pending));
+}
+
+/// Paying a pending order with the recorded buyer/token/amount still succeeds,
+/// so the binding does not break the happy path.
+#[test]
+fn test_pay_matching_pending_order_succeeds() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 33);
+    client.create_order(&buyer, &id, &token, &50_000);
+
+    client.pay(&token, &buyer, &id, &50_000);
+    assert_eq!(client.status(&id), Some(Status::Paid));
+    assert_eq!(usdc_balance(&env, &token, &checkout), 50_000);
+}
