@@ -1,14 +1,15 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
 import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { useAuth } from "../lib/AuthContext";
 import { logout } from "../lib/auth";
 import Toast from "../components/Toast";
 import useToast from "../hooks/useToast";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { TfiAngleRight } from "react-icons/tfi";
+import { trapFocus } from "../lib/accessibility";
 
 const navLinkClass =
   "text-md font-medium text-mova-ink/80 hover:text-purple-600 transition-colors duration-200";
@@ -19,7 +20,7 @@ function BrandMark() {
       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-mova-deep text-sm font-bold text-white shadow-mova transition group-hover:scale-105">
         M
       </span>
-      <span className="font-display text-xl font-bold tracking-tight text-mova-ink">
+      <span className="font-display texl-xl font-bold tracking-tight text-mova-ink">
         Mova <span className="text-purple-600">Store</span>
       </span>
     </Link>
@@ -28,6 +29,7 @@ function BrandMark() {
 
 function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleLinkClick = (event) => {
@@ -55,6 +57,8 @@ function Navbar() {
 
   const [showNav, setShowNav] = useState(false);
   const { user } = useAuth();
+  const drawerRef = useRef(null);
+  const toggleButtonRef = useRef(null);
 
   const toggleNav = () => setShowNav(!showNav);
   const closeNavOnClick = () => setShowNav(false);
@@ -67,6 +71,17 @@ function Navbar() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showNav]);
+
+  useEffect(() => {
+    if (!showNav) return;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    const cleanup = trapFocus(drawer);
+    return () => {
+      cleanup();
+      toggleButtonRef.current?.focus();
+    };
   }, [showNav]);
 
   const handleLogout = async () => {
@@ -115,13 +130,18 @@ function Navbar() {
         <div className="hidden items-center justify-between px-3 py-2 sm:px-6 md:flex">
           <BrandMark />
           <div className="hidden md:flex md:gap-6">
-            <Link href="/" className={navLinkClass}>
+            <Link
+              href="/"
+              className={navLinkClass}
+              aria-current={pathname === "/" ? "page" : undefined}
+            >
               Home
             </Link>
             <Link
               href={user ? "/shop" : "/profile/login"}
               className={navLinkClass}
               onClick={(e) => handleProtectedLinkClick(e, "/shop")}
+              aria-current={pathname === "/shop" ? "page" : undefined}
             >
               Shop
             </Link>
@@ -129,20 +149,29 @@ function Navbar() {
               href={user ? "/collections" : "/profile/login"}
               className={navLinkClass}
               onClick={(e) => handleProtectedLinkClick(e, "/collections")}
+              aria-current={pathname === "/collections" ? "page" : undefined}
             >
               Collections
             </Link>
             <Link href="#aboutus" className={navLinkClass}>
               About Us
             </Link>
-            <Link href="/blog" className={navLinkClass}>
+            <Link
+              href="/blog"
+              className={navLinkClass}
+              aria-current={pathname === "/blog" ? "page" : undefined}
+            >
               Blog
             </Link>
             <Link href="#contact" className={navLinkClass}>
               Contact Us
             </Link>
             {user && (
-              <Link href="/orders" className={navLinkClass}>
+              <Link
+                href="/orders"
+                className={navLinkClass}
+                aria-current={pathname === "/orders" ? "page" : undefined}
+              >
                 Orders
               </Link>
             )}
@@ -173,15 +202,17 @@ function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/profile/login">
-                  <button className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">
-                    Login
-                  </button>
+                <Link
+                  href="/profile/login"
+                  className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                >
+                  Login
                 </Link>
-                <Link href="/profile/login">
-                  <button className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600">
-                    SignUp
-                  </button>
+                <Link
+                  href="/profile/login"
+                  className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                >
+                  SignUp
                 </Link>
               </>
             )}
@@ -191,6 +222,7 @@ function Navbar() {
         <div className="flex items-center justify-between px-3 sm:px-6 md:hidden">
           <BrandMark />
           <button
+            ref={toggleButtonRef}
             type="button"
             aria-label={showNav ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={showNav}
@@ -205,7 +237,19 @@ function Navbar() {
           </button>
         </div>
         {showNav && (
-          <div className="fixed inset-y-0 right-0 z-50 flex h-screen w-1/2 flex-col items-center bg-white py-6 shadow-mova">
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/40"
+              aria-hidden="true"
+              onClick={closeNavOnClick}
+            />
+            <div
+              ref={drawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
+              className="fixed inset-y-0 right-0 z-50 flex h-screen w-1/2 flex-col items-center bg-white py-6 shadow-mova"
+            >
             <button
               type="button"
               aria-label="Close navigation menu"
@@ -239,6 +283,7 @@ function Navbar() {
                   href={item.href}
                   className="flex w-full items-center justify-between py-2 pr-4 text-md font-medium text-mova-ink transition-colors hover:text-purple-600"
                   onClick={item.onClick}
+                  aria-current={pathname === item.href ? "page" : undefined}
                 >
                   <span className="pl-2">{item.label}</span>
                   <TfiAngleRight size={20} />
@@ -274,24 +319,28 @@ function Navbar() {
                 </>
               ) : (
                 <div className="flex space-x-2">
-                  <Link href="/profile/login" onClick={closeNavOnClick}>
-                    <button className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none">
-                      Login
-                    </button>
+                  <Link
+                    href="/profile/login"
+                    onClick={closeNavOnClick}
+                    className="rounded-md bg-purple-700 px-4 py-2 text-md font-medium text-white hover:bg-purple-600 focus:outline-none"
+                  >
+                    Login
                   </Link>
-                  <Link href="/profile/login" onClick={closeNavOnClick}>
-                    <button className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none">
-                      SignUp
-                    </button>
+                  <Link
+                    href="/profile/login"
+                    onClick={closeNavOnClick}
+                    className="rounded-md border border-purple-500 px-4 py-2 text-md font-medium text-purple-700 transition hover:bg-purple-700 hover:text-white focus:outline-none"
+                  >
+                    SignUp
                   </Link>
                 </div>
               )}
             </div>
-          </div>
+            </div>
+          </>
         )}
-
-        <Toast message={toast.message} show={toast.show} onClose={hideToast} />
       </nav>
+      {toast && <Toast message={toast.message} onClose={hideToast} />}
     </>
   );
 }

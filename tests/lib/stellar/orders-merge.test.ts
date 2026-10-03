@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   mergeOrderEvent,
   mergeOrderEvents,
+  eventToOrder,
   OrderEvent,
 } from "../../../lib/stellar/orders";
 
@@ -145,3 +146,4 @@ describe("mergeOrderEvent", () => {
     expect(mergeOrderEvents).toBe(mergeOrderEvent);
   });
 });
+

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import AdminGuard from "../../../components/AdminGuard";
 import StellarWalletButton from "../../../components/StellarWalletButton";
 import { PaymentEventIndexer, IndexedEvent } from "../../../lib/stellar/indexer";
@@ -11,7 +11,12 @@ import {
   OrderStatus,
   mergeOrderEvents,
 } from "../../../lib/stellar/orders";
-import { NETWORK, CHECKOUT_CONTRACT_ID } from "../../../lib/stellar/config";
+import {
+  NETWORK,
+  CHECKOUT_CONTRACT_ID,
+  CHECKOUT_START_LEDGER,
+  ADMIN_ORDERS_CURSOR_STORAGE_KEY,
+} from "../../../lib/stellar/config";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import {
   MdRefresh,
@@ -89,11 +94,13 @@ const OrderRow = ({
   onDispatch,
   onRefund,
   isProcessing,
+  error,
 }: {
   order: OrderEvent;
   onDispatch: (orderId: string) => void;
   onRefund: (orderId: string) => void;
   isProcessing: boolean;
+  error?: string | null;
 }) => {
   const canDispatch = order.status === "Paid";
   const canRefund = order.status === "Paid";
@@ -153,6 +160,11 @@ const OrderRow = ({
           )}
           {!canDispatch && !canRefund && <span className="text-gray-400 text-sm">-</span>}
         </div>
+        {error && (
+          <div className="mt-2 text-xs text-red-600" role="alert">
+            {error}
+          </div>
+        )}
       </td>
     </tr>
   );
@@ -163,8 +175,8 @@ const OrdersManagementContent = () => {
   const [orders, setOrders] = useState<Map<string, OrderEvent>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [orderErrors, setOrderErrors] = useState<Record<string, string>>({});
+  const [orderSuccesses, setOrderSuccesses] = useState<Record<string, string>>({});
   const [indexerStatus, setIndexerStatus] = useState<{
     running: boolean;
     eventsSeen: number;
@@ -172,7 +184,15 @@ const OrdersManagementContent = () => {
 
   // Initialize event indexer
   useEffect(() => {
-    const indexer = new PaymentEventIndexer();
+    // The admin table is an operations view: it must show orders paid long
+    // before the ~8-minute rolling backfill window, and it must not re-walk
+    // that window on every navigation. Scan from the durable checkout deploy
+    // ledger (when configured) and persist the resume cursor so a reload
+    // continues where the last scan stopped.
+    const indexer = new PaymentEventIndexer({
+      startLedger: CHECKOUT_START_LEDGER,
+      cursorStorageKey: ADMIN_ORDERS_CURSOR_STORAGE_KEY,
+    });
 
     indexer.start({
       onEvent: (event: IndexedEvent) => {
@@ -199,7 +219,6 @@ const OrdersManagementContent = () => {
         setIsLoading(false);
       },
       onError: (err) => {
-        setError(err.message);
         setIsLoading(false);
       },
     });
@@ -215,17 +234,75 @@ const OrdersManagementContent = () => {
     };
   }, []);
 
+  // Confirmation dialog state for irreversible escrow actions.
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "dispatch" | "refund";
+    orderId: string;
+    amount: string;
+    tokenSymbol: string;
+  } | null>(null);
+  const confirmResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
+
+  // Ask the admin to explicitly confirm an irreversible value transfer.
+  // Resolves true only when the admin clicks the confirm button.
+  const requestConfirmation = useCallback(
+    (action: {
+      type: "dispatch" | "refund";
+      orderId: string;
+      amount: string;
+      tokenSymbol: string;
+    }) => {
+      return new Promise<boolean>((resolve) => {
+        confirmResolverRef.current = resolve;
+        setConfirmAction(action);
+      });
+    },
+    []
+  );
+
+  const resolveConfirmation = useCallback((confirmed: boolean) => {
+    const resolver = confirmResolverRef.current;
+    confirmResolverRef.current = null;
+    setConfirmAction(null);
+    if (resolver) {
+      resolver(confirmed);
+    }
+  }, []);
+
   // Handle dispatch order
   const handleDispatch = useCallback(async (orderId: string) => {
     setProcessingOrderId(orderId);
-    setError(null);
-    setSuccessMessage(null);
+    setOrderErrors((prev) => {
+      const next = { ...prev };
+      delete next[orderId];
+      return next;
+    });
+    setOrderSuccesses((prev) => {
+      const next = { ...prev };
+      delete next[orderId];
+      return next;
+    });
 
     try {
+      const order = orders.get(orderId);
+      const confirmed = await requestConfirmation({
+        type: "dispatch",
+        orderId,
+        amount: order?.amount ?? "unknown",
+        tokenSymbol: order?.tokenSymbol ?? "",
+      });
+      if (!confirmed) {
+        setProcessingOrderId(null);
+        return;
+      }
+
       const result = await dispatchOrder(orderId);
 
       if (result.success) {
-        setSuccessMessage(`Order ${truncateAddress(orderId)} dispatched successfully!`);
+        setOrderSuccesses((prev) => ({
+          ...prev,
+          [orderId]: `Order ${truncateAddress(orderId)} dispatched successfully!`,
+        }));
         // Update local state
         setOrders((prev) => {
           const newMap = new Map(prev);
@@ -236,26 +313,55 @@ const OrdersManagementContent = () => {
           return newMap;
         });
       } else {
-        setError(result.error || "Failed to dispatch order");
+        setOrderErrors((prev) => ({
+          ...prev,
+          [orderId]: result.error || "Failed to dispatch order",
+        }));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      setOrderErrors((prev) => ({
+        ...prev,
+        [orderId]: err instanceof Error ? err.message : "Unknown error occurred",
+      }));
     } finally {
       setProcessingOrderId(null);
     }
-  }, []);
+  }, [orders, requestConfirmation]);
 
   // Handle refund order
   const handleRefund = useCallback(async (orderId: string) => {
     setProcessingOrderId(orderId);
-    setError(null);
-    setSuccessMessage(null);
+    setOrderErrors((prev) => {
+      const next = { ...prev };
+      delete next[orderId];
+      return next;
+    });
+    setOrderSuccesses((prev) => {
+      const next = { ...prev };
+      delete next[orderId];
+      return next;
+    });
 
     try {
+      const order = orders.get(orderId);
+      const confirmed = await requestConfirmation({
+        type: "refund",
+        orderId,
+        amount: order?.amount ?? "unknown",
+        tokenSymbol: order?.tokenSymbol ?? "",
+      });
+      if (!confirmed) {
+        setProcessingOrderId(null);
+        return;
+      }
+
       const result = await refundOrder(orderId);
 
       if (result.success) {
-        setSuccessMessage(`Order ${truncateAddress(orderId)} refunded successfully!`);
+        setOrderSuccesses((prev) => ({
+          ...prev,
+          [orderId]: `Order ${truncateAddress(orderId)} refunded successfully!`,
+        }));
         // Update local state
         setOrders((prev) => {
           const newMap = new Map(prev);
@@ -266,14 +372,20 @@ const OrdersManagementContent = () => {
           return newMap;
         });
       } else {
-        setError(result.error || "Failed to refund order");
+        setOrderErrors((prev) => ({
+          ...prev,
+          [orderId]: result.error || "Failed to refund order",
+        }));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      setOrderErrors((prev) => ({
+        ...prev,
+        [orderId]: err instanceof Error ? err.message : "Unknown error occurred",
+      }));
     } finally {
       setProcessingOrderId(null);
     }
-  }, []);
+  }, [orders, requestConfirmation]);
 
   // Sort orders by timestamp (newest first) and derive the status counts in a
   // single pass. Both are pure functions of the order map, so memoise them:
@@ -346,17 +458,6 @@ const OrdersManagementContent = () => {
       </div>
 
       {/* Messages */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-      {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
-          <MdCheckCircle className="text-green-500" />
-          {successMessage}
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -455,6 +556,7 @@ const OrdersManagementContent = () => {
                     onDispatch={handleDispatch}
                     onRefund={handleRefund}
                     isProcessing={processingOrderId === order.orderId}
+                    error={orderErrors[order.orderId]}
                   />
                 ))}
               </tbody>
@@ -494,6 +596,66 @@ const OrdersManagementContent = () => {
           sure you're connected with the correct Freighter wallet.
         </p>
       </div>
+
+      {/* Confirmation dialog for irreversible escrow actions */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-action-title"
+        >
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h2
+              id="confirm-action-title"
+              className="text-lg font-semibold text-gray-800 mb-2"
+            >
+              {confirmAction.type === "dispatch"
+                ? "Confirm dispatch and release escrow"
+                : "Confirm refund from escrow"}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {confirmAction.type === "dispatch"
+                ? "This will release the escrowed funds to the merchant wallet. This action cannot be undone on-chain."
+                : "This will return the escrowed funds to the buyer's wallet. This action cannot be undone on-chain."}
+            </p>
+            <div className="bg-gray-50 rounded p-3 mb-4 text-sm">
+              <div className="flex justify-between mb-1">
+                <span className="text-gray-500">Order</span>
+                <span className="font-mono text-gray-800">
+                  {truncateAddress(confirmAction.orderId)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Amount</span>
+                <span className="font-semibold text-gray-800">
+                  {confirmAction.amount} {confirmAction.tokenSymbol}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => resolveConfirmation(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => resolveConfirmation(true)}
+                className={`px-4 py-2 text-white rounded ${
+                  confirmAction.type === "dispatch"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-purple-600 hover:bg-purple-700"
+                }`}
+              >
+                {confirmAction.type === "dispatch" ? "Release escrow" : "Refund buyer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

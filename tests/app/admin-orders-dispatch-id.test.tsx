@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 
-// The indexer's `order_id` topic is the already-hashed BytesN<32> as hex. The
+// The indexer's `order_id` topic is the already-hashed BytesN32> as hex. The
 // admin page must hand that value to dispatchOrder/refundOrder untouched — no
 // truncation, no re-hashing — or the contract call cannot find the order.
 const EVENT_DERIVED_ID = "3f".repeat(32); // 64 hex chars
@@ -49,6 +49,8 @@ vi.mock("../../lib/stellar/indexer", () => ({
 vi.mock("../../lib/stellar/config", () => ({
   NETWORK: "testnet",
   CHECKOUT_CONTRACT_ID: "C".repeat(56),
+  CHECKOUT_START_LEDGER: 0,
+  ADMIN_ORDERS_CURSOR_STORAGE_KEY: "mova:admin-orders:cursor:v1",
 }));
 
 vi.mock("../../components/AdminGuard", () => ({
@@ -72,6 +74,20 @@ describe("admin orders page — order id passed to dispatch/refund", () => {
     const ship = await screen.findByRole("button", { name: /ship/i });
     fireEvent.click(ship);
 
+    // The dialog's confirm control is labelled by the action it performs
+    // ("Release escrow"), not by a generic "Confirm".
+    const confirm = await screen.findByRole("button", { name: /release escrow/i });
+    // The dialog truncates the id for display (6...4); it is the value handed to
+    // dispatchOrder, asserted below, that has to be the full 64 hex characters.
+    // The order row also displays the id and the amount, so scope these to the
+    // confirmation dialog to avoid matching both.
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(`${EVENT_DERIVED_ID.slice(0, 6)}...${EVENT_DERIVED_ID.slice(-4)}`)
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/10(\.\d{1,7})?/)).toBeInTheDocument();
+    fireEvent.click(confirm);
+
     await waitFor(() => expect(dispatchOrder).toHaveBeenCalledTimes(1));
     expect(dispatchOrder).toHaveBeenCalledWith(EVENT_DERIVED_ID);
 
@@ -88,7 +104,45 @@ describe("admin orders page — order id passed to dispatch/refund", () => {
     const refund = await screen.findByRole("button", { name: /refund/i });
     fireEvent.click(refund);
 
+    const confirm = await screen.findByRole("button", { name: /refund buyer/i });
+    // The dialog truncates the id for display (6...4); it is the value handed to
+    // dispatchOrder, asserted below, that has to be the full 64 hex characters.
+    // The order row also displays the id and the amount, so scope these to the
+    // confirmation dialog to avoid matching both.
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(`${EVENT_DERIVED_ID.slice(0, 6)}...${EVENT_DERIVED_ID.slice(-4)}`)
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/10(\.\d{1,7})?/)).toBeInTheDocument();
+    fireEvent.click(confirm);
+
     await waitFor(() => expect(refundOrder).toHaveBeenCalledTimes(1));
     expect(refundOrder).toHaveBeenCalledWith(EVENT_DERIVED_ID);
+  });
+
+  it("does not submit dispatch when confirmation is declined", async () => {
+    render(<AdminOrdersPage />);
+
+    const ship = await screen.findByRole("button", { name: /ship/i });
+    fireEvent.click(ship);
+
+    const cancel = await screen.findByRole("button", { name: /cancel/i });
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(screen.queryByText(/confirm/i)).toBeNull());
+    expect(dispatchOrder).not.toHaveBeenCalled();
+  });
+
+  it("does not submit refund when confirmation is declined", async () => {
+    render(<AdminOrdersPage />);
+
+    const refund = await screen.findByRole("button", { name: /refund/i });
+    fireEvent.click(refund);
+
+    const cancel = await screen.findByRole("button", { name: /cancel/i });
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(screen.queryByText(/confirm/i)).toBeNull());
+    expect(refundOrder).not.toHaveBeenCalled();
   });
 });

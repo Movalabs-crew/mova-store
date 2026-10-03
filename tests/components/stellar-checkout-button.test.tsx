@@ -2,27 +2,37 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 
-const { mockConnectWallet, mockCurrentAddress, mockPayWithStellar, WalletError } = vi.hoisted(
-  () => {
-    class WalletError extends Error {
-      constructor(message, code = "WALLET_ERROR") {
-        super(message);
-        this.name = "WalletError";
-        this.code = code;
-      }
+const {
+  mockConnectWallet,
+  mockCurrentAddress,
+  mockPayWithStellar,
+  mockWatchWalletChanges,
+  WalletError,
+} = vi.hoisted(() => {
+  class WalletError extends Error {
+    constructor(message, code = "WALLET_ERROR") {
+      super(message);
+      this.name = "WalletError";
+      this.code = code;
     }
-    return {
-      mockConnectWallet: vi.fn(),
-      mockCurrentAddress: vi.fn(),
-      mockPayWithStellar: vi.fn(),
-      WalletError,
-    };
   }
-);
+  return {
+    mockConnectWallet: vi.fn(),
+    mockCurrentAddress: vi.fn(),
+    mockPayWithStellar: vi.fn(),
+    mockWatchWalletChanges: vi.fn(() => () => {}),
+    WalletError,
+  };
+});
 
 vi.mock("../../lib/stellar/freighter", () => ({
   connectWallet: (...args) => mockConnectWallet(...args),
   currentAddress: (...args) => mockCurrentAddress(...args),
+  watchWalletChanges: (...args) => mockWatchWalletChanges(...args),
+  shortAddress: (address) =>
+    !address || address.length <= 15
+      ? (address ?? "")
+      : `${address.slice(0, 6)}…${address.slice(-6)}`,
   WalletError,
 }));
 
@@ -58,6 +68,7 @@ function renderButton(props = {}) {
 afterEach(() => {
   vi.resetAllMocks();
   mockCurrentAddress.mockResolvedValue(null);
+  mockWatchWalletChanges.mockReturnValue(() => {});
 });
 
 describe("StellarCheckoutButton", () => {
@@ -189,6 +200,7 @@ describe("StellarCheckoutButton", () => {
         amountUsd={12}
         orderId="SS-XLM-1"
         token={xlmToken}
+        xlmUsdPrice={0.12}
       />
     );
 
@@ -218,5 +230,78 @@ describe("StellarCheckoutButton", () => {
 
     expect(screen.getByText("Payment confirmed ✓")).toBeInTheDocument();
     expect(screen.getByText(/~100\.00 XLM/i)).toBeInTheDocument();
+  });
+
+  const ADDR2 = "GCKFBEIYTKP6RJKF6LO5C6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6";
+
+  it("invalidates the cached address when Freighter reports an account change (#709)", async () => {
+    let onChange;
+    mockWatchWalletChanges.mockImplementation((cb) => {
+      onChange = cb;
+      return () => {};
+    });
+    mockCurrentAddress.mockResolvedValueOnce(ADDR).mockResolvedValue(ADDR2);
+    mockPayWithStellar.mockResolvedValue(successResult());
+
+    renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      onChange({ address: ADDR2, network: "TESTNET" });
+    });
+    expect(screen.getByRole("alert").textContent).toContain("account changed");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).toHaveBeenCalledWith(expect.objectContaining({ publicKey: ADDR2 }));
+  });
+
+  it("aborts with a reconnect message when Freighter disconnects before paying (#709)", async () => {
+    mockCurrentAddress.mockResolvedValueOnce(ADDR).mockResolvedValue(null);
+    mockPayWithStellar.mockResolvedValue(successResult());
+
+    renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("disconnected");
+    expect(screen.getByRole("button")).toBeEnabled();
+  });
+
+  it("re-reads the live address, resets the cache and pays with the new account (#709)", async () => {
+    mockCurrentAddress.mockResolvedValueOnce(ADDR).mockResolvedValue(ADDR2);
+    mockPayWithStellar.mockResolvedValue(successResult());
+
+    renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("account changed");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).toHaveBeenCalledWith(expect.objectContaining({ publicKey: ADDR2 }));
   });
 });

@@ -1,5 +1,7 @@
 import { xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
 
+import { WalletError } from "./freighter";
+
 // ---------------------------------------------------------------------------
 // ScVal construction + decoding helpers for the checkout contract.
 // The contract `pay` signature is:
@@ -13,8 +15,13 @@ import { xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk
 export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
   const v = BigInt(value);
   const mask = BigInt("0xffffffffffffffff");
-  const lo = new xdr.Uint64(BigInt.asUintN(64, v & mask));
-  const hi = new xdr.Int64(BigInt.asIntN(64, v >> BigInt(64)));
+  // SDK 17 declares `xdr.Uint64`/`xdr.Int64` as plain `bigint` and takes the
+  // halves as bigints, so the old js-xdr wrappers (`new xdr.Uint64(...)`) no
+  // longer exist. The split is kept hand-rolled rather than delegating to
+  // `nativeToScVal`, so the "byte-for-byte identical" test below stays an
+  // independent check instead of becoming tautological.
+  const lo = BigInt.asUintN(64, v & mask);
+  const hi = BigInt.asIntN(64, v >> BigInt(64));
   return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
 }
 
@@ -41,10 +48,9 @@ export function bytes32ToScVal(bytes: Uint8Array | string): xdr.ScVal {
   }
   // Pass a copy: `scvBytes` retains the reference it is handed, so without this a
   // later mutation of the caller's array would silently change the built ScVal.
-  // NOTE: the `as any` widening cast here is deliberately left open-coded - issue
-  // #552 tracks centralizing it behind the `toSdkBytes` helper, so do not fold the
-  // two changes together.
-  return xdr.ScVal.scvBytes(arr.slice() as any);
+  // The widening cast for BytesN<32> lives in exactly one place - `toSdkBytes`
+  // above (issue #552) - instead of being open-coded beside it.
+  return xdr.ScVal.scvBytes(toSdkBytes(arr.slice()));
 }
 
 /**
@@ -70,30 +76,29 @@ export function symbolToScVal(symbol: string): xdr.ScVal {
  * addresses, bytes (hex), numbers/bigints and maps/vecs (JSON).
  */
 export function scValToString(scVal: xdr.ScVal): string {
-  const typeName = scVal.switch();
-  if (typeName === xdr.ScValType.scvSymbol()) {
-    return scVal.sym().toString();
-  }
-  if (typeName === xdr.ScValType.scvString()) {
-    return scVal.str().toString();
-  }
-  if (typeName === xdr.ScValType.scvAddress()) {
-    return Address.fromScVal(scVal).toString();
-  }
-  if (
-    typeName === xdr.ScValType.scvI128() ||
-    typeName === xdr.ScValType.scvI64() ||
-    typeName === xdr.ScValType.scvU32() ||
-    typeName === xdr.ScValType.scvU64() ||
-    typeName === xdr.ScValType.scvI32()
-  ) {
-    return scValToNative(scVal).toString();
-  }
-  if (typeName === xdr.ScValType.scvBytes()) {
-    return bytesToHex(scVal.bytes());
-  }
-  if (typeName === xdr.ScValType.scvBool()) {
-    return String(scVal.b());
+  // SDK 17 replaces `ScVal.switch()` + accessor methods with a string
+  // discriminant on `type` and plain property accessors. The discriminant is
+  // read inline in the `switch`: assigning it to a local first (as SDK 16
+  // required) defeats TypeScript's narrowing, leaving the payload accessors
+  // unresolvable on the union.
+  switch (scVal.type) {
+    case "scvSymbol":
+      return scVal.sym.toString();
+    case "scvString":
+      return scVal.str.toString();
+    case "scvAddress":
+      return Address.fromScVal(scVal).toString();
+    case "scvI128":
+    case "scvI64":
+    case "scvU32":
+    case "scvU64":
+    case "scvI32":
+      return scValToNative(scVal).toString();
+    case "scvBytes":
+      // `bytes` is an ScBytes wrapper in SDK 17, not a bare Uint8Array.
+      return bytesToHex(scVal.bytes.toBytes());
+    case "scvBool":
+      return String(scVal.b);
   }
   try {
     return JSON.stringify(scValToNative(scVal), bigintSafeReplacer);
@@ -124,9 +129,7 @@ export function hexToBytes(hex: string): Uint8Array {
   }
   const invalidIndex = clean.search(/[^0-9a-f]/i);
   if (invalidIndex !== -1) {
-    throw new Error(
-      `invalid hex character "${clean[invalidIndex]}" at index ${invalidIndex}`
-    );
+    throw new Error(`invalid hex character "${clean[invalidIndex]}" at index ${invalidIndex}`);
   }
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {
@@ -147,10 +150,24 @@ export function bytesToHex(bytes: Uint8Array): string {
 
 /**
  * SHA-256 a string order id into a 32-byte value accepted by the contract.
+ *
+ * Uses the Web Crypto API, which is only exposed in secure contexts (HTTPS or
+ * localhost). On a plain-HTTP origin `crypto.subtle` is `undefined`, so we
+ * feature-detect it and throw an actionable typed error instead of an opaque
+ * `TypeError`.
  */
 export async function hashOrderId(orderId: string): Promise<Uint8Array> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) {
+    throw new WalletError(
+      "Order ids are hashed with SHA-256 via the Web Crypto API, which is only " +
+        "available in a secure context. Serve this app over HTTPS (or localhost) " +
+        "and try again.",
+      "CRYPTO_UNAVAILABLE"
+    );
+  }
   const data = new TextEncoder().encode(orderId);
-  const digest = await crypto.subtle.digest("SHA-256", data);
+  const digest = await subtle.digest("SHA-256", data);
   return new Uint8Array(digest);
 }
 

@@ -120,7 +120,7 @@ impl Checkout {
 
     /// Pay for an order. The buyer authorizes the transfer.
     ///
-    /// * `token`    - the [SEP-41 token](https://stellar.org/developers/learn/guides/interoperability/sep-41)
+    /// * `token`   - the [SEP-41 token](https://stellar.org/developers/learn/guides/interoperability/sep-41)
     ///                contract to pay with (whitelisted by the merchant).
     /// * `buyer`    - the address paying for the order (must authorize the transfer).
     /// * `order_id` - a unique 32-byte identifier for the order.
@@ -129,6 +129,16 @@ impl Checkout {
     /// Transfers `amount` from `buyer` into the **contract's escrow** and
     /// records the order as `Paid`. Funds are released to the merchant by
     /// calling `dispatch`, or returned to the buyer by calling `refund`.
+    ///
+    /// Binding: when a `Pending` order already exists for `order_id` (i.e.
+    /// `create_order` was called), `pay` must match the recorded buyer and
+    /// amount. A mismatch fails with `OrderBuyerMismatch` or
+    /// `OrderAmountMismatch` instead of overwriting the recorded intent.
+    ///
+    /// The *token* is not bound: a whitelisted token presented to `pay`
+    /// settles the order even when it differs from the one `create_order`
+    /// recorded, so the registry reflects the payment that actually happened.
+    /// Without a prior `create_order`, the `pay` arguments are authoritative.
     ///
     /// Emits `pay`, the single canonical payment event topic. An order can
     /// only be paid once; duplicate payments are rejected with `OrderAlreadyPaid`.
@@ -151,9 +161,21 @@ impl Checkout {
         let merchant = get_admin(&env)?;
 
         // A previous pay/refund cannot be superseded; a pending order can.
+        // A pending order is a reservation for its buyer and amount, so paying
+        // it as anyone else, or for a different amount, is a distinct asserted
+        // error rather than a silent overwrite of another party's recorded
+        // intent. The token is intentionally not part of the binding: a
+        // whitelisted token presented to `pay` settles the order, so the
+        // registry reflects the payment that actually happened.
         if let Some(existing) = get_order(&env, &order_id) {
             if existing.status != Status::Pending {
                 return Err(Error::OrderAlreadyPaid);
+            }
+            if existing.buyer != buyer {
+                return Err(Error::OrderBuyerMismatch);
+            }
+            if existing.amount != amount {
+                return Err(Error::OrderAmountMismatch);
             }
         }
 

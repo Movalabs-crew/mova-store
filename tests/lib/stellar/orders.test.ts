@@ -4,6 +4,9 @@ import {
   refundOrder,
   resolveOrderIdHash,
   eventToOrder,
+  formatOrderAmount,
+  formatOrderRow,
+  DEFAULT_DECIMALS,
 } from "../../../lib/stellar/orders";
 import { bytesToHex, hashOrderId, hexToBytes } from "../../../lib/stellar/scval";
 import * as freighterMod from "../../../lib/stellar/freighter";
@@ -13,6 +16,155 @@ vi.mock("../../../lib/stellar/freighter", () => ({
   connectWallet: vi.fn(),
   signWithFreighter: vi.fn(),
 }));
+
+/**
+ * Real topic layouts declared in `contracts/checkout/src/events.rs`.
+ *
+ * The producer emits events with the following topic positions:
+ *
+ *   create_order: (symbol, order_id, buyer)          -> data: (amount)
+ *   pay:          (symbol, order_id, buyer)          -> data: (amount)
+ *   dispatch:     (symbol, order_id, buyer)          -> data: (amount)
+ *   refund:       (symbol, order_id, buyer)          -> data: (amount)
+ *
+ * `topic0` is the event symbol, `topic1` is the order id, `topic2` is the
+ * buyer. The order id is therefore always at `topic1`, never at `topic0`.
+ */
+const REAL_TOPIC_LAYOUT = {
+  create_order: { symbol: "create_order", orderIdIndex: 1, buyerIndex: 2 },
+  pay: { symbol: "pay", orderIdIndex: 1, buyerIndex: 2 },
+  dispatch: { symbol: "dispatch", orderIdIndex: 1, buyerIndex: 2 },
+  refund: { symbol: "refund", orderIdIndex: 1, buyerIndex: 2 },
+} as const;
+
+const ORDER_ID_A =
+  "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+const ORDER_ID_B =
+  "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+const BUYER =
+  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+const TX_HASH =
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+/**
+ * Builds an event fixture using the real topic positions declared by the
+ * producer. `topic0` is the symbol, `topic1` is the order id, `topic2` is the
+ * buyer. The order id is intentionally placed at `topic1` so that a mapping
+ * which mistakenly reads `topic0` (the symbol) as the order id will fail.
+ */
+function buildRealTopicEvent(
+  eventName: keyof typeof REAL_TOPIC_LAYOUT,
+  orderId: string,
+  buyer: string,
+  amount: string,
+  ledger: number,
+) {
+  const layout = REAL_TOPIC_LAYOUT[eventName];
+  const topics: string[] = [];
+  topics[0] = layout.symbol;
+  topics[layout.orderIdIndex] = orderId;
+  topics[layout.buyerIndex] = buyer;
+
+  return {
+    symbol: layout.symbol,
+    ledger,
+    txHash: TX_HASH,
+    fields: {
+      topic0: topics[0],
+      topic1: topics[1],
+      topic2: topics[2],
+      amount,
+    },
+  };
+}
+
+describe("eventToOrder real topic mapping (Issue #67)", () => {
+  it("maps create_order using the real topic layout", () => {
+    const event = buildRealTopicEvent(
+      "create_order",
+      ORDER_ID_A,
+      BUYER,
+      "50000000",
+      1000,
+    );
+
+    const order = eventToOrder(event);
+    expect(order).not.toBeNull();
+    expect(order?.orderId).toBe(ORDER_ID_A);
+    expect(order?.buyer).toBe(BUYER);
+    expect(order?.amount).toBe("5.00"); // 50000000 raw at 7 decimals
+    expect(order?.amountRaw).toBe(50000000n);
+  });
+
+  it("maps pay using the real topic layout", () => {
+    const event = buildRealTopicEvent(
+      "pay",
+      ORDER_ID_A,
+      BUYER,
+      "50000000",
+      1001,
+    );
+
+    const order = eventToOrder(event);
+    expect(order).not.toBeNull();
+    expect(order?.orderId).toBe(ORDER_ID_A);
+    expect(order?.buyer).toBe(BUYER);
+    expect(order?.amount).toBe("5.00"); // 50000000 raw at 7 decimals
+    expect(order?.amountRaw).toBe(50000000n);
+  });
+
+  it("maps dispatch using the real topic layout", () => {
+    const event = buildRealTopicEvent(
+      "dispatch",
+      ORDER_ID_B,
+      BUYER,
+      "50000000",
+      1002,
+    );
+
+    const order = eventToOrder(event);
+    expect(order).not.toBeNull();
+    expect(order?.orderId).toBe(ORDER_ID_B);
+    expect(order?.buyer).toBe(BUYER);
+    expect(order?.amount).toBe("5.00"); // 50000000 raw at 7 decimals
+    expect(order?.amountRaw).toBe(50000000n);
+  });
+
+  it("maps refund using the real topic layout", () => {
+    const event = buildRealTopicEvent(
+      "refund",
+      ORDER_ID_B,
+      BUYER,
+      "50000000",
+      1003,
+    );
+
+    const order = eventToOrder(event);
+    expect(order).not.toBeNull();
+    expect(order?.orderId).toBe(ORDER_ID_B);
+    expect(order?.buyer).toBe(BUYER);
+    expect(order?.amount).toBe("5.00"); // 50000000 raw at 7 decimals
+    expect(order?.amountRaw).toBe(50000000n);
+  });
+
+  it("fails if topic1 is used as the order id", () => {
+    const event = buildRealTopicEvent(
+      "pay",
+      ORDER_ID_A,
+      BUYER,
+      "50000000",
+      1004,
+    );
+
+    const order = eventToOrder(event);
+    expect(order).not.toBeNull();
+    // The order id must come from topic1, not topic0 (the symbol).
+    expect(order?.orderId).not.toBe(event.fields.topic0);
+    expect(order?.orderId).not.toBe("pay");
+    expect(order?.orderId).toBe(event.fields.topic1);
+    expect(order?.orderId).toBe(ORDER_ID_A);
+  });
+});
 
 describe("resolveOrderIdHash (Issue #67)", () => {
   const SAMPLE_64_HEX =
@@ -31,7 +183,7 @@ describe("resolveOrderIdHash (Issue #67)", () => {
     expect(bytesToHex(resolved)).not.toBe(bytesToHex(doubleHashed));
   });
 
-  it("normalizes uppercase and 0x-prefixed 64-hex strings", async () => {
+  it("normalizes uppercase and 0x-trimmed 64-hex strings", async () => {
     const upperHex = SAMPLE_64_HEX.toUpperCase();
     const resolvedUpper = await resolveOrderIdHash(upperHex);
     expect(bytesToHex(resolvedUpper)).toBe(SAMPLE_64_HEX);
@@ -111,7 +263,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       fields: {
         order_id: SAMPLE_64_HEX,
         topic1: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
         amount: "50000000",
       },
     };
@@ -125,7 +277,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
 
   it("handles event when order_id is in topic1 fallback", () => {
     const SAMPLE_64_HEX =
-      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+      "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     const indexedDispatchEvent = {
       symbol: "dispatch",
@@ -133,7 +285,7 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
         topic1: SAMPLE_64_HEX,
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
         amount: "50000000",
       },
     };
@@ -142,5 +294,78 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
     expect(order).not.toBeNull();
     expect(order?.orderId).toBe(SAMPLE_64_HEX);
     expect(order?.status).toBe("Shipped");
+  });
+});
+
+describe("Checkout contract configuration validation", () => {
+  const ORIGINAL_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+  const VALID_CONTRACT_ID =
+    "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = ORIGINAL_CONTRACT_ID;
+  });
+
+  it("throws a clear error from dispatchOrder when the contract id is missing", async () => {
+    delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+
+    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(
+      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    );
+
+    await expect(
+      dispatchOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"),
+    ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+
+    // Fail fast: no RPC/network call should have been attempted.
+    expect(connectSpy).not.toHaveBeenCalled();
+  });
+
+  it("throws a clear error from refundOrder when the contract id is missing", async () => {
+    delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
+
+    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(
+      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    );
+
+    await expect(
+      refundOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"),
+    ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+
+    expect(connectSpy).not.toHaveBeenCalled();
+  });
+
+  it("throws a clear error when the contract id is blank", async () => {
+    process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = "   ";
+
+    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(
+      "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    );
+
+    await expect(
+      dispatchOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"),
+    ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+
+    expect(connectSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not report the configuration error when the contract id is set", async () => {
+    process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = VALID_CONTRACT_ID;
+
+    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockRejectedValue(
+      new Error("connect failed"),
+    );
+
+    const result = await dispatchOrder(
+      "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    );
+
+    // Reaching the wallet proves the configuration gate opened; the transport
+    // failure is still reported as a result, not as a configuration error.
+    expect(connectSpy).toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("connect failed");
+    expect(result.error).not.toMatch(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
   });
 });

@@ -4,6 +4,7 @@ import {
   MIN_NATIVE_RESERVE,
   loadAccount,
   getNativeBalance,
+  getTrustline,
   isAccountMissingError,
 } from "../../../lib/stellar/account";
 import { FRIENDBOT_URL } from "../../../lib/stellar/config";
@@ -263,7 +264,7 @@ describe("getNativeBalance", () => {
   it("returns balance when getAccountEntry succeeds", async () => {
     const stubServer = {
       getAccountEntry: vi.fn().mockResolvedValue({
-        balance: () => "50000000",
+        balance: 50000000n,
       }),
     };
 
@@ -288,5 +289,70 @@ describe("getNativeBalance", () => {
 
     const balance = await getNativeBalance(stubServer as never, dummyPublicKey);
     expect(balance).toBe(0n);
+  });
+});
+
+describe("getTrustline", () => {
+  const dummyPublicKey = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const usdc = {
+    isNative: false,
+    assetCode: "USDC",
+    assetIssuer: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+  } as never;
+
+  it("reports hasTrustline: false for a confirmed missing balance entry", async () => {
+    const stubServer = {
+      getAssetBalance: vi.fn().mockResolvedValue({ balanceEntry: null }),
+    };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, usdc);
+
+    expect(info).toEqual({ hasTrustline: false, balanceRaw: 0n, authorized: false });
+  });
+
+  it("returns the balance and authorization for an existing trustline", async () => {
+    const stubServer = {
+      getAssetBalance: vi.fn().mockResolvedValue({
+        balanceEntry: { amount: "250000000", authorized: true },
+      }),
+    };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, usdc);
+
+    expect(info).toEqual({ hasTrustline: true, balanceRaw: 250000000n, authorized: true });
+  });
+
+  it("throws an RPC_ERROR instead of reporting no trustline when the RPC call fails", async () => {
+    const stubServer = {
+      getAssetBalance: vi.fn().mockRejectedValue(new Error("503 Service Unavailable: RPC timeout")),
+    };
+
+    await expect(getTrustline(stubServer as never, dummyPublicKey, usdc)).rejects.toMatchObject({
+      name: "WalletError",
+      code: "RPC_ERROR",
+    });
+  });
+
+  it("still treats a confirmed missing account as an absent trustline", async () => {
+    const stubServer = {
+      getAssetBalance: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error("Account not found"), { status: 404 })),
+    };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, usdc);
+
+    expect(info).toEqual({ hasTrustline: false, balanceRaw: 0n, authorized: false });
+  });
+
+  it("returns the native trustline trivially for the native asset without an RPC call", async () => {
+    const stubServer = { getAssetBalance: vi.fn() };
+
+    const info = await getTrustline(stubServer as never, dummyPublicKey, {
+      isNative: true,
+    } as never);
+
+    expect(info).toEqual({ hasTrustline: true, balanceRaw: 0n, authorized: true });
+    expect(stubServer.getAssetBalance).not.toHaveBeenCalled();
   });
 });

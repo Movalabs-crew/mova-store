@@ -16,7 +16,7 @@ export interface PaymentReceipt {
   token?: string;
   buyer?: string;
   merchant?: string;
-  orderId?: string; // hex
+  orderId?: string; // hex; undefined when the event does not carry a resolvable id
   amount?: string; // raw token units as decimal string
   txHash: string;
   ledger: number;
@@ -32,9 +32,17 @@ export async function waitForTransaction(
   const server = new rpc.Server(RPC_URL);
   const deadline = Date.now() + TX_TIMEOUT_SECONDS * 1000;
   let last: rpc.Api.GetTransactionResponse | null = null;
+  let lastError: unknown = null;
 
   while (Date.now() < deadline) {
-    last = await server.getTransaction(hash);
+    try {
+      last = await server.getTransaction(hash);
+      lastError = null;
+    } catch (err) {
+      lastError = err;
+      await sleep(TX_POLL_INTERVAL_MS);
+      continue;
+    }
     if (last.status === rpc.Api.GetTransactionStatus.SUCCESS) {
       return last;
     }
@@ -47,6 +55,14 @@ export async function waitForTransaction(
     await sleep(TX_POLL_INTERVAL_MS);
   }
 
+  if (lastError) {
+    throw new Error(
+      `Transaction did not reach a final state within ${TX_TIMEOUT_SECONDS}s ` +
+        `(hash: ${hash}). Last RPC error: ${
+          lastError instanceof Error ? lastError.message : String(lastError)
+        }`
+    );
+  }
   throw new Error(
     `Transaction did not reach a final state within ${TX_TIMEOUT_SECONDS}s ` +
       `(hash: ${hash}). Check its status on StellarExpert.`
@@ -64,21 +80,22 @@ export function decodePaymentEvent(
   for (const event of contractEvents) {
     let v0: xdr.ContractEventV0;
     try {
-      v0 = event.body().v0();
+      v0 = event.body.v0;
     } catch {
       continue;
     }
-    const topics = v0.topics();
+    const topics = v0.topics;
     if (!topics || topics.length < 1) continue;
     const first = topics[0];
-    if (first.switch() !== xdr.ScValType.scvSymbol()) continue;
-    if (first.sym().toString() !== "pay") continue;
+    if (first.type !== "scvSymbol") continue;
+    if (first.sym.toString() !== "pay") continue;
 
     let eventContractId: string | undefined;
     try {
-      const contractId = event.contractId();
+      const contractId = event.contractId;
       if (contractId) {
-        eventContractId = StrKey.encodeContract(contractId as any);
+        // ContractId is a BytesValue wrapper in SDK 17, not a raw Buffer.
+        eventContractId = StrKey.encodeContract(contractId.toBytes());
       }
     } catch {
       // system events have no contract id
@@ -89,7 +106,7 @@ export function decodePaymentEvent(
       continue;
     }
 
-    const data = v0.data();
+    const data = v0.data;
     const receipt: PaymentReceipt = {
       txHash: tx.txHash,
       ledger: tx.ledger,
@@ -114,14 +131,19 @@ export function decodePaymentEvent(
           break;
       }
     }
+    // Fail loudly rather than fabricate identity: an event without an explicit
+    // order id must not silently fall back to the token contract address.
+    if (!receipt.orderId) {
+      return null;
+    }
     // data = Map { "amount": i128 }
-    if (data.switch() === xdr.ScValType.scvMap()) {
-      const entries = data.map();
+    if (data.type === "scvMap") {
+      const entries = data.map;
       for (const entry of entries ?? []) {
-        if (entry.key().switch() === xdr.ScValType.scvSymbol()) {
-          const key = entry.key().sym().toString();
+        if (entry.key.type === "scvSymbol") {
+          const key = entry.key.sym.toString();
           if (key === "amount") {
-            receipt.amount = scValToString(entry.val());
+            receipt.amount = scValToString(entry.val);
           }
         }
       }

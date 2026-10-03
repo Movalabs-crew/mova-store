@@ -8,7 +8,7 @@ import {
   defaultToken,
   USDC_DECIMALS,
 } from "./config";
-import { convertUsdToXlm } from "./price";
+import { resolveXlmUsdRate, XlmRateUnavailableError } from "./price";
 import { ensureNetwork, signWithFreighter, WalletError } from "./freighter";
 import { decodePaymentEvent, PaymentReceipt, waitForTransaction } from "./events";
 import { addressToScVal, bytes32ToScVal, bytesToHex, hashOrderId, i128ToScVal } from "./scval";
@@ -26,8 +26,10 @@ export interface PayOptions {
   orderId: string;
   /** Buyer's Freighter public key. */
   publicKey: string;
-  /** Token to pay with (defaults to the first supported token, USDC). */
+  /** Token to pay with (defaults to the first supported token, USDC, but can be native XLM). */
   token?: TokenConfig;
+  /** USD per 1 XLM. Required when paying with native XLM; ignored for stablecoins. */
+  xlmUsdPrice?: number;
   /** Called with human-readable progress updates. */
   onStatus?: (status: string) => void;
 }
@@ -48,8 +50,26 @@ export interface PayResult {
   };
 }
 
+/**
+ * Whether the opt-in Stellar debug logging is enabled.
+ *
+ * Logging is off unless the caller explicitly sets
+ * `NEXT_PUBLIC_STELLAR_DEBUG` to `"1"` or `"true"`, so production payments
+ * never write internal state to the browser console. See issue #718.
+ */
+function isStellarDebugEnabled(): boolean {
+  const flag = process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+  return flag === "1" || flag === "true";
+}
+
+/**
+ * Default progress sink used when the caller does not pass `onStatus`.
+ * Silent unless debug logging is explicitly enabled.
+ */
 function status(s: string): void {
-  console.log(`[stellar] ${s}`);
+  if (isStellarDebugEnabled()) {
+    console.log(`[stellar] ${s}`);
+  }
 }
 
 /**
@@ -87,20 +107,25 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
     );
   }
 
-  const effectiveTokenAmount = token.isNative
-    ? (options.tokenAmount ?? convertUsdToXlm(amountUsd))
-    : (options.tokenAmount ?? amountUsd);
+  let effectiveTokenAmount: number;
+  if (token.isNative) {
+    const rate = resolveXlmUsdRate(options.xlmUsdPrice);
+    if (!rate) throw new XlmRateUnavailableError();
+    effectiveTokenAmount = options.tokenAmount ?? amountUsd / rate.usdPerXlm;
+  } else {
+    effectiveTokenAmount = options.tokenAmount ?? amountUsd;
+  }
   const amountRaw = usdToRawUnits(effectiveTokenAmount);
   const orderBytes = await hashOrderId(orderId);
 
   // 1. Network guard.
-  onStatus("Checking Freighter network…");
+  onStatus("Checking Freighter network...");
   await ensureNetwork();
 
   const server = new rpc.Server(RPC_URL);
 
   // 2. Account readiness: funded, trustline present, balance sufficient.
-  onStatus("Checking account readiness…");
+  onStatus("Checking account readiness...");
   const readiness = await assertPaymentReady(server, publicKey, {
     token,
     requiredRaw: amountRaw,
@@ -108,7 +133,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   });
 
   // 3. Build the invocation.
-  onStatus("Building payment transaction…");
+  onStatus("Building payment transaction...");
   const args = [
     addressToScVal(token.contractId),
     addressToScVal(publicKey),
@@ -118,7 +143,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   const tx = buildInvocationTransaction(readiness.account!, CHECKOUT_CONTRACT_ID, "pay", args);
 
   // 4. Pre-flight simulation (surfaces errors early) + prepare.
-  onStatus("Simulating transaction…");
+  onStatus("Simulating transaction...");
   const { tx: prepared, report } = await prepareAndReport(server, tx);
   if (!report.ok || !readiness.account) {
     throw new WalletError(
@@ -144,6 +169,12 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
     throw new WalletError(
       `Transaction rejected: ${sendResponse.errorResult?.toXDR("base64") ?? "unknown error"}`,
       "TX_SEND_ERROR"
+    );
+  }
+  if (sendResponse.status === "TRY_AGAIN_LATER") {
+    throw new WalletError(
+      "Transaction was not accepted by the network (submission congestion or fee too low). Please retry the payment.",
+      "TX_TRY_AGAIN_LATER"
     );
   }
   if (sendResponse.status === "PENDING" || sendResponse.status === "DUPLICATE") {

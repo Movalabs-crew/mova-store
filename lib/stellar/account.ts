@@ -146,7 +146,8 @@ export async function fundTestnetAccount(publicKey: string): Promise<void> {
 export async function getNativeBalance(server: rpc.Server, publicKey: string): Promise<bigint> {
   try {
     const entry = await server.getAccountEntry(publicKey);
-    return BigInt(entry.balance().toString());
+    // SDK 17 exposes `balance` as a bigint property instead of a `balance()` accessor.
+    return entry.balance;
   } catch (err) {
     if (isAccountMissingError(err)) {
       return BigInt(0);
@@ -186,8 +187,25 @@ export async function getTrustline(
       balanceRaw: BigInt(res.balanceEntry.amount),
       authorized: res.balanceEntry.authorized,
     };
-  } catch {
-    return { hasTrustline: false, balanceRaw: BigInt(0), authorized: false };
+  } catch (err) {
+    // A genuinely missing trustline comes back from `getAssetBalance` as a
+    // response whose `balanceEntry` is falsy, so reaching this catch means the
+    // call itself failed. Only a confirmed "not found" (the account/entry does
+    // not exist) is an absent trustline; anything else is an RPC or network
+    // failure and must surface as an error. Returning `hasTrustline: false`
+    // here used to make a timeout indistinguishable from a missing trustline,
+    // and `assertPaymentReady` then told the buyer to add a trustline that
+    // already existed.
+    if (isAccountMissingError(err)) {
+      return { hasTrustline: false, balanceRaw: BigInt(0), authorized: false };
+    }
+    if (err instanceof WalletError) {
+      throw err;
+    }
+    throw new WalletError(
+      `RPC error retrieving trustline: ${err instanceof Error ? err.message : String(err)}`,
+      "RPC_ERROR"
+    );
   }
 }
 
@@ -260,9 +278,7 @@ export async function assertPaymentReady(
     );
   }
 
-  const minNativeRequired = token.isNative
-    ? requiredRaw + MIN_NATIVE_RESERVE
-    : MIN_NATIVE_RESERVE;
+  const minNativeRequired = token.isNative ? requiredRaw + MIN_NATIVE_RESERVE : MIN_NATIVE_RESERVE;
 
   if (nativeBalanceRaw < minNativeRequired) {
     issues.push(

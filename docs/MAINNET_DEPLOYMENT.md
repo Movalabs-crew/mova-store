@@ -30,7 +30,7 @@ Before deploying to mainnet, ensure you have:
    - Purchase XLM from an exchange
    - Transfer to your new merchant address
 
-4. **Verify the account is funded:**
+4. **Verify the account is funded:*
    ```bash
    stellar account info --network mainnet --source-account merchant-mainnet
    ```
@@ -103,7 +103,7 @@ Should return your merchant address.
 
 ## Step 5: Whitelist Payment Tokens
 
-### Add Mainnet USDC
+### Add Mainnet USDD
 
 Get the mainnet USDC contract ID from [Circle's documentation](https://developers.circle.com/stablecoins/docs/usdc-on-stellar) or the Stellar Asset List.
 
@@ -115,7 +115,7 @@ stellar contract invoke \
   --network mainnet \
   -- \
   add_token \
-  --token <MAINNET_USDC_CONTRACT_ID>
+  --token <MAINNET_USDJ_CONTRACT_ID>
 ```
 
 ### Add Native XLM
@@ -128,7 +128,7 @@ stellar contract invoke \
   --network mainnet \
   -- \
   add_token \
-  --token CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA
+  --token CAS3J7GYLGXMF6TDJBBYYS3HPQ6BBMLNUQ34T6TZMYMW2EVH34XOWMA
 ```
 
 ### Verify Token Whitelist
@@ -154,16 +154,16 @@ NEXT_PUBLIC_STELLAR_NETWORK=mainnet
 NEXT_PUBLIC_STELLAR_RPC_URL=https://soroban-rpc.stellar.org
 
 # Mainnet passphrase
-NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE=Public Global Stellar Network ; September 2015
+NEXT_PUBLIC_STELLAR_NETWORK_PASSTHRASE=Public Global Stellar Network ; September 2015
 
 # Your deployed mainnet contract
-NEXT_PUBLIC_CHECKOUT_CONTRACT_ID=<YOUR_MAINNET_CONTRACT_ID>
+NEXT_PUBLIC_CHECKOUT_CONTRACT_ID<<YOUR_MAINNET_CONTRACT_ID>
 
 # Mainnet USDC contract ID
-NEXT_PUBLIC_USDC_CONTRACT_ID=<MAINNET_USDC_CONTRACT_ID>
+NEXT_PUBLIC_USDC_CONTRACT_ID<<MAINNET_USDJ_CONTRACT_ID>
 
 # Mainnet native XLM SAC
-NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID=CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA
+NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID=CAS3J7GYLGXMF6TDJBBYYS3HPQ6BBMLNUQ34T6TZMYMW2EVH34XOWMA
 ```
 
 ## Step 7: Deploy the Frontend
@@ -219,7 +219,7 @@ Before going live, verify:
 ### Transaction Fails with "Insufficient Balance"
 
 - Ensure the user has enough tokens plus XLM for fees
-- Check that the user has a trustline for USDC
+- Check that the user has a trustline for USDD
 
 ### Contract Invocation Fails
 

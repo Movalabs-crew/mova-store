@@ -1,5 +1,5 @@
 import { Address, rpc, xdr } from "@stellar/stellar-sdk";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentEventIndexer, type IndexedEvent } from "../../../lib/stellar/indexer";
 
@@ -25,6 +25,14 @@ describe("PaymentEventIndexer configuration", () => {
 });
 
 describe("PaymentEventIndexer startup retry (Issue #68)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("retries getLatestLedger when initial call fails and recovers without 'no cursor' error", async () => {
     let getLatestLedgerAttempts = 0;
     let getEventsCalled = false;
@@ -60,7 +68,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     });
 
     // Wait for the first attempt to run and fail
-    await new Promise((resolve) => setTimeout(resolve, 15));
+    await tick(15);
     expect(getLatestLedgerAttempts).toBe(1);
     expect(getEventsCalled).toBe(false);
     expect(errors.some((e) => e.includes("Could not reach the Stellar RPC (retrying)"))).toBe(true);
@@ -69,7 +77,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     expect(indexer.status.retrying).toBe(true);
 
     // Wait for second tick to succeed and begin polling
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await tick(60);
     expect(getLatestLedgerAttempts).toBeGreaterThanOrEqual(2);
     expect(getEventsCalled).toBe(true);
     expect(errors.some((e) => e.includes("no cursor or start ledger"))).toBe(false);
@@ -101,7 +109,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
       onEvent: () => { },
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await tick(100);
     expect(callCount).toBeGreaterThanOrEqual(2);
     expect(indexer.status.latestLedger).toBeGreaterThanOrEqual(202);
     expect(indexer.status.retrying).toBe(false);
@@ -131,9 +139,87 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     indexer.stop();
     const callsAtStop = getEventsCalls;
 
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await tick(60);
     expect(getEventsCalls).toBe(callsAtStop);
     expect(indexer.status.running).toBe(false);
+  });
+});
+
+describe("PaymentEventIndexer recovery paths (Issues #520, #521)", () => {
+  it("recovers from a retention error by resetting the cursor to the latest ledger", async () => {
+    let getEventsCalls = 0;
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 900 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        getEventsCalls++;
+        if (getEventsCalls === 1) {
+          throw new Error("startLedger is outside the retention window");
+        }
+        return { latestLedger: 900, cursor: "cursor-after-retention", events: [] };
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+    const errors: string[] = [];
+
+    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    indexer.stop();
+
+    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
+    expect(indexer.status.lastCursor).toBe("cursor-after-retention");
+    expect(indexer.status.latestLedger).toBe(900);
+    expect(indexer.status.retrying).toBe(false);
+  });
+
+  it("does not move the scan window on a transient error during the first poll", async () => {
+    let getEventsCalls = 0;
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 700 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        getEventsCalls++;
+        if (getEventsCalls === 1) {
+          throw new Error("RPC temporary network partition");
+        }
+        return { latestLedger: 700, cursor: "cursor-transient-recovered", events: [] };
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+    const errors: string[] = [];
+
+    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    indexer.stop();
+
+    expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
+    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
+    expect(indexer.status.lastCursor).toBe("cursor-transient-recovered");
+    expect(indexer.status.latestLedger).toBe(700);
+  });
+
+  it("advances the scan position when a response omits the cursor", async () => {
+    let getEventsCalls = 0;
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 400 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        getEventsCalls++;
+        return { latestLedger: 400 + getEventsCalls, events: [] };
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    indexer.stop();
+
+    expect(getEventsCalls).toBeGreaterThanOrEqual(2);
+    expect(indexer.status.latestLedger).toBeGreaterThanOrEqual(402);
+    expect(indexer.status.retrying).toBe(false);
   });
 });
 
@@ -142,8 +228,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
   const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
   const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
   const MERCHANT = "GAIYNHCVTWL7MHEVQEJBZNXPPJRE5ELR6CJ5LTL74UISWA7T6BQ47HEU";
-  const ORDER_ID_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"; // 64 hex chars == 32 bytes
+  const ORDER_ID_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"; // 64 hex chars == 32 bytes
   const TX_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
   const LEDGER = 4242;
   const CLOSED_AT = "2026-09-07T01:00:00Z";
@@ -208,7 +293,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
       expect(callDecodeEvent(indexer, stringFirst)).toBeNull();
 
       const bytesFirst = makeRawEvent({
-        topic: [xdr.ScVal.scvBytes(Buffer.from("pay")), addressToScVal(TOKEN)],
+        topic: [xdr.ScVal.scvBytes(new Uint8Array(Buffer.from("pay"))), addressToScVal(TOKEN)],
         value: xdr.ScVal.scvVoid(),
       });
       expect(callDecodeEvent(indexer, bytesFirst)).toBeNull();
@@ -309,9 +394,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
 
       const decoded = callDecodeEvent(indexer, raw);
       expect(decoded).not.toBeNull();
-      const topicKeys = Object.keys(decoded?.fields ?? {}).filter((k) =>
-        k.startsWith("topic")
-      );
+      const topicKeys = Object.keys(decoded?.fields ?? {}).filter((k) => k.startsWith("topic"));
       expect(topicKeys).toHaveLength(0);
     });
   });
@@ -502,7 +585,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
           }),
           new xdr.ScMapEntry({
             key: symbolToScVal("timestamp"),
-            val: xdr.ScVal.scvU64(new xdr.Uint64(BigInt("1725700000"))),
+            val: xdr.ScVal.scvU64(BigInt("1725700000")),
           }),
         ]),
       });
@@ -520,11 +603,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
     it("decodes dispatch event matching Soroban OrderShipped contract event", () => {
       const indexer = new PaymentEventIndexer();
       const raw = makeRawEvent({
-        topic: [
-          symbolToScVal("dispatch"),
-          bytes32ToScVal(ORDER_ID_HEX),
-          addressToScVal(MERCHANT),
-        ],
+        topic: [symbolToScVal("dispatch"), bytes32ToScVal(ORDER_ID_HEX), addressToScVal(MERCHANT)],
         value: xdr.ScVal.scvMap([
           new xdr.ScMapEntry({
             key: symbolToScVal("amount"),
@@ -544,11 +623,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
     it("decodes refund event matching Soroban OrderRefunded contract event", () => {
       const indexer = new PaymentEventIndexer();
       const raw = makeRawEvent({
-        topic: [
-          symbolToScVal("refund"),
-          bytes32ToScVal(ORDER_ID_HEX),
-          addressToScVal(BUYER),
-        ],
+        topic: [symbolToScVal("refund"), bytes32ToScVal(ORDER_ID_HEX), addressToScVal(BUYER)],
         value: xdr.ScVal.scvMap([
           new xdr.ScMapEntry({
             key: symbolToScVal("amount"),
@@ -567,6 +642,14 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
   });
 
   describe("End-to-end polling integration with decodeEvent", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it("filters and dispatches only watched successful contract events to onEvent", async () => {
       const receivedEvents: IndexedEvent[] = [];
 
@@ -616,7 +699,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
         onEvent: (e) => receivedEvents.push(e),
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await tick(60);
       indexer.stop();
 
       expect(receivedEvents).toHaveLength(1);
@@ -630,6 +713,14 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
 });
 
 describe("PaymentEventIndexer document visibility (Issue #636)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const setDocumentHidden = (value: boolean) => {
     Object.defineProperty(document, "hidden", { configurable: true, get: () => value });
   };
@@ -680,7 +771,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     // Hide the tab: the interval must be cleared so no further poll fires.
     setDocumentHidden(true);
     document.dispatchEvent(new Event("visibilitychange"));
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await tick(60);
     expect(indexer.status.paused).toBe(true);
     expect(calls).toBe(beforeHide);
 
@@ -688,7 +779,7 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     // advancing the cursor from exactly where it stopped.
     setDocumentHidden(false);
     document.dispatchEvent(new Event("visibilitychange"));
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await tick(5);
     expect(indexer.status.paused).toBe(false);
     expect(calls).toBe(beforeHide + 1);
     expect(indexer.status.lastCursor).toBe(`cursor-${beforeHide + 1}`);
@@ -717,6 +808,14 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
 });
 
 describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("keeps at most one poll in flight when a response outruns the interval", async () => {
     let active = 0;
     let maxActive = 0;
@@ -728,7 +827,7 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
         calls += 1;
         active += 1;
         maxActive = Math.max(maxActive, active);
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        await tick(80);
         active -= 1;
         return { latestLedger: 1000, cursor: `cursor-${calls}`, events: [] };
       }),
@@ -770,5 +869,184 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
 
     expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
     expect(calls).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("PaymentEventIndexer durable start ledger & persisted cursor (Issue #715)", () => {
+  const STORAGE_KEY = "mova:test:admin-orders:cursor";
+
+  // Node's jsdom environment does not expose `window.localStorage` without a
+  // backing file, so install a minimal in-memory Storage for these tests.
+  function installMemoryStorage() {
+    const map = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => (map.has(key) ? (map.get(key) as string) : null),
+      setItem: (key: string, value: string) => void map.set(key, String(value)),
+      removeItem: (key: string) => void map.delete(key),
+      clear: () => map.clear(),
+      key: (index: number) => Array.from(map.keys())[index] ?? null,
+      get length() {
+        return map.size;
+      },
+    };
+    Object.defineProperty(window, "localStorage", {
+      value: storage,
+      configurable: true,
+      writable: true,
+    });
+    return storage;
+  }
+
+  function fakeServer(sequence: number, cursor: string) {
+    return {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence }),
+      getEvents: vi.fn().mockResolvedValue({ latestLedger: sequence, cursor, events: [] }),
+    };
+  }
+
+  beforeEach(() => {
+    installMemoryStorage();
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("scans from a configured durable start ledger instead of the rolling backfill window", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 10_000 }),
+      getEvents: vi.fn().mockImplementation(async (args: Record<string, unknown>) => {
+        calls.push(args);
+        return { latestLedger: 10_000, cursor: "cursor-durable", events: [] };
+      }),
+    };
+    const indexer = new PaymentEventIndexer({ startLedger: 5_000, pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = server;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    indexer.stop();
+
+    expect(calls[0]).toMatchObject({ startLedger: 5_000 });
+    expect(calls[0].cursor).toBeUndefined();
+  });
+
+  it("falls back to the rolling backfill when no durable start ledger is configured", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 1_000 }),
+      getEvents: vi.fn().mockImplementation(async (args: Record<string, unknown>) => {
+        calls.push(args);
+        return { latestLedger: 1_000, cursor: "c", events: [] };
+      }),
+    };
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = server;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    indexer.stop();
+
+    expect(calls[0].startLedger).toBe(900);
+  });
+
+  it("persists the cursor and resumes from it on a later load", async () => {
+    const first = new PaymentEventIndexer({
+      startLedger: 5_000,
+      cursorStorageKey: STORAGE_KEY,
+      pollMs: 20,
+    });
+    (first as unknown as { server: unknown }).server = fakeServer(9_000, "cursor-persisted");
+    first.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    first.stop();
+
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("cursor-persisted");
+
+    const secondCalls: Array<Record<string, unknown>> = [];
+    const second = new PaymentEventIndexer({
+      startLedger: 5_000,
+      cursorStorageKey: STORAGE_KEY,
+      pollMs: 20,
+    });
+    (second as unknown as { server: unknown }).server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 9_001 }),
+      getEvents: vi.fn().mockImplementation(async (args: Record<string, unknown>) => {
+        secondCalls.push(args);
+        return { latestLedger: 9_001, cursor: "cursor-next", events: [] };
+      }),
+    };
+    second.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    second.stop();
+
+    expect(secondCalls[0]).toMatchObject({ cursor: "cursor-persisted" });
+    expect(secondCalls[0].startLedger).toBeUndefined();
+  });
+
+  it("drops a persisted cursor that outlived RPC retention and re-derives the durable window", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "stale-cursor");
+    const calls: Array<Record<string, unknown>> = [];
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 20_000 }),
+      getEvents: vi.fn().mockImplementation(async (args: Record<string, unknown>) => {
+        calls.push(args);
+        if (args.cursor === "stale-cursor") {
+          throw new Error("cursor is outside the retention window");
+        }
+        return { latestLedger: 20_000, cursor: "cursor-fresh", events: [] };
+      }),
+    };
+    const indexer = new PaymentEventIndexer({
+      startLedger: 12_000,
+      cursorStorageKey: STORAGE_KEY,
+      pollMs: 20,
+    });
+    (indexer as unknown as { server: unknown }).server = server;
+
+    indexer.start({ onEvent: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    indexer.stop();
+
+    expect(calls.some((c) => c.cursor === "stale-cursor")).toBe(true);
+    expect(calls.some((c) => c.startLedger === 12_000)).toBe(true);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("cursor-fresh");
+  });
+});
+
+describe("PaymentEventIndexer RPC topic filter (Issue #714)", () => {
+  const CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+
+  it("constrains the getEvents filter to the watched event symbols", async () => {
+    let captured: rpc.Api.GetEventsRequest | undefined = undefined;
+    const fakeServer = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 500 }),
+      getEvents: vi.fn().mockImplementation(async (req: rpc.Api.GetEventsRequest) => {
+        captured = req;
+        return { latestLedger: 500, cursor: "cursor-500", events: [] };
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 1000, contractId: CONTRACT_ID });
+    (indexer as unknown as { server: unknown }).server = fakeServer;
+
+    indexer.start({ onEvent: () => {} });
+    await vi.waitFor(() => {
+      expect(fakeServer.getEvents).toHaveBeenCalled();
+    });
+    indexer.stop();
+
+    const filter = captured?.filters[0];
+    expect(filter?.type).toBe("contract");
+    expect(filter?.contractIds).toEqual([CONTRACT_ID]);
+
+    // One segment matcher per watched symbol, encoding topics[0] (the event name).
+    const segmentMatchers = (filter?.topics ?? []).map((segment) => segment[0]);
+    const expected = ["pay", "create_order", "dispatch", "refund"].map((symbol) =>
+      xdr.ScVal.scvSymbol(symbol).toXDR("base64")
+    );
+    expect(segmentMatchers).toHaveLength(4);
+    expect(segmentMatchers).toEqual(expect.arrayContaining(expected));
   });
 });

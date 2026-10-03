@@ -1,0 +1,17 @@
+{
+  "$comment": "Bundle budgets for scripts/bundle-report.mjs. All values are gzip kilobytes. These are initial ceilings measured against a stock Next.js 14 App Router baseline plus the app's known heavy dependencies; they exist to catch regressions, not to be a target. Tighten them once the first CI bundle report is recorded (see docs/BUNDLE_BUDGET.md).",
+  "budgets": {
+    "routeKb": 600,
+    "sharedKb": 300,
+    "largestChunkKb": 450,
+    "totalJsKb": 2500
+  },
+  "routeOverrides": {},
+  "markers": {
+    "@emailjs/browser": ["emailjs"],
+    "@stellar/stellar-sdk": ["soroban", "TransactionBuilder", "scval"],
+    "@stellar/freighter-api": ["freighter"],
+    "@supabase/supabase-js": ["supabase"],
+    "react-icons": ["react-icons"]
+  }
+}

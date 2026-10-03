@@ -18,7 +18,7 @@ function TestConsumer() {
   );
 }
 
-function wrapper({ children }) {
+function wrapper({ children }: { children: React.ReactNode }) {
   return <CartProvider>{children}</CartProvider>;
 }
 
@@ -26,11 +26,22 @@ function wrapper({ children }) {
 // distinct identities (see the remove / duplicate-row suites, which assert that
 // property directly). These cases are about counts, totals and persistence, so
 // the generated line id is normalised away rather than pinned to a literal.
-function withoutLineIds(cartItems) {
+function withoutLineIds(cartItems: Array<Record<string, unknown>>) {
   return cartItems.map(({ cartItemId, ...rest }) => rest);
 }
 
-function expectCartState(result, { items, count, total }) {
+function readStoredItems() {
+  const raw = localStorage.getItem("cartItems");
+  if (!raw) return [];
+  const parsed = JSON.parse(raw);
+  if (Array.isArray(parsed)) return parsed;
+  return Array.isArray(parsed?.items) ? parsed.items : [];
+}
+
+function expectCartState(
+  result: { current: { cartItems: unknown[]; itemCount: number; totalPrice: number } },
+  { items, count, total }: { items: unknown[]; count: number; total: number }
+) {
   expect(withoutLineIds(result.current.cartItems)).toEqual(items);
   expect(result.current.itemCount).toBe(count);
   expect(result.current.totalPrice).toBe(total);
@@ -45,7 +56,7 @@ function expectStored({ items, count, total, cleared = false }) {
     expect(localStorage.getItem("totalPrice")).toBeNull();
     return;
   }
-  expect(withoutLineIds(JSON.parse(localStorage.getItem("cartItems") || "[]"))).toEqual(items);
+  expect(withoutLineIds(readStoredItems())).toEqual(items);
   expect(localStorage.getItem("itemCount")).toBe(String(count));
   expect(localStorage.getItem("totalPrice")).toBe(String(total));
   expect(Number(localStorage.getItem("itemCount"))).toBeGreaterThanOrEqual(0);
@@ -105,6 +116,23 @@ describe("CartProvider hydration error handling", () => {
       expect(screen.getByTestId("count").textContent).toBe("1");
       expect(screen.getByTestId("total").textContent).toBe("25.5");
       expect(screen.getByTestId("items-length").textContent).toBe("1");
+    });
+  });
+
+  it("recomputes the total from items when the stored totalPrice is untrusted", async () => {
+    const sampleItems = [{ id: "prod_1", name: "Shirt", price: 25.5 }];
+    localStorage.setItem("cartItems", JSON.stringify(sampleItems));
+    localStorage.setItem("itemCount", "1");
+    localStorage.setItem("totalPrice", "0.01");
+
+    render(
+      <CartProvider>
+        <TestConsumer />
+      </CartProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("total").textContent).toBe("25.5");
     });
   });
 });
@@ -259,5 +287,39 @@ describe("CartProvider count and total transitions", () => {
       expectCartState(remounted, { items: [shirt, hat], count: 2, total: 35.5 });
     });
     expectStored({ items: [shirt, hat], count: 2, total: 35.5 });
+  });
+
+  it("keeps the stored total in sync with the stored items across an edit-then-read cycle", async () => {
+    const { result, unmount } = renderHook(() => useCart(), { wrapper });
+
+    act(() => {
+      result.current.addToCart(shirt);
+      result.current.addToCart(hat);
+    });
+
+    // Edit: remove one line, then verify the persisted total matches the
+    // persisted items before any read happens.
+    act(() => {
+      result.current.removeFromCart(shirt);
+    });
+
+    const storedAfterEdit = readStoredItems();
+    const storedTotalAfterEdit = Number(localStorage.getItem("totalPrice"));
+    const derivedTotalAfterEdit = storedAfterEdit.reduce(
+      (sum, item) => sum + (Number(item.price) || 0),
+      0
+    );
+    expect(storedTotalAfterEdit).toBe(derivedTotalAfterEdit);
+    expect(storedTotalAfterEdit).toBe(10);
+
+    unmount();
+
+    // Read: a fresh provider must surface the same total as the stored items.
+    const { result: remounted } = renderHook(() => useCart(), { wrapper });
+
+    await waitFor(() => {
+      expectCartState(remounted, { items: [hat], count: 1, total: 10 });
+    });
+    expectStored({ items: [hat], count: 1, total: 10 });
   });
 });

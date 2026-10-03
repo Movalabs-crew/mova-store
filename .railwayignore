@@ -1,0 +1,14 @@
+# Keep `railway up` uploads small: the build runs on Railway, so local
+# dependencies, previous build output and git history are all dead weight.
+# Without this the upload is ~2.6 GB and times out.
+node_modules
+.next
+.git
+coverage
+contracts/checkout/target
+*.log
+.env.local
+.env*.local
+.vercel
+.DS_Store
+tsconfig.tsbuildinfo

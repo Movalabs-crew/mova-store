@@ -7,6 +7,7 @@ const { CONTRACT_ID, CONTRACT_ID_STR } = vi.hoisted(() => {
   return {
     CONTRACT_ID: bytes,
     CONTRACT_ID_STR: "CADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP5KR",
+    FOREIGN_CONTRACT_ID_STR: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4",
   };
 });
 
@@ -29,11 +30,14 @@ import { i128ToScVal, hexToBytes } from "../../../lib/stellar/scval";
 const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const MERCHANT = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+const FOREIGN_CONTRACT_ID = StrKey.decodeContract(
+  "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
+);
 const ORDER_ID_HEX = "a1" + "b2".repeat(31); // 64 hex chars == 32 bytes
 const TX_HASH = "0123456789abcdef".repeat(4);
 const LEDGER = 4242;
 
-const ext = () => new xdr.ExtensionPoint(0);
+const ext = () => xdr.ExtensionPoint.v0();
 
 function makeEvent(
   topics: xdr.ScVal[],
@@ -42,9 +46,11 @@ function makeEvent(
 ): xdr.ContractEvent {
   return new xdr.ContractEvent({
     ext: ext(),
-    contractId,
-    type: xdr.ContractEventType.contract(),
-    body: new xdr.ContractEventBody(0, new xdr.ContractEventV0({ topics, data })),
+    // SDK 17 requires a ContractId instance here, not a bare Uint8Array: the
+    // Wire form is only produced via `ContractId#toXdrObject`.
+    contractId: contractId ? new xdr.ContractId(contractId) : null,
+    type: xdr.ContractEventType.contract,
+    body: new xdr.ContractEventBodyV0(new xdr.ContractEventV0({ topics, data })),
   });
 }
 
@@ -58,7 +64,7 @@ function makeTx(events: xdr.ContractEvent[]): unknown {
 }
 
 const addressScVal = (strkey: string) =>
-  xdr.ScVal.scvAddress(new Address(strkey).toScVal().address());
+  xdr.ScVal.scvAddress(new Address(strkey).toScVal().address);
 
 const payTopics = () => [
   xdr.ScVal.scvSymbol("pay"),
@@ -92,6 +98,28 @@ describe("decodePaymentEvent", () => {
     expect(receipt?.amount).toBe("123400000");
   });
 
+  it("returns null for a pay event emitted by a foreign contract", () => {
+    const foreignPay = makeEvent(payTopics(), amountMap(1n), FOREIGN_CONTRACT_ID);
+    expect(decodePaymentEvent(makeTx([foreignPay]) as never)).toBeNull();
+  });
+
+  it("returns null for a non-pay event from the checkout contract", () => {
+    const nonPay = makeEvent(
+      [xdr.ScVal.scvSymbol("transfer"), addressScVal(TOKEN)],
+      amountMap(1n),
+      CONTRACT_ID
+    );
+    expect(decodePaymentEvent(makeTx([nonPay]) as never)).toBeNull();
+  });
+
+  it("still decodes a genuine pay from the checkout contract", () => {
+    const genuine = makeEvent(payTopics(), amountMap(77n), CONTRACT_ID);
+    const receipt = decodePaymentEvent(makeTx([genuine]) as never);
+    expect(receipt).not.toBeNull();
+    expect(receipt?.contractId).toBe(StrKey.encodeContract(CONTRACT_ID));
+    expect(receipt?.amount).toBe("77");
+  });
+
   it("skips events whose first topic is not the 'pay' symbol", () => {
     const transferEvent = makeEvent(
       [xdr.ScVal.scvSymbol("transfer"), addressScVal(TOKEN)],
@@ -105,20 +133,31 @@ describe("decodePaymentEvent", () => {
     expect(decodePaymentEvent(makeTx([event]) as never)).toBeNull();
   });
 
-  it("tolerates fewer than five topics (only fills the slots present)", () => {
+  it("rejects a pay event whose topics stop before the order id slot", () => {
     const event = makeEvent(
       [xdr.ScVal.scvSymbol("pay"), addressScVal(TOKEN)],
       amountMap(5n),
       null // no contract id -> system-style event
     );
-    const receipt = decodePaymentEvent(makeTx([event]) as never);
-    expect(receipt).not.toBeNull();
-    expect(receipt?.token).toBe(TOKEN);
-    expect(receipt?.buyer).toBeUndefined();
-    expect(receipt?.merchant).toBeUndefined();
-    expect(receipt?.orderId).toBeUndefined();
-    expect(receipt?.amount).toBe("5");
-    expect(receipt?.contractId).toBeUndefined();
+    // The topic layout is positional ([symbol, token, buyer, merchant, order_id]),
+    // so an event that stops short of the order id slot carries no order identity.
+    // It is rejected rather than reported against an unknown order.
+    expect(decodePaymentEvent(makeTx([event]) as never)).toBeNull();
+  });
+
+  it("does not fall back to the token address when the order id topic is missing", () => {
+    const event = makeEvent(
+      [
+        xdr.ScVal.scvSymbol("pay"),
+        addressScVal(TOKEN),
+        addressScVal(BUYER),
+        addressScVal(MERCHANT),
+      ],
+      amountMap(7n)
+    );
+    // Rejecting outright is the strongest form of "does not fall back": the
+    // token address is exactly the value a buggy fallback would have substituted.
+    expect(decodePaymentEvent(makeTx([event]) as never)).toBeNull();
   });
 
   it("returns null when no pay event exists in the transaction", () => {
@@ -170,6 +209,23 @@ describe("waitForTransaction", () => {
     const spy = vi.spyOn(rpc.Server.prototype, "getTransaction").mockResolvedValue(mockTx as never);
 
     await expect(waitForTransaction(TX_HASH)).rejects.toThrow("Transaction failed on ledger 101");
+    spy.mockRestore();
+  });
+
+  it("retries transient getTransaction failures and resolves on a later success", async () => {
+    const mockTx = {
+      status: "SUCCESS",
+      ledger: 102,
+      txHash: TX_HASH,
+    };
+    const spy = vi
+      .spyOn(rpc.Server.prototype, "getTransaction")
+      .mockRejectedValueOnce(new Error("transient RPC error"))
+      .mockResolvedValueOnce(mockTx as never);
+
+    const res = await waitForTransaction(TX_HASH);
+    expect(res).toBe(mockTx);
+    expect(spy).toHaveBeenCalledTimes(2);
     spy.mockRestore();
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import { useMemo } from "react";
 import Modal from "./Modal";
 
 /**
@@ -8,23 +9,39 @@ import Modal from "./Modal";
  * logic (and every future fix to it) had to be applied twice. Both routes now
  * render this component instead.
  *
+ * The total is derived from the cart items on read so the displayed value
+ * can never diverge from the stored items.
+ *
  * @param {boolean} show            - whether the modal is open
  * @param {() => void} onClose      - close handler passed to `Modal`
  * @param {Array} cartItems         - cart rows from `useCart()`
- * @param {number} totalPrice       - cart total from `useCart()`
  * @param {(item) => void} onRemove - removes one cart row
  * @param {() => void} onCheckout   - checkout handler
  * @param {string} checkoutLabel    - label for the checkout button
  */
+
+const toNumber = (value) => {
+  const num = typeof value === "string" ? Number.parseFloat(value) : value;
+  return Number.isFinite(num) ? num : 0;
+};
+
 const CartModal = ({
   show,
   onClose,
   cartItems,
-  totalPrice,
   onRemove,
   onCheckout,
   checkoutLabel = "Checkout",
 }) => {
+  const totalPrice = useMemo(
+    () =>
+      cartItems.reduce(
+        (sum, item) => sum + toNumber(item.price) * toNumber(item.quantity || 1),
+        0
+      ),
+    [cartItems]
+  );
+
   return (
     <Modal show={show} onClose={onClose}>
       <h2 className="text-2xl mb-4">Cart Items</h2>
@@ -61,7 +78,11 @@ const CartModal = ({
       <div className="flex justify-between items-center mt-4 mx-5 sm:mx-10">
         <div>
           {cartItems.length > 0 && <strong>Total:</strong>}
-          {totalPrice ? <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span> : ""}
+          {cartItems.length > 0 ? (
+            <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span>
+          ) : (
+            ""
+          )}
         </div>
         {cartItems.length > 0 && (
           <button

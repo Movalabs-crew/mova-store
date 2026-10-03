@@ -41,11 +41,19 @@ drop policy if exists "Admins can view admin_users" on public.admin_users;
 -- because a policy expression may only reference a function that already exists.
 
 -- Helper function: Evaluates true if the caller is an admin via JWT claims or admin_users table
+--
+-- `security definer` runs with the owner's privileges, so the body's names must
+-- not resolve through a caller-influenced `search_path`: an attacker who can
+-- create objects could otherwise shadow `admin_users`. `set search_path = ''`
+-- pins resolution to schema-qualified names only; `pg_catalog` is still searched
+-- implicitly, so built-ins such as `lower`/`coalesce` keep working. This clears
+-- Supabase's `function_search_path_mutable` lint.
 create or replace function public.is_admin()
 returns boolean
 language sql
 stable
 security definer
+set search_path = ''
 as $$
   select
     coalesce((auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean, false) = true
@@ -54,6 +62,13 @@ as $$
       where lower(email) = lower(auth.jwt() ->> 'email')
     );
 $$;
+
+-- Only the roles whose RLS policies call is_admin() need EXECUTE on it. Dropping
+-- the implicit PUBLIC grant keeps `anon` from invoking a SECURITY DEFINER
+-- function it never needs (every policy that calls it is `to authenticated`).
+revoke execute on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+grant execute on function public.is_admin() to service_role;
 
 -- admin_users backs is_admin() and holds the privileged allowlist. Only admins
 -- may read it: anon and ordinary authenticated users get no rows, so the list of

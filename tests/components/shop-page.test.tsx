@@ -91,7 +91,7 @@ describe("Shop product loading states", () => {
     expect(screen.getByRole("button", { name: /shopping cart with 1 item/i })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Item added to cart");
     expect(
-      JSON.parse(localStorage.getItem("cartItems")!).map(({ cartItemId, ...rest }) => rest)
+      (JSON.parse(localStorage.getItem("cartItems")!).items || []).map(({ cartItemId, ...rest }) => rest)
     ).toEqual([product]);
   });
 

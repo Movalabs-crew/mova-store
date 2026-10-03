@@ -76,6 +76,101 @@ describe("payWithStellar", () => {
       .build();
   };
 
+  const readiness = {
+    account: dummyAccount,
+    funded: true,
+    nativeBalanceRaw: 50_000_000n,
+    tokenBalanceRaw: 100_000_000n,
+    decimals: 7,
+    hasTrustline: true,
+    trustlineAuthorized: true,
+    requiredRaw: 10_000_000n,
+    sufficientBalance: true,
+    sufficientReserve: true,
+    issues: [],
+  };
+
+  const mockSuccessfulFlow = () => {
+    const tx = buildDummyTx();
+    const xdrString = tx.toXDR();
+    vi.spyOn(freighterMod, "ensureNetwork").mockResolvedValue();
+    vi.spyOn(accountMod, "assertPaymentReady").mockResolvedValue(readiness);
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolvedValue({
+      tx,
+      report: { ok: true, minResourceFee: 1200n, instructions: 5000 },
+    });
+    vi.spyOn(simulateMod, "budgetFee").mockResolvedValue("51200");
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolvedValue(xdrString);
+    vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolvedValue({
+      status: "PENDING",
+      hash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "waitForTransaction").mockResolvedValue({
+      status: rpc.Api.GetTransactionStatus.SUCCESS,
+      ledger: 456,
+      txHash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "decodePaymentEvent").mockReturnValue({
+      txHash: "abc123mocktxhash",
+      ledger: 456,
+      amount: "10000000",
+      buyer: dummyPublicKey,
+    });
+  };
+
+  it("writes nothing to the console for a production payment without onStatus (#718)", async () => {
+    const previous = process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    mockSuccessfulFlow();
+
+    await payWithStellar({
+      amountUsd: 1,
+      orderId: "ORD-NO-LOGS",
+      publicKey: dummyPublicKey,
+    });
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(infoSpy).not.toHaveBeenCalled();
+    expect(debugSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    } else {
+      process.env.NEXT_PUBLIC_STELLAR_DEBUG = previous;
+    }
+    vi.restoreAllMocks();
+  });
+
+  it("only emits [stellar] progress logs when NEXT_PUBLIC_STELLAR_DEBUG is enabled (#718)", async () => {
+    const previous = process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    process.env.NEXT_PUBLIC_STELLAR_DEBUG = "true";
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    mockSuccessfulFlow();
+
+    await payWithStellar({
+      amountUsd: 1,
+      orderId: "ORD-DEBUG-LOGS",
+      publicKey: dummyPublicKey,
+    });
+
+    expect(logSpy).toHaveBeenCalled();
+    expect(logSpy.mock.calls.some(([msg]) => String(msg).startsWith("[stellar]"))).toBe(true);
+
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    } else {
+      process.env.NEXT_PUBLIC_STELLAR_DEBUG = previous;
+    }
+    vi.restoreAllMocks();
+  });
+
   it("throws CONTRACT_NOT_CONFIGURED if CHECKOUT_CONTRACT_ID is empty", async () => {
     vi.resetModules();
     vi.doMock("../../../lib/stellar/config", async () => {
@@ -241,7 +336,7 @@ describe("payWithStellar", () => {
     } as never);
 
     await expect(
-      payWithStellar({
+      payWithStellar( {
         amountUsd: 2,
         orderId: "ORD-FAIL-SEND",
         publicKey: dummyPublicKey,
@@ -251,6 +346,54 @@ describe("payWithStellar", () => {
       message: expect.stringContaining("Transaction rejected"),
     });
 
+    vi.restoreAllMocks();
+  });
+
+  it("throws TX_TRY_AGAIN_LATER and never polls an undefined hash when submission returns TRY_AGAIN_LATER", async () => {
+    const tx = buildDummyTx();
+    const xdrString = tx.toXDR();
+
+    vi.spyOn(freighterMod, "ensureNetwork").mockResolvedValue();
+    vi.spyOn(accountMod, "assertPaymentReady").mockResolvedValue({
+      account: dummyAccount,
+      funded: true,
+      nativeBalanceRaw: 50_000_000n,
+      tokenBalanceRaw: 100_000_000n,
+      decimals: 7,
+      hasTrustline: true,
+      trustlineAuthorized: true,
+      requiredRaw: 10_000_000n,
+      sufficientBalance: true,
+      sufficientReserve: true,
+      issues: [],
+    });
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolvedValue({
+      tx,
+      report: { ok: true, minResourceFee: 100n },
+    });
+    vi.spyOn(simulateMod, "budgetFee").mockResolvedValue("50100");
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolvedValue(xdrString);
+    const sendSpy = vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolvedValue({
+      status: "TRY_AGAIN_LATER",
+      hash: undefined,
+    } as never);
+    const waitSpy = vi.spyOn(eventsMod, "waitForTransaction");
+
+    await expect(
+      payWithStellar({
+        amountUsd: 3,
+        orderId: "ORD-TRY-AGAIN",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toMatchObject({
+      code: "TX_TRY_AGAIN_LATER",
+      message: expect.stringContaining("retry"),
+    });
+
+    expect(waitSpy).not.toHaveBeenCalled();
+
+    sendSpy.mockRestore();
+    waitSpy.mockRestore();
     vi.restoreAllMocks();
   });
 });
