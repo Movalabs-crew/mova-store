@@ -18,6 +18,8 @@ vi.mock("../../context/CartContext", () => ({
     totalPrice: 100,
     totalItems: 1,
   }),
+  computeCartTotal: (items: Array<{ price?: number }>) =>
+    items.reduce((sum, item) => sum + (Number(item?.price) || 0), 0),
 }));
 
 vi.mock("../../components/StellarCheckoutButton", () => ({
@@ -89,6 +91,10 @@ describe("Checkout OTP flow (server-side verification)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // The page derives its total from the stored cart items (Issue #619); seed a
+    // cart so the checkout form actually renders instead of the empty state.
+    localStorage.setItem("cartItems", JSON.stringify([{ id: "a", name: "A", price: 100 }]));
+    localStorage.setItem("itemCount", "1");
   });
 
   it("disables the stage-1 submit button while the OTP request is in flight", async () => {
