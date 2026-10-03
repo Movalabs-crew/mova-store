@@ -17,23 +17,10 @@ import {
   symbolToScVal,
 } from "../../../lib/stellar/scval";
 
-/**
- * Advance fake timers and let any pending microtasks (promise chains) settle.
- * Using fake timers keeps these tests independent of wall-clock margins, so
- * they stay deterministic even on a loaded CI runner.
- */
-async function tick(ms: number): Promise<void> {
-  await vi.advanceTimersByTimeAsync(ms);
-}
-
 describe("PaymentEventIndexer configuration", () => {
   it("throws an error when constructed with an empty or invalid contract ID", () => {
-    expect(() => new PaymentEventIndexer({ contractId: "" })).toThrow(
-      /Invalid or missing checkout contract ID/
-    );
-    expect(() => new PaymentEventIndexer({ contractId: "INVALID_ID" })).toThrow(
-      /Invalid or missing checkout contract ID/
-    );
+    expect(() => new PaymentEventIndexer({ contractId: "" })).toThrow(/Invalid or missing checkout contract ID/);
+    expect(() => new PaymentEventIndexer({ contractId: "INVALID_ID" })).toThrow(/Invalid or missing checkout contract ID/);
   });
 });
 
@@ -75,7 +62,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     const statuses: unknown[] = [];
 
     indexer.start({
-      onEvent: () => {},
+      onEvent: () => { },
       onError: (err) => errors.push(err.message),
       onStatus: (st) => statuses.push(st),
     });
@@ -119,7 +106,7 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
     indexer.start({
-      onEvent: () => {},
+      onEvent: () => { },
     });
 
     await tick(100);
@@ -147,8 +134,8 @@ describe("PaymentEventIndexer startup retry (Issue #68)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 30 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
-    await tick(50);
+    indexer.start({ onEvent: () => { } });
+    await new Promise((resolve) => setTimeout(resolve, 50));
     indexer.stop();
     const callsAtStop = getEventsCalls;
 
@@ -752,8 +739,8 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 10 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
-    await tick(60);
+    indexer.start({ onEvent: () => { } });
+    await new Promise((resolve) => setTimeout(resolve, 60));
 
     expect(fakeServer.getLatestLedger).not.toHaveBeenCalled();
     expect(fakeServer.getEvents).not.toHaveBeenCalled();
@@ -776,8 +763,8 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 20 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
-    await tick(50);
+    indexer.start({ onEvent: () => { } });
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(calls).toBeGreaterThanOrEqual(1);
     const beforeHide = calls;
 
@@ -810,8 +797,8 @@ describe("PaymentEventIndexer document visibility (Issue #636)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
     const removeSpy = vi.spyOn(document, "removeEventListener");
 
-    indexer.start({ onEvent: () => {} });
-    await tick(0);
+    indexer.start({ onEvent: () => { } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
     indexer.stop();
 
     expect(removeSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
@@ -849,8 +836,8 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     const indexer = new PaymentEventIndexer({ pollMs: 10 });
     (indexer as unknown as { server: unknown }).server = fakeServer;
 
-    indexer.start({ onEvent: () => {} });
-    await tick(260);
+    indexer.start({ onEvent: () => { } });
+    await new Promise((resolve) => setTimeout(resolve, 260));
     indexer.stop();
 
     // Serialized: no second poll starts until the previous one has settled.
@@ -876,8 +863,8 @@ describe("PaymentEventIndexer overlapping-poll guard (Issue #632)", () => {
     (indexer as unknown as { server: unknown }).server = fakeServer;
     const errors: string[] = [];
 
-    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
-    await tick(100);
+    indexer.start({ onEvent: () => { }, onError: (err) => errors.push(err.message) });
+    await new Promise((resolve) => setTimeout(resolve, 100));
     indexer.stop();
 
     expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
