@@ -1031,6 +1031,79 @@ fn test_pay_matching_pending_order_succeeds() {
 }
 
 // ---------------------------------------------------------------------------
+// Centralized TTL extension (#509)
+// ---------------------------------------------------------------------------
+
+/// Reading a whitelisted token must keep its entry alive, exactly as reading
+/// the admin or an order does. `is_token_allowed` is on the hot path for both
+/// `create_order` and `pay`, so a whitelist entry that is only ever read would
+/// otherwise age out from under a live deployment and start rejecting payments
+/// with `TokenNotAllowed` (#493).
+#[test]
+fn test_whitelist_read_refreshes_ttl_without_a_write() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, _, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+
+    // Normalise the entry to the contract's own ceiling so the decay below does
+    // not depend on the host's default entry TTLs.
+    env.as_contract(&checkout, || {
+        let persistent = env.storage().persistent();
+        persistent.extend_ttl(&key, LEDGER_TO_EXTEND_TO, LEDGER_TO_EXTEND_TO);
+        env.storage()
+            .instance()
+            .extend_ttl(LEDGER_TO_EXTEND_TO, LEDGER_TO_EXTEND_TO);
+    });
+
+    // Age it until it sits below the contract's extend threshold.
+    env.ledger().with_mut(|li| {
+        li.sequence_number += LEDGER_TO_EXTEND_TO - LEDGER_THRESHOLD / 2;
+    });
+
+    let before = persistent_ttl(&env, &checkout, &key);
+    assert!(
+        before < LEDGER_THRESHOLD,
+        "whitelist TTL should have decayed below the threshold, got {before}"
+    );
+
+    // A bare read of the whitelist keeps it alive with no intervening write.
+    assert!(client.is_token_allowed(&token));
+
+    assert_eq!(
+        persistent_ttl(&env, &checkout, &key),
+        LEDGER_TO_EXTEND_TO,
+        "reading a whitelisted token must extend its TTL"
+    );
+}
+
+/// Probing a token that was never whitelisted must not create an entry, and
+/// revoking a token must remove it outright. A miss or a removal that left a
+/// TTL-bearing entry behind would let `is_token_allowed` drift away from "was
+/// this token explicitly approved".
+#[test]
+fn test_whitelist_miss_and_removal_leave_no_entry() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, _, checkout) = setup_usdc(&env);
+    let key = DataKey::TokenAllowed(token.clone());
+    let unlisted = env.register(MockToken, ());
+    let unlisted_key = DataKey::TokenAllowed(unlisted.clone());
+
+    // A miss reads as `false` and writes nothing.
+    assert!(!client.is_token_allowed(&unlisted));
+    assert!(!env.as_contract(&checkout, || env.storage().persistent().has(&unlisted_key)));
+
+    // Removal is a removal, not a tombstone.
+    assert!(client.is_token_allowed(&token));
+    client.remove_token(&token);
+    assert!(!client.is_token_allowed(&token));
+    assert!(!env.as_contract(&checkout, || env.storage().persistent().has(&key)));
+}
+
+// ---------------------------------------------------------------------------
 // Token whitelist TTL (#493)
 // ---------------------------------------------------------------------------
 
