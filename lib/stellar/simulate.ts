@@ -191,6 +191,10 @@ export async function prepareAndReport(
  * Recommended classic inclusion fee (stroops) based on recent network stats.
  * `max` from the Soroban inclusion fee distribution is a safe upper bound;
  * falls back to BASE_FEE when stats are unavailable.
+ *
+ * Note: `getFeeStats` may be unavailable on some RPC providers or during
+ * transient outages; in that case we deliberately fall back to BASE_FEE
+ * rather than zero so the buyer path never under-budgets the inclusion fee.
  */
 export async function recommendedInclusionFee(server: rpc.Server): Promise<bigint> {
   try {
@@ -208,6 +212,10 @@ export async function recommendedInclusionFee(server: rpc.Server): Promise<bigin
 /**
  * Total fee the final transaction should carry: max(recommended inclusion
  * fee, simulated min resource fee) plus a safety buffer.
+ *
+ * When the simulation failed (`report.ok === false`) there is no resource
+ * fee to consider, so the budget is driven purely by the recommended
+ * inclusion fee plus the buffer.
  */
 export async function budgetFee(server: rpc.Server, report: SimulationReport): Promise<string> {
   const inclusion = await recommendedInclusionFee(server);
