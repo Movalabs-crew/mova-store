@@ -13,7 +13,16 @@ import { WalletError } from "./freighter";
  * `nativeToScVal(v, { type: "i128" })` for arbitrary 128-bit values.
  */
 export function i128ToScVal(value: bigint | number | string): xdr.ScVal {
+  // Converting an imprecise Number to BigInt cannot recover its original value.
+  if (typeof value === "number" && !Number.isSafeInteger(value)) {
+    throw new RangeError("i128 number inputs must be safe integers; use bigint or string");
+  }
   const v = BigInt(value);
+  const min = -(BigInt(1) << BigInt(127));
+  const max = -min - BigInt(1);
+  if (v < min || v > max) {
+    throw new RangeError("i128 value is outside the signed 128-bit range");
+  }
   const mask = BigInt("0xffffffffffffffff");
   // SDK 17 declares `xdr.Uint64`/`xdr.Int64` as plain `bigint` and takes the
   // halves as bigints, so the old js-xdr wrappers (`new xdr.Uint64(...)`) no

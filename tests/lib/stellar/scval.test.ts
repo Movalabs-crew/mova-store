@@ -85,6 +85,25 @@ describe("i128ToScVal", () => {
     );
   });
 
+  it.each([
+    ["positive bigint overflow", BigInt(1) << BigInt(127)],
+    ["negative bigint overflow", -(BigInt(1) << BigInt(127)) - BigInt(1)],
+    ["positive decimal-string overflow", (BigInt(1) << BigInt(127)).toString()],
+    ["negative decimal-string overflow", (-(BigInt(1) << BigInt(127)) - BigInt(1)).toString()],
+    ["unsafe positive number", Number.MAX_SAFE_INTEGER + 1],
+    ["unsafe negative number", Number.MIN_SAFE_INTEGER - 1],
+  ])("rejects %s before constructing XDR", (_label, value) => {
+    expect(() => i128ToScVal(value)).toThrow(RangeError);
+  });
+
+  it("preserves safe-number boundary encodings", () => {
+    for (const value of [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]) {
+      expect(i128ToScVal(value).toXDR("base64")).toBe(
+        nativeToScVal(BigInt(value), { type: "i128" }).toXDR("base64")
+      );
+    }
+  });
+
   it("keeps the sign for negative values", () => {
     expect(scValToNativeSafe(i128ToScVal(-42n))).toBe(-42n);
     expect(i128ToScVal(-42).toXDR("base64")).toBe(
