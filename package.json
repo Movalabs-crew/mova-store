@@ -46,7 +46,7 @@
     "@vercel/og": "^0.6.2",
     "next": "15.5.27",
     "next-auth": "^4.24.15",
-    "nextjs-toploader": "^1.6.12",
+    "nextjs-toploader": "^3.9.17",
     "react": "^18",
     "react-dom": "^18",
     "react-icons": "^5.7.0",
