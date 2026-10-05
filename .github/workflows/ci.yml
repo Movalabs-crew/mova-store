@@ -67,6 +67,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Check for case-colliding paths
+        run: npm run check:case
+
       - name: Type check
         run: npm run type-check
 
