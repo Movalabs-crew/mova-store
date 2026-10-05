@@ -43,7 +43,7 @@
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^17.2.1",
     "@supabase/supabase-js": "^2.117.2",
-    "@vercel/og": "^0.6.2",
+    "@vercel/og": "^1.0.3",
     "next": "15.5.27",
     "next-auth": "^4.24.15",
     "nextjs-toploader": "^1.6.12",
