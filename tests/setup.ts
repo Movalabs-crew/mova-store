@@ -76,6 +76,9 @@ vi.stubEnv(
   "NEXT_PUBLIC_CHECKOUT_CONTRACT_ID",
   "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
 );
-vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "admin@test.com,admin2@test.com");
+// NOTE: admin authorization is NOT configured through a NEXT_PUBLIC_* variable.
+// The client gate reads the server-verified `app_metadata.is_admin` claim
+// (mirrored by the `admin_users` table / RLS) instead, so there is no admin
+// email allowlist to inline into the client bundle.
 vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://dummy.supabase.co");
 vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "dummy_anon_key");
