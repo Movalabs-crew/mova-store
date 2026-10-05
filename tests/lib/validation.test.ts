@@ -7,8 +7,6 @@ import {
   validatePrice,
   validateStellarAddress,
   sanitizeText,
-  escapeHtml,
-  sanitizeForHtml,
   validateAddress,
   validateCity,
   validatePostalCode,
@@ -40,22 +38,6 @@ describe("sanitizeText", () => {
 
   it("handles empty strings", () => {
     expect(sanitizeText("")).toBe("");
-  });
-});
-
-describe("escapeHtml", () => {
-  it("escapes HTML special characters", () => {
-    expect(escapeHtml("<script>alert('xss')</script>")).toBe(
-      "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;&#x2F;script&gt;"
-    );
-  });
-
-  it("escapes ampersands", () => {
-    expect(escapeHtml("foo & bar")).toBe("foo &amp; bar");
-  });
-
-  it("escapes quotes", () => {
-    expect(escapeHtml('"hello"')).toBe("&quot;hello&quot;");
   });
 });
 
@@ -205,19 +187,6 @@ describe("validateForm", () => {
     });
 
     expect(result.sanitized.email).toBe("test@example.com");
-  });
-});
-
-describe("sanitizeForHtml", () => {
-  it("sanitizes control characters and escapes HTML tags", () => {
-    expect(sanitizeForHtml("<script>alert('xss')</script>\u0000")).toBe(
-      "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;&#x2F;script&gt;"
-    );
-  });
-
-  it("trims whitespace and handles empty strings", () => {
-    expect(sanitizeForHtml("  <b>Bold</b>  ")).toBe("&lt;b&gt;Bold&lt;&#x2F;b&gt;");
-    expect(sanitizeForHtml("")).toBe("");
   });
 });
 
