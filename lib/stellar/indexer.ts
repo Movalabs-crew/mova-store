@@ -77,7 +77,7 @@ export class PaymentEventIndexer {
   private lastError: string | undefined;
   private readonly seenIds = new Set<string>();
 
-  private timer: ReturnType<typeof setInterval> | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
   /** Prevents a new poll from starting while the previous one is still running. */
   private inFlight = false;
   /** Set while the document is hidden; polling resumes on visibilitychange. */
@@ -138,7 +138,9 @@ export class PaymentEventIndexer {
       return;
     }
 
-    this.timer = setInterval(() => void this.tick(callbacks), this.pollMs);
+    // Poll now rather than after one `pollMs` delay: the first event should not
+    // wait a whole interval to be seen. `tick` chains every subsequent poll via
+    // `schedule`, so this is the only immediate call.
     void this.tick(callbacks);
   }
 
@@ -147,20 +149,43 @@ export class PaymentEventIndexer {
     this.paused = false;
     this.detachVisibilityListener();
     if (this.timer !== null) {
-      clearInterval(this.timer);
+      clearTimeout(this.timer);
       this.timer = null;
     }
+  }
+
+  /**
+   * Queue the next tick. A recursive `setTimeout` (instead of `setInterval`)
+   * means the next tick is only queued once the current one has settled, so two
+   * ticks can never overlap on a slow RPC.
+   *
+   * `delayMs` defaults to a full interval but callers pass whatever is left of
+   * the current one, so a poll that overran `pollMs` does not push the next one
+   * out by another full interval — the loop keeps its cadence instead of
+   * drifting slower whenever the RPC is slow.
+   */
+  private schedule(callbacks: IndexerCallbacks, delayMs: number = this.pollMs): void {
+    if (!this.running || this.paused) return;
+    if (this.timer !== null) return;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      void this.tick(callbacks);
+    }, delayMs);
   }
 
   private async tick(callbacks: IndexerCallbacks): Promise<void> {
     if (!this.running || this.paused) return;
 
-    // Never let the interval outrun its own work. If the previous poll is still
+    // Never let the loop outrun its own work. If the previous poll is still
     // unresolved (a slow getLatestLedger/getEvents), skip this tick entirely —
     // overlapping polls would read the same cursor, advance it out of order and
     // deliver the same event twice.
-    if (this.inFlight) return;
+    if (this.inFlight) {
+      this.schedule(callbacks);
+      return;
+    }
     this.inFlight = true;
+    const startedAt = Date.now();
 
     try {
       if (!this.initialized) {
@@ -173,11 +198,16 @@ export class PaymentEventIndexer {
       await this.poll(callbacks);
     } finally {
       this.inFlight = false;
+      // Chain the next iteration only after this one has completely finished,
+      // waiting out whatever is left of the interval rather than a whole fresh
+      // one: a slow RPC must not slow the cadence down, and a fast one must not
+      // be polled harder.
+      this.schedule(callbacks, Math.max(0, this.pollMs - (Date.now() - startedAt)));
     }
   }
 
   /**
-   * Background tabs should not poll: stop the interval while the document is
+   * Background tabs should not poll: stop the loop while the document is
    * hidden so a buyer who switches tabs mid-payment stops hammering the RPC.
    */
   private attachVisibilityListener(callbacks: IndexerCallbacks): void {
@@ -206,7 +236,7 @@ export class PaymentEventIndexer {
     if (this.paused) return;
     this.paused = true;
     if (this.timer !== null) {
-      clearInterval(this.timer);
+      clearTimeout(this.timer);
       this.timer = null;
     }
     callbacks.onStatus?.(this.status);
@@ -220,10 +250,10 @@ export class PaymentEventIndexer {
   private resume(callbacks: IndexerCallbacks): void {
     if (!this.paused) return;
     this.paused = false;
-    if (this.timer === null) {
-      this.timer = setInterval(() => void this.tick(callbacks), this.pollMs);
-    }
     callbacks.onStatus?.(this.status);
+    // Run the catch-up tick now. `tick` will chain the next iteration itself,
+    // and the in-flight guard ensures we don't start a second one if one is
+    // already running.
     void this.tick(callbacks);
   }
 
