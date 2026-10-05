@@ -37,7 +37,8 @@
     "test:naming": "node scripts/check-test-names.mjs",
     "triage": "node scripts/triage-prs.mjs",
     "deploy:testnet": "./scripts/deploy-testnet.sh",
-    "prepare": "node scripts/setup-git-hooks.mjs"
+    "prepare": "node scripts/setup-git-hooks.mjs",
+    "type-check:tests": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
