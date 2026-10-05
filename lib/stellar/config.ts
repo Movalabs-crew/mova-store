@@ -1,5 +1,7 @@
 import { Networks, StrKey } from "@stellar/stellar-sdk";
 
+import { MAINNET_RPC_URL, TESTNET_RPC_URL } from "./endpoints";
+
 // ---------------------------------------------------------------------------
 // Network + contract configuration.
 //
@@ -42,10 +44,12 @@ export const IS_MAINNET = NETWORK === "mainnet";
 // d5fb865 reconciled env.ts and the deployment guide onto the stellar.org
 // endpoint but left this module behind, so an operator who left the variable
 // unset talked to gateway.fm from here and stellar.org from lib/env — two
-// different RPCs depending on which module resolved it. Aligned to match.
+// different RPCs depending on which module resolved it. Both modules now read
+// the endpoint from lib/stellar/endpoints.ts, so the two cannot drift again,
+// and tests/lib/stellar/rpc-endpoint-single-source.test.ts checks the doc still
+// names the same endpoint.
 export const RPC_URL =
-  process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
-  (IS_MAINNET ? "https://soroban-rpc.stellar.org" : "https://soroban-testnet.stellar.org");
+  process.env.NEXT_PUBLIC_STELLAR_RPC_URL ?? (IS_MAINNET ? MAINNET_RPC_URL : TESTNET_RPC_URL);
 
 export const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ??

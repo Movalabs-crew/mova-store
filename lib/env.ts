@@ -9,6 +9,8 @@
 // TYPE DEFINITIONS
 // =============================================================================
 
+import { MAINNET_RPC_URL, TESTNET_RPC_URL } from "./stellar/endpoints";
+
 export interface StellarConfig {
   network: "testnet" | "mainnet";
   rpcUrl: string;
@@ -47,13 +49,14 @@ export interface EnvConfig {
 
 const STELLAR_DEFAULTS = {
   testnet: {
-    rpcUrl: "https://soroban-testnet.stellar.org",
+    // One source of truth for the endpoints (#691): see lib/stellar/endpoints.ts.
+    rpcUrl: TESTNET_RPC_URL,
     networkPassphrase: "Test SDF Network ; September 2015",
     usdcContractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
     nativeAssetContractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
   },
   mainnet: {
-    rpcUrl: "https://soroban-rpc.stellar.org",
+    rpcUrl: MAINNET_RPC_URL,
     networkPassphrase: "Public Global Stellar Network ; September 2015",
     usdcContractId: "", // Must be configured for mainnet
     nativeAssetContractId: "", // Must be configured for mainnet
