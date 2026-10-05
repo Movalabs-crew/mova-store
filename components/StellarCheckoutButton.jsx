@@ -171,9 +171,9 @@ const StellarCheckoutButton = ({
           <>
             <span className="font-semibold">Payment confirmed ✓</span>
             <span className="text-xs text-white/80">
-              {token?.isNative && effectiveXlmAmount
-                ? `~${effectiveXlmAmount.toFixed(2)} XLM ($${Number(result.amountUsd).toFixed(2)})`
-                : `$${Number(result.amountUsd).toFixed(2)} ${token?.symbol || "USDC"}`}{" "}
+              {token?.isNative
+                ? `~${Number(result.tokenAmount).toFixed(2)} XLM ($${Number(result.amountUsd).toFixed(2)})`
+                : `$${Number(result.amountUsd).toFixed(2)} ${result.tokenSymbol || token?.symbol || "USDC"}`}{" "}
               · order {effectiveOrderId}
             </span>
           </>

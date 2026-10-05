@@ -232,6 +232,72 @@ describe("StellarCheckoutButton", () => {
     expect(screen.getByText(/~100\.00 XLM/i)).toBeInTheDocument();
   });
 
+  // --- Issue #712: the confirmation must describe the payment the chain
+  // recorded, never the amount the buyer was quoted ---
+
+  it("reports the receipt's confirmed amount, not the quoted amount (#712)", async () => {
+    mockCurrentAddress.mockResolvedValue(ADDR);
+    // The buyer was quoted $12.34, but the chain only escrowed $5.00.
+    mockPayWithStellar.mockResolvedValue({ ...successResult(5), tokenAmount: 5 });
+
+    const { container } = renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    const confirmed = screen.getByText("Payment confirmed ✓").parentElement;
+    expect(confirmed.textContent).toContain("$5.00 USDC");
+    expect(confirmed.textContent).toContain("order SS-TEST-1");
+    // Presenting the requested figure as the paid figure is the bug in #712.
+    expect(confirmed.textContent).not.toContain("$12.34");
+    expect(container.textContent).not.toContain("$12.34");
+  });
+
+  it("reports the receipt's confirmed XLM amount when it differs from the quote (#712)", async () => {
+    mockCurrentAddress.mockResolvedValue(ADDR);
+    const xlmToken = {
+      contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      symbol: "XLM",
+      name: "Stellar Lumens",
+      decimals: 7,
+      isNative: true,
+    };
+    // The quote is $12 / 0.12 = 100 XLM, but the receipt recorded 40 XLM.
+    mockPayWithStellar.mockResolvedValue({
+      amountUsd: 4.8,
+      tokenAmount: 40,
+      tokenSymbol: "XLM",
+      hash: TX_HASH,
+      receipt: { ledger: 5001, orderId: "abcd".repeat(8) },
+      simulation: null,
+    });
+
+    render(
+      <StellarCheckoutButton
+        amountUsd={12}
+        orderId="SS-XLM-2"
+        token={xlmToken}
+        xlmUsdPrice={0.12}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    const confirmed = screen.getByText("Payment confirmed ✓").parentElement;
+    expect(confirmed.textContent).toContain("~40.00 XLM");
+    expect(confirmed.textContent).toContain("($4.80)");
+    expect(confirmed.textContent).not.toContain("100.00 XLM");
+  });
+
   const ADDR2 = "GCKFBEIYTKP6RJKF6LO5C6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6";
 
   it("invalidates the cached address when Freighter reports an account change (#709)", async () => {

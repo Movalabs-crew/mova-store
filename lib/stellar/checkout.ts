@@ -37,7 +37,8 @@ export interface PayOptions {
 export interface PayResult {
   hash: string;
   status: string;
-  receipt: PaymentReceipt | null;
+  /** The decoded on-chain payment event, already checked against the request. */
+  receipt: PaymentReceipt;
   amountUsd: number;
   tokenAmount: number;
   tokenSymbol: string;
@@ -93,6 +94,49 @@ export async function orderIdHash(orderId: string): Promise<string> {
 }
 
 /**
+ * Confirm a payment from the chain rather than from the request that produced it.
+ *
+ * `payWithStellar` builds the transaction from its own inputs, so those inputs
+ * only say what the buyer *asked* to pay. `decodePaymentEvent` reports what the
+ * chain actually recorded. Reporting success when the two disagree shows
+ * "Payment confirmed ✓" for a payment that escrowed a different amount or landed
+ * under a different order id, buyer or token.
+ *
+ * Every comparison is made on the decoded string form of the value: the receipt
+ * carries the raw i128 as a decimal string, so it is compared against
+ * `amountRaw.toString()` rather than against the bigint itself.
+ */
+function assertReceiptMatchesRequest(
+  receipt: PaymentReceipt | null,
+  expected: { orderId: string; buyer: string; token: string; amountRaw: bigint }
+): PaymentReceipt {
+  if (!receipt) {
+    throw new WalletError(
+      "The transaction succeeded but contained no payment event from this checkout contract. " +
+        "The payment could not be confirmed.",
+      "PAYMENT_NOT_CONFIRMED"
+    );
+  }
+
+  const mismatches: string[] = [];
+  if (receipt.orderId !== expected.orderId) mismatches.push("order id");
+  if (receipt.buyer !== expected.buyer) mismatches.push("buyer");
+  if (receipt.token !== expected.token) mismatches.push("token");
+  if (receipt.amount !== expected.amountRaw.toString()) mismatches.push("amount");
+
+  if (mismatches.length > 0) {
+    throw new WalletError(
+      `Payment confirmation did not match the request (${mismatches.join(", ")}). ` +
+        "The escrowed payment was not the payment that was requested, so it is not confirmed. " +
+        `Expected order ${expected.orderId} for ${expected.amountRaw.toString()} raw units.`,
+      "PAYMENT_MISMATCH"
+    );
+  }
+
+  return receipt;
+}
+
+/**
  * Main flow: connect wallet -> readiness checks -> simulate -> prepare ->
  * sign -> submit -> wait -> decode event.
  */
@@ -108,9 +152,11 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   }
 
   let effectiveTokenAmount: number;
+  let usdPerXlm: number | undefined;
   if (token.isNative) {
     const rate = resolveXlmUsdRate(options.xlmUsdPrice);
     if (!rate) throw new XlmRateUnavailableError();
+    usdPerXlm = rate.usdPerXlm;
     effectiveTokenAmount = options.tokenAmount ?? amountUsd / rate.usdPerXlm;
   } else {
     effectiveTokenAmount = options.tokenAmount ?? amountUsd;
@@ -181,18 +227,32 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
     onStatus("Confirming transaction…");
   }
 
-  // 7. Wait for final state and decode the payment event.
+  // 7. Wait for the final state, decode the payment event, and confirm it
+  //    against the request. The request describes what the buyer asked to pay;
+  //    only the decoded event describes what the chain recorded.
   const txResult = await waitForTransaction(sendResponse.hash);
-  const receipt = decodePaymentEvent(txResult);
+  const receipt = assertReceiptMatchesRequest(decodePaymentEvent(txResult), {
+    orderId: bytesToHex(orderBytes),
+    buyer: publicKey,
+    token: token.contractId,
+    amountRaw,
+  });
+
+  // 8. Report the escrowed figures from the receipt, never the requested ones.
+  const escrowedRaw = BigInt(receipt.amount ?? "0");
+  const escrowedTokenAmount = Number(escrowedRaw) / 10 ** (token.decimals ?? USDC_DECIMALS);
+  const escrowedUsd = token.isNative
+    ? escrowedTokenAmount * (usdPerXlm ?? 0)
+    : escrowedTokenAmount;
 
   return {
     hash: sendResponse.hash,
     status: txResult.status,
     receipt,
-    amountUsd,
-    tokenAmount: effectiveTokenAmount,
+    amountUsd: escrowedUsd,
+    tokenAmount: escrowedTokenAmount,
     tokenSymbol: token.symbol,
-    amountRaw,
+    amountRaw: escrowedRaw,
     simulation: {
       minResourceFeeStroops: report.minResourceFee?.toString() ?? "0",
       recommendedInclusionFeeStroops: fee,
