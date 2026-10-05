@@ -235,3 +235,104 @@ describe("Checkout form error identification (#603)", () => {
     expect(firstName).not.toHaveAttribute("aria-describedby");
   });
 });
+
+/**
+ * Issue #477: the card/contact validators are imported by the page, so every
+ * one of them has to actually gate submission. Each case below starts from a
+ * form that is valid except for the one field under test, so a missing
+ * validator for that field shows up as "an OTP was requested anyway".
+ */
+describe("Checkout per-field validation blocks submission (#477)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  const REJECTED: Array<{ id: string; label: string; value: string; message: string }> = [
+    {
+      id: "checkout-first-name",
+      label: "first name",
+      value: "A9",
+      message: "First name can only contain letters, spaces, hyphens, and apostrophes",
+    },
+    {
+      id: "checkout-last-name",
+      label: "last name",
+      value: "",
+      message: "Last name is required",
+    },
+    {
+      id: "checkout-email",
+      label: "email",
+      value: "not-an-email",
+      message: "Please enter a valid email address",
+    },
+    {
+      id: "checkout-address",
+      label: "address",
+      value: "12A",
+      message: "Please enter a complete address",
+    },
+    {
+      id: "checkout-card-number",
+      label: "card number",
+      value: "1234",
+      message: "Please enter a valid card number",
+    },
+    {
+      id: "checkout-expiry-date",
+      label: "expiry date",
+      value: "01/20",
+      message: "Card has expired",
+    },
+    {
+      id: "checkout-cvv",
+      label: "CVV",
+      value: "12",
+      message: "CVV must be 3 or 4 digits",
+    },
+  ];
+
+  it.each(REJECTED)(
+    "rejects an invalid $label with a visible message and sends no OTP",
+    async ({ id, value, message }) => {
+      seedCart();
+      const { container } = render(<Checkout />);
+      fillValidForm(container);
+
+      fireEvent.change(field(container, id), { target: { value } });
+      fireEvent.submit(formOf(container));
+
+      const input = field(container, id);
+      await waitFor(() => {
+        expect(input).toHaveAttribute("aria-invalid", "true");
+      });
+      expect(input).toHaveAttribute("aria-describedby", `${id}-error`);
+      expect(container.querySelector(`#${id}-error`)).toHaveTextContent(message);
+      // Every other field is valid, so this failure is the only one.
+      expect(container.querySelectorAll('[aria-invalid="true"]')).toHaveLength(1);
+      // An invalid form never spends an OTP request.
+      expect(requestOtp).not.toHaveBeenCalled();
+    }
+  );
+
+  it("accepts a card number typed with spaces", async () => {
+    vi.mocked(requestOtp).mockResolvedValueOnce({ ok: true } as any);
+
+    seedCart();
+    const { container } = render(<Checkout />);
+    fillValidForm(container);
+
+    // Spaces are how the number is printed on the card; the validator strips
+    // them, so rejecting this would be a false negative.
+    fireEvent.change(field(container, "checkout-card-number"), {
+      target: { value: "4242 4242 4242 4242" },
+    });
+    fireEvent.submit(formOf(container));
+
+    await waitFor(() => {
+      expect(requestOtp).toHaveBeenCalledTimes(1);
+    });
+    expect(container.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
+  });
+});
