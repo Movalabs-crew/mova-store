@@ -18,24 +18,42 @@ vi.mock("../../../lib/stellar/freighter", () => ({
 }));
 
 /**
- * Real topic layouts declared in `contracts/checkout/src/events.rs`.
+ * The topic layouts the checkout contract actually emits
+ * (`contracts/checkout/src/events.rs`):
  *
- * The producer emits events with the following topic positions:
+ *   pay:          (pay, token, buyer, merchant, order_id)  -> data: (amount)
+ *   create_order: (create_order, token, buyer, order_id)   -> data: (amount, timestamp)
+ *   dispatch:     (dispatch, order_id, merchant)           -> data: (amount)
+ *   refund:       (refund, order_id, buyer)                -> data: (amount)
  *
- *   create_order: (symbol, order_id, buyer)          -> data: (amount)
- *   pay:          (symbol, order_id, buyer)          -> data: (amount)
- *   dispatch:     (symbol, order_id, buyer)          -> data: (amount)
- *   refund:       (symbol, order_id, buyer)          -> data: (amount)
- *
- * `topic0` is the event symbol, `topic1` is the order id, `topic2` is the
- * buyer. The order id is therefore always at `topic1`, never at `topic0`.
+ * The indexer skips `topics[0]` (the symbol, returned separately as `symbol`)
+ * and exposes `topics[1..]` as `fields.topic1..fields.topicN`, so `topic1` is
+ * the token address for `pay`/`create_order` and only `dispatch`/`refund` put
+ * the order id there.
  */
 const REAL_TOPIC_LAYOUT = {
-  create_order: { symbol: "create_order", orderIdIndex: 1, buyerIndex: 2 },
-  pay: { symbol: "pay", orderIdIndex: 1, buyerIndex: 2 },
-  dispatch: { symbol: "dispatch", orderIdIndex: 1, buyerIndex: 2 },
-  refund: { symbol: "refund", orderIdIndex: 1, buyerIndex: 2 },
+  create_order: {
+    symbol: "create_order",
+    topics: ["create_order", "TOKEN", "BUYER", "ORDER_ID"],
+  },
+  pay: {
+    symbol: "pay",
+    topics: ["pay", "TOKEN", "BUYER", "MERCHANT", "ORDER_ID"],
+  },
+  dispatch: {
+    symbol: "dispatch",
+    topics: ["dispatch", "ORDER_ID", "MERCHANT"],
+  },
+  refund: {
+    symbol: "refund",
+    topics: ["refund", "ORDER_ID", "BUYER"],
+  },
 } as const;
+
+const TOKEN_ADDRESS =
+  "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+const MERCHANT =
+  "GCMERCHANT7BZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 
 const ORDER_ID_A =
   "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
@@ -47,10 +65,9 @@ const TX_HASH =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 /**
- * Builds an event fixture using the real topic positions declared by the
- * producer. `topic0` is the symbol, `topic1` is the order id, `topic2` is the
- * buyer. The order id is intentionally placed at `topic1` so that a mapping
- * which mistakenly reads `topic0` (the symbol) as the order id will fail.
+ * Builds an event fixture from the layout the contract declares for that event
+ * name. Every key under `fields` is one the indexer produces: `topic1..topicN`
+ * (from `topics[1..]`, so never `topic0`) plus the event's data-map entries.
  */
 function buildRealTopicEvent(
   eventName: keyof typeof REAL_TOPIC_LAYOUT,
@@ -60,21 +77,25 @@ function buildRealTopicEvent(
   ledger: number,
 ) {
   const layout = REAL_TOPIC_LAYOUT[eventName];
-  const topics: string[] = [];
-  topics[0] = layout.symbol;
-  topics[layout.orderIdIndex] = orderId;
-  topics[layout.buyerIndex] = buyer;
+  const fields: Record<string, string> = {};
+
+  layout.topics.slice(1).forEach((template, index) => {
+    const value =
+      template === "ORDER_ID"
+        ? orderId
+        : template === "BUYER"
+          ? buyer
+          : template === "TOKEN"
+            ? TOKEN_ADDRESS
+            : MERCHANT;
+    fields[`topic${index + 1}`] = value;
+  });
 
   return {
     symbol: layout.symbol,
     ledger,
     txHash: TX_HASH,
-    fields: {
-      topic0: topics[0],
-      topic1: topics[1],
-      topic2: topics[2],
-      amount,
-    },
+    fields: { ...fields, amount },
   };
 }
 
@@ -124,8 +145,13 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
+    // dispatch is (dispatch, order_id, merchant), so topic1 is the order id...
     expect(order?.orderId).toBe(ORDER_ID_B);
-    expect(order?.buyer).toBe(BUYER);
+    expect(order?.orderId).toBe(event.fields.topic1);
+    // ...and there is no buyer topic to read, so the merchant is not reported
+    // as the buyer of the order.
+    expect(event.fields.topic2).toBe(MERCHANT);
+    expect(order?.buyer).toBe("");
     expect(order?.amount).toBe("5.00"); // 50000000 raw at 7 decimals
     expect(order?.amountRaw).toBe(50000000n);
   });
@@ -147,7 +173,24 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
     expect(order?.amountRaw).toBe(50000000n);
   });
 
-  it("fails if topic1 is used as the order id", () => {
+  it("reads a create_order event's timestamp from its data map", () => {
+    const event = buildRealTopicEvent(
+      "create_order",
+      ORDER_ID_A,
+      BUYER,
+      "50000000",
+      1005,
+    );
+    // create_order's data map is (amount, timestamp); the timestamp arrives in
+    // seconds and has to be surfaced in milliseconds.
+    event.fields.timestamp = "1700000000";
+
+    const order = eventToOrder(event);
+    expect(order?.orderId).toBe(ORDER_ID_A);
+    expect(order?.timestamp).toBe(1_700_000_000_000);
+  });
+
+  it("never reports the token address as the order id for a pay event", () => {
     const event = buildRealTopicEvent(
       "pay",
       ORDER_ID_A,
@@ -158,11 +201,15 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
-    // The order id must come from topic1, not topic0 (the symbol).
-    expect(order?.orderId).not.toBe(event.fields.topic0);
-    expect(order?.orderId).not.toBe("pay");
-    expect(order?.orderId).toBe(event.fields.topic1);
+    // pay is (pay, token, buyer, merchant, order_id), so topic1 holds the token
+    // contract address - reading it as the order id made dispatchOrder hash the
+    // token and fail with OrderNotFound.
+    expect(event.fields.topic1).toBe(TOKEN_ADDRESS);
     expect(order?.orderId).toBe(ORDER_ID_A);
+    expect(order?.orderId).toBe(event.fields.topic4);
+    expect(order?.orderId).not.toBe(event.fields.topic1);
+    // The address is still reported as the token it is.
+    expect(order?.token).toBe(TOKEN_ADDRESS);
   });
 });
 
@@ -256,14 +303,17 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
     const SAMPLE_64_HEX =
       "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
+    // (pay, token, buyer, merchant, order_id) exactly as the indexer emits it:
+    // there is no `order_id` key in `fields` for a pay event.
     const indexedPayEvent = {
       symbol: "pay",
       ledger: 1000,
       txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       fields: {
-        order_id: SAMPLE_64_HEX,
-        topic1: "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
-        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic1: TOKEN_ADDRESS,
+        topic2: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        topic3: MERCHANT,
+        topic4: SAMPLE_64_HEX,
         amount: "50000000",
       },
     };
@@ -273,9 +323,12 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
     // The admin dashboard uses order.orderId directly for dispatch and refund
     expect(order?.orderId).toBe(SAMPLE_64_HEX);
     expect(order?.orderId).toHaveLength(64);
+    // A mapping that reads topic1 would hand the dashboard the token address,
+    // which hashes to something the contract has no order for.
+    expect(order?.orderId).not.toBe(indexedPayEvent.fields.topic1);
   });
 
-  it("handles event when order_id is in topic1 fallback", () => {
+  it("resolves a dispatch event's order id from topic1, where the contract puts it", () => {
     const SAMPLE_64_HEX =
       "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 

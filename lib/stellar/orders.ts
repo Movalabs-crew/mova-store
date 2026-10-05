@@ -449,14 +449,57 @@ export function eventToOrder(
       status = existingStatus ?? "Unknown";
   }
 
-  // Extract fields
-  const orderId = fields.order_id || fields.topic1 || "";
-  const buyer = fields.buyer || fields.topic2 || "";
+  // Extract fields. The contract declares a different topic layout per event
+  // (`contracts/checkout/src/events.rs`) and the indexer exposes `topics[1..]`
+  // as `topic1..topicN`. Reading `topic1` as the order id for every event made
+  // a `pay`/`create_order` event resolve to the token contract address, which
+  // the dashboard then hashed and sent to `dispatchOrder`/`refundOrder`, where
+  // it failed with `OrderNotFound`.
+  const topic = (position: number): string => fields[`topic${position}`] ?? "";
+
+  let orderId = "";
+  let buyer = "";
+  let token = "";
+  switch (symbol) {
+    // topics: (pay, token, buyer, merchant, order_id)
+    case "pay":
+      token = topic(1);
+      buyer = topic(2);
+      orderId = topic(4);
+      break;
+    // topics: (create_order, token, buyer, order_id)
+    case "create_order":
+      token = topic(1);
+      buyer = topic(2);
+      orderId = topic(3);
+      break;
+    // topics: (dispatch, order_id, merchant) - the event carries no buyer, so
+    // `buyer` stays empty rather than reporting the merchant as the buyer.
+    case "dispatch":
+      orderId = topic(1);
+      break;
+    // topics: (refund, order_id, buyer)
+    case "refund":
+      orderId = topic(1);
+      buyer = topic(2);
+      break;
+    default:
+      // Unknown event: fall back to the positional field, then to the old
+      // `topic1` behaviour so an unrecognised symbol is not silently dropped.
+      orderId = topic(1);
+      break;
+  }
+
+  // A field emitted by the event's data map wins over the positional read, so
+  // a layout that carries these values in `data` keeps working unchanged.
+  const resolvedOrderId = fields.order_id || orderId;
+  const resolvedBuyer = fields.buyer || buyer;
+  const resolvedToken = fields.token || token;
+
   const amountStr = fields.amount || "0";
-  const token = fields.token || "";
 
   // Try to get token config
-  const tokenConfig = tokenForContract(token);
+  const tokenConfig = tokenForContract(resolvedToken);
   const decimals = tokenConfig?.decimals ?? 7;
   const tokenSymbol = tokenConfig?.symbol ?? "TOKEN";
 
@@ -481,11 +524,11 @@ export function eventToOrder(
   }
 
   return {
-    orderId,
-    buyer,
+    orderId: resolvedOrderId,
+    buyer: resolvedBuyer,
     amount: amountDisplay,
     amountRaw,
-    token,
+    token: resolvedToken,
     tokenSymbol,
     status,
     timestamp,
