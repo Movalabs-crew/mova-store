@@ -1,4 +1,4 @@
-import { rpc, xdr } from "@stellar/stellar-sdk";
+import { rpc, xdr, StrKey } from "@stellar/stellar-sdk";
 
 import {
   CHECKOUT_CONTRACT_ID,
@@ -100,6 +100,9 @@ export class PaymentEventIndexer {
   ) {
     this.server = new rpc.Server(opts.rpcUrl ?? RPC_URL);
     this.contractId = opts.contractId ?? CHECKOUT_CONTRACT_ID;
+    if (!this.contractId || !StrKey.isValidContract(this.contractId)) {
+      throw new Error(`Invalid or missing checkout contract ID: "${this.contractId || ""}"`);
+    }
     this.pollMs = opts.pollMs ?? EVENT_POLL_INTERVAL_MS;
     this.watchedSymbols = opts.watchedSymbols ?? ["pay", "create_order", "dispatch", "refund"];
     this.durableStartLedger =
@@ -341,7 +344,13 @@ this.recoverFromRetentionError(err);
   }
 
   private async fetchEvents(): Promise<rpc.Api.GetEventsResponse> {
-    const filters: rpc.Api.EventFilter[] = [{ type: "contract", contractIds: [this.contractId] }];
+    const filters: rpc.Api.EventFilter[] = [
+      {
+        type: "contract",
+        contractIds: [this.contractId],
+        topics: this.topicFilters(),
+      },
+    ];
     if (this.startLedger !== undefined) {
       return this.server.getEvents({ filters, startLedger: this.startLedger });
     }
@@ -349,6 +358,15 @@ this.recoverFromRetentionError(err);
       return this.server.getEvents({ filters, cursor: this.cursor });
     }
     throw new Error("Indexer has no cursor or start ledger to poll from.");
+  }
+
+  /**
+   * One topic filter per watched symbol, matching `topics[0]` (the event name)
+   * at the RPC so unwatched events are never transferred or decoded. The RPC
+   * ORs the per-symbol filters and each segment is a base64-encoded `ScVal`.
+   */
+  private topicFilters(): string[][] {
+    return this.watchedSymbols.map((symbol) => [xdr.ScVal.scvSymbol(symbol).toXDR("base64")]);
   }
 
   /**
