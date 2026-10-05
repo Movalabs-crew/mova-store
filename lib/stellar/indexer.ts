@@ -377,6 +377,13 @@ export class PaymentEventIndexer {
    * stuck on a stale resume point.
    */
   private recoverFromRetentionError(error?: unknown): void {
+    // A transient failure - a timeout, a 5xx, a dropped connection - says
+    // nothing about where the scan should resume. Moving the window on any
+    // error skips every event between the old and the new position, so only a
+    // retention error, where the requested position has genuinely aged out of
+    // the RPC's history, may move it. Everything else retries the same window.
+    if (!isRetentionError(error)) return;
+
     if (this.startLedger !== undefined && this.latestLedger !== undefined) {
       this.startLedger = Math.max(
         this.startLedger,
@@ -385,7 +392,9 @@ export class PaymentEventIndexer {
       return;
     }
 
-    if (this.cursor !== undefined && isRetentionError(error)) {
+    // The retention check above already ran, so reaching this point means the
+    // cursor really has outlived the RPC's history.
+    if (this.cursor !== undefined) {
       this.cursor = undefined;
       this.clearPersistedCursor();
       this.startLedger = this.resolveStartLedger();

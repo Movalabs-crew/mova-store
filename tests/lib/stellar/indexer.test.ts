@@ -236,6 +236,118 @@ describe("PaymentEventIndexer recovery paths (Issues #520, #521)", () => {
   });
 });
 
+describe("PaymentEventIndexer transient-error window guard (Issue #520)", () => {
+  const STORAGE_KEY = "mova:test:transient-guard:cursor";
+
+  // Node's jsdom environment does not expose `window.localStorage` without a
+  // backing file, so install a minimal in-memory Storage for these tests.
+  function installMemoryStorage() {
+    const map = new Map<string, string>();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => (map.has(key) ? (map.get(key) as string) : null),
+        setItem: (key: string, value: string) => void map.set(key, String(value)),
+        removeItem: (key: string) => void map.delete(key),
+        clear: () => map.clear(),
+        key: (index: number) => Array.from(map.keys())[index] ?? null,
+        get length() {
+          return map.size;
+        },
+      },
+    });
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    installMemoryStorage();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does not advance the scan window when a poll fails transiently", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 900 }),
+      // Always transient: a transport failure says nothing about where the scan
+      // should resume, so every retry must re-read the same window.
+      getEvents: vi.fn().mockImplementation(async (args: Record<string, unknown>) => {
+        requests.push(args);
+        throw new Error("RPC timeout while fetching events");
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = server;
+    const errors: string[] = [];
+
+    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
+
+    await tick(80);
+    indexer.stop();
+
+    expect(requests.length).toBeGreaterThanOrEqual(2);
+    expect(errors.filter((e) => e.includes("getEvents failed")).length).toBeGreaterThanOrEqual(2);
+    // Every retry re-reads the window the first poll used. If it had moved,
+    // every event between the old and the new position would be skipped
+    // without ever being delivered.
+    expect(requests[0].startLedger).toBeDefined();
+    expect(new Set(requests.map((r) => r.startLedger)).size).toBe(1);
+    expect(indexer.scanPosition.startLedger).toBe(requests[0].startLedger);
+  });
+
+  it("still rolls the scan window forward for a genuine retention error", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 900 }),
+      getEvents: vi.fn().mockImplementation(async (args: Record<string, unknown>) => {
+        requests.push(args);
+        throw new Error("startLedger is older than the retention window");
+      }),
+    };
+
+    const indexer = new PaymentEventIndexer({ pollMs: 20 });
+    (indexer as unknown as { server: unknown }).server = server;
+
+    indexer.start({ onEvent: () => {} });
+    await tick(80);
+    indexer.stop();
+
+    const first = requests[0].startLedger as number;
+    const last = requests[requests.length - 1].startLedger as number;
+    // The requested position has aged out, so the only way to make progress is
+    // to move up to the tip (900) minus the retry delta (5).
+    expect(last).toBe(895);
+    expect(last).toBeGreaterThan(first);
+  });
+
+  it("keeps a persisted cursor when the poll fails transiently", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "cursor-kept");
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 20_000 }),
+      getEvents: vi.fn().mockRejectedValue(new Error("RPC timeout while fetching events")),
+    };
+
+    const indexer = new PaymentEventIndexer({
+      cursorStorageKey: STORAGE_KEY,
+      pollMs: 20,
+    });
+    (indexer as unknown as { server: unknown }).server = server;
+    const errors: string[] = [];
+
+    indexer.start({ onEvent: () => {}, onError: (err) => errors.push(err.message) });
+    await tick(60);
+    indexer.stop();
+
+    expect(errors.some((e) => e.includes("getEvents failed"))).toBe(true);
+    // A timeout is not evidence that the cursor expired, so it must survive.
+    expect(indexer.scanPosition.cursor).toBe("cursor-kept");
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("cursor-kept");
+  });
+});
+
 describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
   const CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
   const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
