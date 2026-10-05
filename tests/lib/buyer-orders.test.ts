@@ -10,10 +10,15 @@ import {
 import * as stellarOrders from "../../lib/stellar/orders";
 
 /**
- * Rows the mocked Supabase `select -> order -> eq` chain resolves with.
- * Tests reset this to `[]` to exercise the localStorage fallback.
+ * The mocked Supabase `select -> order -> eq` chain resolves with `db.rows` and
+ * `db.error`, the way supabase-js does: a query-level failure lands in the
+ * resolved value, never as a rejection. Tests reset `rows` to `[]` to exercise
+ * the localStorage fallback and set `error` to exercise a failed query.
  */
-const db = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
+const db = vi.hoisted(() => ({
+  rows: [] as Record<string, unknown>[],
+  error: null as { message: string } | null,
+}));
 
 // Shared so a test can make the insert resolve with an { error } (issue #561).
 const insertMock = vi.hoisted(() =>
@@ -26,7 +31,7 @@ vi.mock("../../lib/supabase", () => ({
       insert: insertMock,
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
-      eq: vi.fn(() => Promise.resolve({ data: db.rows, error: null })),
+      eq: vi.fn(() => Promise.resolve({ data: db.rows, error: db.error })),
     })),
   },
 }));
@@ -68,6 +73,7 @@ describe("Buyer Orders Management", () => {
     vi.clearAllMocks();
     db.rows = [{ ...DB_ROW }];
     insertMock.mockResolvedValue({ data: null, error: null });
+    db.error = null;
   });
 
   it("saves an order and caches it in localStorage", async () => {
@@ -106,20 +112,75 @@ describe("Buyer Orders Management", () => {
   });
 
   it("fetches orders from Supabase when available", async () => {
-    const orders = await fetchBuyerOrders("buyer@example.com");
-    expect(orders.length).toBe(1);
-    expect(orders[0].orderId).toBe("SS-DB-1");
-    expect(orders[0].total).toBe(120);
+    const result = await fetchBuyerOrders("buyer@example.com");
+    expect(result.orders.length).toBe(1);
+    expect(result.orders[0].orderId).toBe("SS-DB-1");
+    expect(result.orders[0].total).toBe(120);
+    expect(result.source).toBe("server");
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
   });
 
   it("falls back to the local cache for the signed-in user when Supabase is empty", async () => {
     db.rows = [];
     await saveBuyerOrder(sampleOrder);
 
-    const orders = await fetchBuyerOrders("buyer@example.com");
+    const result = await fetchBuyerOrders("buyer@example.com");
 
-    expect(orders.length).toBe(1);
-    expect(orders[0].orderId).toBe("SS-101");
+    expect(result.orders.length).toBe(1);
+    expect(result.orders[0].orderId).toBe("SS-101");
+    // The server answered and simply had nothing: the cache fills the gap, but
+    // this is not a stale result.
+    expect(result.source).toBe("cache");
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
+  });
+
+  it("reports a query that resolves with an error as stale cache content", async () => {
+    // supabase-js resolves query-level failures; only reading `res.error` tells
+    // this apart from an empty history.
+    db.rows = [];
+    db.error = { message: "permission denied for table orders" };
+    await saveBuyerOrder(sampleOrder);
+
+    const result = await fetchBuyerOrders("buyer@example.com");
+
+    expect(result.orders.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(result.source).toBe("cache");
+    expect(result.stale).toBe(true);
+    expect(result.error).toBe("permission denied for table orders");
+  });
+
+  it("flags a failed query even when the cache is empty", async () => {
+    db.rows = [];
+    db.error = { message: "column orders.total does not exist" };
+
+    const result = await fetchBuyerOrders("buyer@example.com");
+
+    expect(result.orders).toEqual([]);
+    expect(result.stale).toBe(true);
+    expect(result.error).toBe("column orders.total does not exist");
+  });
+
+  it("does not mark a confirmed empty history as stale", async () => {
+    db.rows = [];
+
+    const result = await fetchBuyerOrders("buyer@example.com");
+
+    expect(result.orders).toEqual([]);
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
+  });
+
+  it("keeps a failed query scoped to the caller's own cached orders", async () => {
+    db.rows = [];
+    db.error = { message: "permission denied for table orders" };
+    await saveBuyerOrder(sampleOrder);
+
+    const intruder = await fetchBuyerOrders("someone-else@example.com");
+
+    expect(intruder.orders).toEqual([]);
+    expect(intruder.stale).toBe(true);
   });
 
   it("matches a cached order by userId as well as by email", async () => {
@@ -129,8 +190,8 @@ describe("Buyer Orders Management", () => {
     const byEmail = await fetchBuyerOrders("buyer@example.com");
     const byId = await fetchBuyerOrders("user-123");
 
-    expect(byEmail.map((o) => o.orderId)).toEqual(["SS-101"]);
-    expect(byId.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(byEmail.orders.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(byId.orders.map((o) => o.orderId)).toEqual(["SS-101"]);
   });
 
   it("never returns another account's cached orders (cross-user leak)", async () => {
@@ -139,7 +200,7 @@ describe("Buyer Orders Management", () => {
 
     const intruder = await fetchBuyerOrders("someone-else@example.com");
 
-    expect(intruder).toEqual([]);
+    expect(intruder.orders).toEqual([]);
   });
 
   it("does not surface an order that is missing one identifier", async () => {
@@ -157,8 +218,8 @@ describe("Buyer Orders Management", () => {
     const unrelated = await fetchBuyerOrders("user-999");
     const owner = await fetchBuyerOrders("buyer@example.com");
 
-    expect(unrelated).toEqual([]);
-    expect(owner.map((o) => o.orderId)).toEqual(["SS-EMAIL-ONLY"]);
+    expect(unrelated.orders).toEqual([]);
+    expect(owner.orders.map((o) => o.orderId)).toEqual(["SS-EMAIL-ONLY"]);
   });
 
   it("does not return attributed orders to an anonymous caller", async () => {
@@ -167,7 +228,7 @@ describe("Buyer Orders Management", () => {
 
     const anonymous = await fetchBuyerOrders(undefined);
 
-    expect(anonymous).toEqual([]);
+    expect(anonymous.orders).toEqual([]);
   });
 
   it("shows guest orders only to an anonymous caller", async () => {
@@ -184,8 +245,8 @@ describe("Buyer Orders Management", () => {
     const signedIn = await fetchBuyerOrders("buyer@example.com");
     const anonymous = await fetchBuyerOrders(undefined);
 
-    expect(signedIn).toEqual([]);
-    expect(anonymous.map((o) => o.orderId)).toEqual(["SS-GUEST"]);
+    expect(signedIn.orders).toEqual([]);
+    expect(anonymous.orders.map((o) => o.orderId)).toEqual(["SS-GUEST"]);
   });
 
   it("verifies order on-chain via readOrder", async () => {
