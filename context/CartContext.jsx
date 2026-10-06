@@ -201,31 +201,57 @@ export const CartProvider = ({ children }) => {
       return item.id === targetProductId;
     };
 
-    const source = isHydratedRef.current
-      ? cartItems
-      : readStoredCart().storedCartItems;
-
-    const index = source.findIndex(matchesLine);
-    if (index === -1) return;
-
     // A value-based fallback (no line identity supplied) is only safe when it
     // identifies a single line; otherwise it would silently remove the first of
     // several identical products.
-    if (!targetLineId) {
-      const valueMatches = source.filter((item) => item && item.id === targetProductId).length;
-      if (valueMatches !== 1) return;
+    const resolveIndex = (source) => {
+      const index = source.findIndex(matchesLine);
+      if (index === -1) return -1;
+
+      if (!targetLineId) {
+        const valueMatches = source.filter((item) => item && item.id === targetProductId).length;
+        if (valueMatches !== 1) return -1;
+      }
+
+      return index;
+    };
+
+    if (!isHydratedRef.current) {
+      // Pre-hydration there is no in-memory cart to read `prev` from, so the
+      // stored cart remains the source of truth for this single removal.
+      const source = readStoredCart().storedCartItems;
+      const index = resolveIndex(source);
+      if (index === -1) return;
+
+      const nextCartItems = [...source];
+      nextCartItems.splice(index, 1);
+
+      const persisted = persistCart(nextCartItems);
+
+      setCartItems(persisted.items);
+      setItemCount(persisted.itemCount);
+      setTotalPrice(persisted.totalPrice);
+      return;
     }
 
-    const removedItem = source[index];
-    const nextCartItems = [...source];
-    nextCartItems.splice(index, 1);
+    // Compute inside the updater so every result is derived from `prev`, the
+    // cart as it is when the update is applied. Reading the captured `cartItems`
+    // instead let two removals in one render window compute from the same stale
+    // cart and persist a total that no longer matched the items (Issue #575).
+    setCartItems((prevCartItems) => {
+      const index = resolveIndex(prevCartItems);
+      if (index === -1) return prevCartItems;
 
-    const persisted = persistCart(nextCartItems);
+      const nextCartItems = [...prevCartItems];
+      nextCartItems.splice(index, 1);
 
-    setCartItems(persisted.items);
-    setItemCount(persisted.itemCount);
-    setTotalPrice(persisted.totalPrice);
-  }, [cartItems]);
+      const persisted = persistCart(nextCartItems);
+
+      setItemCount(persisted.itemCount);
+      setTotalPrice(persisted.totalPrice);
+      return persisted.items;
+    });
+  }, []);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
