@@ -75,10 +75,11 @@ export const computeTotalPrice = (items) => {
 /**
  * Read the persisted cart.
  *
- * The cart is stored as a single object under `cartItems` that carries both
- * the lines and the derived total. Legacy installs that persisted the total
- * under a separate `totalPriced key are migrated on read: the total is
- * recomputed from the items so a stale/forged `totalPrice` can never win.
+ * The cart is stored under `cartItems` as the lines only; the total is derived
+ * from those lines. Legacy installs that persisted a total under a separate
+ * `totalPrice` key are migrated on read: that key is never consulted, and the
+ * total here is recomputed from the items so a stale/forged value can never
+ * win (Issue #619).
  */
 export const readStoredCart = () => {
   let storedCartItems = [];
@@ -104,29 +105,32 @@ export const readStoredCart = () => {
 };
 
 /**
- * Persist the cart as a single object so the stored total always matches the
- * stored items. `itemCount` is kept as a derived convenience key for existing
- * consumers, but it is recomputed from the items on every write.
+ * Persist the cart items.
+ *
+ * Only the items are authoritative; the total is derived from them on read
+ * (Issue #619). `itemCount` is kept as a convenience key for existing
+ * consumers, but it is recomputed from the items on every write. Any legacy
+ * standalone `totalPrice` key is removed so a stale total can never linger as
+ * a second source of truth.
  */
 const persistCart = (items) => {
-  const total = computeTotalPrice(items);
   try {
-    localStorage.setItem(
-      "cartItems",
-      JSON.stringify({ items, total })
-    );
+    localStorage.setItem("cartItems", JSON.stringify({ items }));
     localStorage.setItem("itemCount", String(items.length));
-    localStorage.setItem("totalPrice", String(total));
+    localStorage.removeItem("totalPrice");
   } catch {}
-  return { items, itemCount: items.length, totalPrice: total };
+  return { items, itemCount: items.length };
 };
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [itemCount, setItemCount] = useState(0);
-  const [totalPrice, setTotalPrice] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const isHydratedRef = useRef(false);
+
+  // `cartItems` is the single source of truth: the total is a pure function of
+  // it, so the displayed value can never describe a cart that no longer exists.
+  const totalPrice = useMemo(() => computeTotalPrice(cartItems), [cartItems]);
 
   useEffect(() => {
     isHydratedRef.current = true;
@@ -140,7 +144,6 @@ export const CartProvider = ({ children }) => {
 
     setCartItems(persisted.items);
     setItemCount(persisted.itemCount);
-    setTotalPrice(persisted.totalPrice);
   }, []);
 
   const addToCart = useCallback((product) => {
@@ -159,7 +162,6 @@ export const CartProvider = ({ children }) => {
 
       setCartItems(persisted.items);
       setItemCount(persisted.itemCount);
-      setTotalPrice(persisted.totalPrice);
       return;
     }
 
@@ -167,7 +169,6 @@ export const CartProvider = ({ children }) => {
       const merged = [...prevCartItems, cartLine];
       const persisted = persistCart(merged);
       setItemCount(persisted.itemCount);
-      setTotalPrice(persisted.totalPrice);
       return persisted.items;
     });
   }, []);
@@ -224,13 +225,11 @@ export const CartProvider = ({ children }) => {
 
     setCartItems(persisted.items);
     setItemCount(persisted.itemCount);
-    setTotalPrice(persisted.totalPrice);
   }, [cartItems]);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
     setItemCount(0);
-    setTotalPrice(0);
     try {
       localStorage.removeItem("cartItems");
       localStorage.removeItem("itemCount");

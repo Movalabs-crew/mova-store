@@ -58,6 +58,30 @@ export interface OrderActionResult {
 }
 
 // ---------------------------------------------------------------------------
+// Order IDs
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a human-readable, unguessable order id.
+ *
+ * The id is hashed to the 32-byte `order_id` that the contract treats as
+ * unique: a second `create_order` for an id already registered is rejected with
+ * `OrderAlreadyPaid`, so a predictable id lets an observer pre-register a
+ * buyer's likely id and permanently block that checkout (#708). `Math.random()`
+ * is not a CSPRNG; the entropy here comes from `crypto.getRandomValues`, which
+ * keeps the `SS-<timestamp>-<6 digits>` shape that callers and support tooling
+ * read.
+ */
+export function generateOrderId(): string {
+  const entropy = new Uint32Array(1);
+  crypto.getRandomValues(entropy);
+  // Same 0..999_999 range the previous `Math.floor(Math.random() * 1e6)`
+  // produced, without the predictable PRNG behind it.
+  const suffix = entropy[0] % 1_000_000;
+  return `SS-${Date.now()}-${suffix}`;
+}
+
+// ---------------------------------------------------------------------------
 // Status Conversion
 // ---------------------------------------------------------------------------
 

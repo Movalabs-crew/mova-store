@@ -74,14 +74,19 @@ function status(s: string): void {
 }
 
 /**
- * Convert a USD amount to raw token units (7 decimals).
- * e.g. 12.34 -> 123_400_000
+ * Convert a USD amount to raw token units.
+ * e.g. 12.34 at 7 decimals -> 123_400_000
+ *
+ * `decimals` must be the *selected token's* decimals. It defaults to
+ * USDC_DECIMALS so the USDC path is unchanged, but hardcoding it is only
+ * correct while every whitelisted token happens to have 7 decimals: a 6- or
+ * 8-decimal SEP-41 token would be converted off by a factor of ten.
  */
-export function usdToRawUnits(amountUsd: number): bigint {
+export function usdToRawUnits(amountUsd: number, decimals: number = USDC_DECIMALS): bigint {
   if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
     throw new WalletError("Invalid amount to pay.", "INVALID_AMOUNT");
   }
-  const raw = Math.round(amountUsd * 10 ** USDC_DECIMALS);
+  const raw = Math.round(amountUsd * 10 ** decimals);
   return BigInt(raw);
 }
 
@@ -161,7 +166,7 @@ export async function payWithStellar(options: PayOptions): Promise<PayResult> {
   } else {
     effectiveTokenAmount = options.tokenAmount ?? amountUsd;
   }
-  const amountRaw = usdToRawUnits(effectiveTokenAmount);
+  const amountRaw = usdToRawUnits(effectiveTokenAmount, token.decimals);
   const orderBytes = await hashOrderId(orderId);
 
   // 1. Network guard.

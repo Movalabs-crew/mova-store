@@ -145,19 +145,12 @@ export class BuyerOrderPersistenceError extends Error {
 }
 
 /**
- * Saves an order to Supabase and syncs to local storage cache.
- *
- * The local cache is the continuity mechanism and is written first. The
- * Supabase insert result is inspected: a duplicate id, a constraint violation,
- * or an RLS denial resolves with ``{ error }`` and is surfaced as a
- * :class:`BuyerOrderPersistenceError` rather than being reported as a
- * successful write.
- *
- * @throws {BuyerOrderPersistenceError} when the row was not persisted (the
- *   order is still available on the error as ``error.order`` and in the cache).
+ * Write an order into the local cache, replacing any entry with the same
+ * `orderId`. The cache is the continuity mechanism: it is written before (and
+ * independently of) any server call so the order stays visible on this browser
+ * even if persistence fails.
  */
-export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
-  // 1. Cache to localStorage first so the order survives even if persistence fails.
+function cacheBuyerOrder(order: BuyerOrder): void {
   try {
     const cached = getCachedBuyerOrders();
     const existingIndex = cached.findIndex((o) => o.orderId === order.orderId);
@@ -172,6 +165,27 @@ export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
   } catch (err) {
     console.warn("Failed to cache order to localStorage:", err);
   }
+}
+
+/**
+ * Saves an order to Supabase and syncs to local storage cache.
+ *
+ * The local cache is the continuity mechanism and is written first. The
+ * Supabase insert result is inspected: a duplicate id, a constraint violation,
+ * or an RLS denial resolves with ``{ error }`` and is surfaced as a
+ * :class:`BuyerOrderPersistenceError` rather than being reported as a
+ * successful write.
+ *
+ * @throws {BuyerOrderPersistenceError} when the row was not persisted (the
+ *   order is still available on the error as ``error.order`` and in the cache).
+ *
+ * Note: this writes directly to Supabase from the browser. New order writes
+ * should use {@link recordBuyerOrder}, which verifies the on-chain payment
+ * server-side before the row is created (issue #491).
+ */
+export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
+  // 1. Cache to localStorage first so the order survives even if persistence fails.
+  cacheBuyerOrder(order);
 
   // 2. Persist to Supabase, inspecting the resolved result (see the docstring).
   if (!supabase) {
@@ -208,6 +222,57 @@ export async function saveBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
     console.warn("Could not insert order into Supabase, kept in local cache:", message);
     throw new BuyerOrderPersistenceError(message, order);
   }
+}
+
+/**
+ * Records a paid order through the server route.
+ *
+ * Unlike {@link saveBuyerOrder} (which inserts straight into Supabase from the
+ * browser), this is the checked write path: `/api/orders` re-verifies the
+ * on-chain payment against the checkout contract and only then writes the row
+ * with the service-role client. The browser therefore cannot record a "Paid"
+ * order for a payment that never happened.
+ *
+ * The local cache is still written first so the order is visible on this
+ * browser even if the server rejects or cannot be reached.
+ *
+ * @throws {BuyerOrderPersistenceError} when the server rejected or could not
+ *   persist the order (the order stays on the error and in the cache).
+ */
+export async function recordBuyerOrder(order: BuyerOrder): Promise<BuyerOrder> {
+  cacheBuyerOrder(order);
+
+  let response: Response;
+  try {
+    response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("Could not reach the orders API, kept in local cache:", message);
+    throw new BuyerOrderPersistenceError(message, order);
+  }
+
+  if (!response.ok) {
+    let message = `Order was not recorded (HTTP ${response.status}).`;
+    try {
+      const payload = (await response.json()) as { error?: unknown; reason?: unknown };
+      if (typeof payload?.error === "string") {
+        message =
+          typeof payload.reason === "string"
+            ? `${payload.error}: ${payload.reason}`
+            : payload.error;
+      }
+    } catch {
+      // Keep the HTTP-status message when the body is not JSON.
+    }
+    console.warn("Orders API rejected the order, kept in local cache:", message);
+    throw new BuyerOrderPersistenceError(message, order);
+  }
+
+  return order;
 }
 
 /**

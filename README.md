@@ -66,6 +66,7 @@ timestamp, status }` and transitions `Pending → Paid → Shipped/Refunded`.
 - [Deep Stellar Integration](#deep-stellar-integration)
 - [Architecture](#architecture)
 - [Repository Layout](#repository-layout)
+- [Documentation](#documentation)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
@@ -190,7 +191,7 @@ other side of the rule: their ids come from event topics and are exactly 64
 hex, so they must pass through unchanged.
 
 The contract is pinned by
-[`tests/lib/resolve-order-id-hash.test.ts`](tests/lib/resolve-order-id-hash.test.ts).
+[`tests/lib/resolve-order-id-hash.byte-passthrough.test.ts`](tests/lib/resolve-order-id-hash.byte-passthrough.test.ts).
 
 ## Repository Layout
 
@@ -235,6 +236,12 @@ mova-store/
 ├── package.json                    # Frontend dependencies + scripts
 └── LICENSE
 ```
+
+## Documentation
+
+The full documentation index lives in **[docs/README.md](docs/README.md)**. It
+lists every guide under `docs/` — architecture, bundle budget, mainnet
+deployment and troubleshooting — with a one-line description of each.
 
 ## Tech Stack
 

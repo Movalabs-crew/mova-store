@@ -3,6 +3,7 @@ import { SiStellar } from "react-icons/si";
 
 import { payWithStellar } from "../lib/stellar/checkout";
 import { defaultToken } from "../lib/stellar/config";
+import { generateOrderId } from "../lib/stellar/orders";
 import { resolveXlmUsdRate, XlmRateUnavailableError } from "../lib/stellar/price";
 import {
   connectWallet,
@@ -31,7 +32,7 @@ const StellarCheckoutButton = ({
   const [result, setResult] = useState(null);
   const addressRef = useRef("");
 
-  const generatedOrderId = useMemo(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`, []);
+  const generatedOrderId = useMemo(() => generateOrderId(), []);
   const effectiveOrderId = orderId || generatedOrderId;
 
   const xlmRate = useMemo(

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import AdminGuard from "../../../components/AdminGuard";
 import StellarWalletButton from "../../../components/StellarWalletButton";
-import { PaymentEventIndexer, IndexedEvent } from "../../../lib/stellar/indexer";
+import { PaymentEventIndexer, IndexedEvent, IndexerCallbacks } from "../../../lib/stellar/indexer";
 import {
   dispatchOrder,
   refundOrder,
@@ -182,6 +182,13 @@ const OrdersManagementContent = () => {
     eventsSeen: number;
   }>({ running: false, eventsSeen: 0 });
 
+  // Keep the running indexer and the callbacks it was started with reachable
+  // from the Refresh button, so "refresh" re-polls the live indexer in place
+  // instead of reloading the document (which would restart the scan and drop
+  // the in-memory order map).
+  const indexerRef = useRef<PaymentEventIndexer | null>(null);
+  const indexerCallbacksRef = useRef<IndexerCallbacks | null>(null);
+
   // Initialize event indexer
   useEffect(() => {
     // The admin table is an operations view: it must show orders paid long
@@ -194,7 +201,7 @@ const OrdersManagementContent = () => {
       cursorStorageKey: ADMIN_ORDERS_CURSOR_STORAGE_KEY,
     });
 
-    indexer.start({
+    const callbacks: IndexerCallbacks = {
       onEvent: (event: IndexedEvent) => {
         const order = eventToOrder(event);
         if (order) {
@@ -221,7 +228,11 @@ const OrdersManagementContent = () => {
       onError: (err) => {
         setIsLoading(false);
       },
-    });
+    };
+
+    indexerRef.current = indexer;
+    indexerCallbacksRef.current = callbacks;
+    indexer.start(callbacks);
 
     // Stop after 2 seconds of loading to show UI
     const loadingTimeout = setTimeout(() => {
@@ -230,8 +241,20 @@ const OrdersManagementContent = () => {
 
     return () => {
       indexer.stop();
+      indexerRef.current = null;
+      indexerCallbacksRef.current = null;
       clearTimeout(loadingTimeout);
     };
+  }, []);
+
+  // Re-poll the existing indexer without a document reload. Orders already in
+  // the map stay there; the refresh only adds events that landed since the last
+  // poll. A no-op while the indexer is stopped or paused.
+  const handleRefresh = useCallback(() => {
+    const indexer = indexerRef.current;
+    const callbacks = indexerCallbacksRef.current;
+    if (!indexer || !callbacks) return;
+    indexer.refresh(callbacks);
   }, []);
 
   // Confirmation dialog state for irreversible escrow actions.
@@ -496,7 +519,7 @@ const OrdersManagementContent = () => {
         <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-800">Orders</h2>
           <button
-            onClick={() => window.location.reload()}
+            onClick={handleRefresh}
             className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-800"
           >
             <MdRefresh /> Refresh

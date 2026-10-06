@@ -36,7 +36,8 @@ describe("CartContext removeFromCart", () => {
     expect(result.current.cartItems[0].id).toBe("p2");
 
     expect(localStorage.getItem("itemCount")).toBe("1");
-    expect(localStorage.getItem("totalPrice")).toBe("50");
+    // Issue #619: no separate total key is persisted.
+    expect(localStorage.getItem("totalPrice")).toBeNull();
     expect(JSON.parse(localStorage.getItem("cartItems") || "{}").items || []).toHaveLength(1);
   });
 
@@ -62,7 +63,8 @@ describe("CartContext removeFromCart", () => {
     expect(result.current.totalPrice).toBe(100);
     expect(result.current.cartItems).toHaveLength(1);
     expect(localStorage.getItem("itemCount")).toBe("1");
-    expect(localStorage.getItem("totalPrice")).toBe("100");
+    // Issue #619: no separate total key is persisted.
+    expect(localStorage.getItem("totalPrice")).toBeNull();
   });
 
   it("repeated remove calls can never produce a negative itemCount or totalPrice", () => {
