@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor, renderHook, act } from "@testing-library/react";
-import { CartProvider, useCart } from "../../context/CartContext";
+import { CartProvider, useCart, computeTotalPrice } from "../../context/CartContext";
 
 const shirt = { id: "prod_1", name: "Shirt", price: 25.5 };
 const hat = { id: "prod_2", name: "Hat", price: 10 };
@@ -58,9 +58,11 @@ function expectStored({ items, count, total, cleared = false }) {
   }
   expect(withoutLineIds(readStoredItems())).toEqual(items);
   expect(localStorage.getItem("itemCount")).toBe(String(count));
-  expect(localStorage.getItem("totalPrice")).toBe(String(total));
+  // Issue #619: the total is derived from the items and is never persisted as
+  // its own key, so a stale standalone total can never be read back.
+  expect(localStorage.getItem("totalPrice")).toBeNull();
+  expect(computeTotalPrice(readStoredItems())).toBe(total);
   expect(Number(localStorage.getItem("itemCount"))).toBeGreaterThanOrEqual(0);
-  expect(Number(localStorage.getItem("totalPrice"))).toBeGreaterThanOrEqual(0);
 }
 
 describe("CartProvider hydration error handling", () => {
@@ -304,13 +306,11 @@ describe("CartProvider count and total transitions", () => {
     });
 
     const storedAfterEdit = readStoredItems();
-    const storedTotalAfterEdit = Number(localStorage.getItem("totalPrice"));
-    const derivedTotalAfterEdit = storedAfterEdit.reduce(
-      (sum, item) => sum + (Number(item.price) || 0),
-      0
-    );
-    expect(storedTotalAfterEdit).toBe(derivedTotalAfterEdit);
-    expect(storedTotalAfterEdit).toBe(10);
+    // The total is not persisted as its own key (Issue #619); it is derived
+    // from the stored items on read and from `cartItems` in state.
+    expect(localStorage.getItem("totalPrice")).toBeNull();
+    const derivedTotalAfterEdit = computeTotalPrice(storedAfterEdit);
+    expect(derivedTotalAfterEdit).toBe(10);
 
     unmount();
 
