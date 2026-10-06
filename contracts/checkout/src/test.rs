@@ -1168,3 +1168,63 @@ fn test_whitelist_entry_stays_usable_past_the_refresh_threshold() {
     client.pay(&token, &buyer, &id, &10_000);
     assert_eq!(client.status(&id), Some(Status::Paid));
 }
+
+// ---------------------------------------------------------------------------
+// Delisting a token must not strand escrow (#497)
+// ---------------------------------------------------------------------------
+
+/// `test_remove_token_disables_payments` covers delisting *before* payment.
+/// Delisting a token whose order is already paid must not trap the escrowed
+/// funds: the whitelist gates new payments (`pay`), while `dispatch` releases
+/// an existing order by its recorded token. If `dispatch` started consulting
+/// the whitelist, this escrow would be stranded in the contract forever.
+#[test]
+fn test_remove_token_after_payment_still_dispatches_to_merchant() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 61);
+
+    // Pay while the token is still whitelisted: the contract holds the escrow.
+    client.pay(&token, &buyer, &id, &100_000);
+    assert_eq!(client.status(&id), Some(Status::Paid));
+    assert_eq!(usdc_balance(&env, &token, &checkout), 100_000);
+    assert_eq!(usdc_balance(&env, &token, &merchant), 0);
+
+    // Delist the token after the order has been paid.
+    client.remove_token(&token);
+    assert!(!client.is_token_allowed(&token));
+
+    // Dispatch still succeeds and the escrow reaches the merchant.
+    let result = client.try_dispatch(&id);
+    assert_eq!(result, Ok(Ok(())));
+    assert_eq!(usdc_balance(&env, &token, &checkout), 0);
+    assert_eq!(usdc_balance(&env, &token, &merchant), 100_000);
+    assert_eq!(client.status(&id), Some(Status::Shipped));
+}
+
+/// The refund escape hatch for an already-paid order must survive delisting
+/// too, otherwise a merchant who removed a token could never return an
+/// undispatched order's funds to its buyer.
+#[test]
+fn test_remove_token_after_payment_still_refunds_to_buyer() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
+    let id = order_id(&env, 62);
+
+    client.pay(&token, &buyer, &id, &100_000);
+    assert_eq!(usdc_balance(&env, &token, &checkout), 100_000);
+    assert_eq!(usdc_balance(&env, &token, &buyer), 900_000);
+
+    client.remove_token(&token);
+    assert!(!client.is_token_allowed(&token));
+
+    let result = client.try_refund(&id);
+    assert_eq!(result, Ok(Ok(())));
+    assert_eq!(usdc_balance(&env, &token, &checkout), 0);
+    assert_eq!(usdc_balance(&env, &token, &buyer), 1_000_000);
+    assert_eq!(client.status(&id), Some(Status::Refunded));
+}
