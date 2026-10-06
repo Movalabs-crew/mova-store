@@ -1,0 +1,21 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "fix/575-cart-total-from-prev-state",
+    "fix/issue-575-fix-cart-compute-the-cart-total-from-the",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "fix/575-cart-total-from-prev-state": "main",
+    "fix/issue-575-fix-cart-compute-the-cart-total-from-the": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "fix/575-cart-total-from-prev-state",
+    "fix/issue-575-fix-cart-compute-the-cart-total-from-the",
+    "origin"
+  ]
+}
