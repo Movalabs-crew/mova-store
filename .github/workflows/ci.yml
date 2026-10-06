@@ -73,6 +73,9 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Type check tests
+        run: npm run type-check:tests
+
       # "vitest run --coverage" executes the whole suite once and collects v8
       # coverage in the same pass, so a separate "npm run test" step would run
       # every test a second time for no extra signal. The coverage thresholds in
