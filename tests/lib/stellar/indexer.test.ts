@@ -1284,3 +1284,132 @@ describe("PaymentEventIndexer cursor expiry recovery (Issue #538)", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("cursor-live");
   });
 });
+
+describe("PaymentEventIndexer.refresh() (Issue #720)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+
+  /** A watched `pay` event, enough for decodeEvent to hand it to onEvent. */
+  function payEvent(id: string): rpc.Api.EventResponse {
+    return {
+      id,
+      pagingToken: id,
+      ledger: 5000,
+      ledgerClosedAt: "2026-09-07T01:15:30Z",
+      contractId: CONTRACT_ID,
+      topic: [symbolToScVal("pay")],
+      value: xdr.ScVal.scvVoid(),
+      inSuccessfulContractCall: true,
+      txHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    } as unknown as rpc.Api.EventResponse;
+  }
+
+  it("re-polls in place without restarting the scan or losing delivered events", async () => {
+    const delivered: IndexedEvent[] = [];
+    let calls = 0;
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 5000 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        calls += 1;
+        return {
+          latestLedger: 5000,
+          cursor: `cursor-${calls}`,
+          events: [payEvent("evt-refresh-1")],
+        };
+      }),
+    };
+
+    // A poll interval far longer than the test: any poll after the first must
+    // come from refresh(), not from the timer.
+    const indexer = new PaymentEventIndexer({ pollMs: 1_000_000 });
+    (indexer as unknown as { server: unknown }).server = server;
+    const callbacks = { onEvent: (e: IndexedEvent) => delivered.push(e) };
+
+    indexer.start(callbacks);
+    await tick(0);
+    expect(calls).toBe(1);
+    expect(delivered).toHaveLength(1);
+    expect(indexer.scanPosition.cursor).toBe("cursor-1");
+
+    indexer.refresh(callbacks);
+    await tick(0);
+
+    // The refresh ran one more poll against the same live indexer...
+    expect(calls).toBe(2);
+    // ...advanced the cursor instead of resetting it...
+    expect(indexer.scanPosition.cursor).toBe("cursor-2");
+    // ...and did not re-emit an event that was already delivered, so a refresh
+    // can only add to the in-memory order map.
+    expect(delivered).toHaveLength(1);
+
+    indexer.stop();
+  });
+
+  it("is a no-op before start() and after stop()", async () => {
+    let calls = 0;
+    const server = {
+      getLatestLedger: vi.fn().mockResolvedValue({ sequence: 100 }),
+      getEvents: vi.fn().mockImplementation(async () => {
+        calls += 1;
+        return { latestLedger: 100, cursor: `cursor-${calls}`, events: [] };
+      }),
+    };
+    const indexer = new PaymentEventIndexer({ pollMs: 1_000_000 });
+    (indexer as unknown as { server: unknown }).server = server;
+
+    indexer.refresh({ onEvent: () => {} });
+    await tick(0);
+    expect(server.getEvents).not.toHaveBeenCalled();
+
+    indexer.start({ onEvent: () => {} });
+    await tick(0);
+    const afterStart = calls;
+
+    indexer.stop();
+    indexer.refresh({ onEvent: () => {} });
+    await tick(0);
+    expect(calls).toBe(afterStart);
+  });
+
+  it("is a no-op while paused; the resume tick owns the catch-up poll", async () => {
+    let hidden = false;
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+
+    try {
+      let calls = 0;
+      const server = {
+        getLatestLedger: vi.fn().mockResolvedValue({ sequence: 100 }),
+        getEvents: vi.fn().mockImplementation(async () => {
+          calls += 1;
+          return { latestLedger: 100, cursor: `cursor-${calls}`, events: [] };
+        }),
+      };
+      const indexer = new PaymentEventIndexer({ pollMs: 1_000_000 });
+      (indexer as unknown as { server: unknown }).server = server;
+
+      indexer.start({ onEvent: () => {} });
+      await tick(0);
+      expect(calls).toBe(1);
+
+      hidden = true;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await tick(0);
+      expect(indexer.status.paused).toBe(true);
+
+      indexer.refresh({ onEvent: () => {} });
+      await tick(0);
+      expect(calls).toBe(1);
+
+      indexer.stop();
+    } finally {
+      delete (document as unknown as { hidden?: boolean }).hidden;
+    }
+  });
+});

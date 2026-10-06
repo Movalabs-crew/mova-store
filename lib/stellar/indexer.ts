@@ -152,6 +152,22 @@ export class PaymentEventIndexer {
     }
   }
 
+  /**
+   * Re-poll immediately without tearing down state: the cursor, the seen-id set
+   * and every event already delivered are kept, so a manual refresh can only
+   * add to what a view has loaded, never drop it. Used by "Refresh" buttons in
+   * place of a document reload, which would restart the indexer and re-scan
+   * only the backfill window.
+   *
+   * Safe to call at any time: it is a no-op when the indexer is not running or
+   * is paused (a hidden tab resumes with its own catch-up tick), and `tick`
+   * itself skips the call if a poll is already in flight.
+   */
+  refresh(callbacks: IndexerCallbacks): void {
+    if (!this.running || this.paused) return;
+    void this.tick(callbacks);
+  }
+
   private async tick(callbacks: IndexerCallbacks): Promise<void> {
     if (!this.running || this.paused) return;
 
