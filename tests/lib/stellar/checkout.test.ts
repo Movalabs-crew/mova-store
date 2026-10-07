@@ -31,6 +31,17 @@ describe("usdToRawUnits", () => {
     expect(usdToRawUnits(1)).toBe(10_000_000n);
   });
 
+  it("converts with an explicit non-7-decimal token's decimals (#527)", () => {
+    // A 6-decimal SEP-41 token: $12.34 is 12_340_000 raw units, not 123_400_000.
+    expect(usdToRawUnits(12.34, 6)).toBe(12_340_000n);
+    expect(usdToRawUnits(1, 6)).toBe(1_000_000n);
+    // An 8-decimal token: $12.34 is 1_234_000_000 raw units.
+    expect(usdToRawUnits(12.34, 8)).toBe(1_234_000_000n);
+    // Omitting the argument keeps the USDC default, so existing callers are
+    // unaffected.
+    expect(usdToRawUnits(12.34)).toBe(usdToRawUnits(12.34, 7));
+  });
+
   const cases: Array<[string, number]> = [
     ["zero", 0],
     ["negative", -5],
@@ -527,5 +538,32 @@ describe("payWithStellar", () => {
     expect(result.amountRaw).toBe(400_000_000n);
     expect(result.tokenAmount).toBe(40);
     expect(result.amountUsd).toBeCloseTo(4.8);
+  });
+
+  it("builds the payment with the selected token's decimals, not USDC's (#527)", async () => {
+    // A 6-decimal SEP-41 token. Its $12.34 payment must be 12_340_000 raw
+    // units; using USDC's 7 decimals would escrow ten times the amount and the
+    // receipt would no longer match the request.
+    const sixDecimalToken = {
+      contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      symbol: "SIX",
+      name: "Six Decimal Token",
+      decimals: 6,
+    };
+    await mockFlowWithReceipt("ORD-SIX-DECIMALS", {
+      amount: "12340000",
+      token: sixDecimalToken.contractId,
+    });
+
+    const result = await payWithStellar({
+      amountUsd: 12.34,
+      orderId: "ORD-SIX-DECIMALS",
+      publicKey: dummyPublicKey,
+      token: sixDecimalToken,
+    });
+
+    expect(result.amountRaw).toBe(12_340_000n);
+    expect(result.tokenAmount).toBeCloseTo(12.34);
+    expect(result.tokenSymbol).toBe("SIX");
   });
 });

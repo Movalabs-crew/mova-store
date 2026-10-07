@@ -1,14 +1,22 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   dispatchOrder,
   refundOrder,
   resolveOrderIdHash,
+  readOrder,
   eventToOrder,
   formatOrderAmount,
   formatOrderRow,
   DEFAULT_DECIMALS,
 } from "../../../lib/stellar/orders";
-import { bytesToHex, hashOrderId, hexToBytes } from "../../../lib/stellar/scval";
+import {
+  bytesToHex,
+  hashOrderId,
+  hexToBytes,
+  i128ToScVal,
+  addressToScVal,
+  symbolToScVal,
+} from "../../../lib/stellar/scval";
 import * as freighterMod from "../../../lib/stellar/freighter";
 import { rpc, xdr } from "@stellar/stellar-sdk";
 
@@ -420,5 +428,100 @@ describe("Checkout contract configuration validation", () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe("connect failed");
     expect(result.error).not.toMatch(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
+  });
+});
+
+describe("readOrder (mocked RPC)", () => {
+  const ORDER_ID_HEX =
+    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const ORDER_BUYER =
+    "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const ORDER_TOKEN =
+    "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+  const ORDER_TIMESTAMP = 1_700_000_000;
+
+  /**
+   * The contract returns `Option<Order>`: a zero-length vec for `None` and a
+   * one-element vec holding the order struct for `Some`. `readOrder` parses the
+   * struct's `scvMap`, so this builds it from the same helpers the rest of the
+   * suite uses.
+   */
+  function buildOrderRetval(): xdr.ScVal {
+    const orderMap = xdr.ScVal.scvMap([
+      new xdr.ScMapEntry({
+        key: symbolToScVal("buyer"),
+        val: addressToScVal(ORDER_BUYER),
+      }),
+      new xdr.ScMapEntry({
+        key: symbolToScVal("token"),
+        val: addressToScVal(ORDER_TOKEN),
+      }),
+      new xdr.ScMapEntry({
+        key: symbolToScVal("amount"),
+        val: i128ToScVal(50_000_000n),
+      }),
+      new xdr.ScMapEntry({
+        key: symbolToScVal("timestamp"),
+        val: xdr.ScVal.scvU64(BigInt(ORDER_TIMESTAMP)),
+      }),
+      new xdr.ScMapEntry({
+        key: symbolToScVal("status"),
+        val: xdr.ScVal.scvVec([symbolToScVal("Paid")]),
+      }),
+    ]);
+
+    return xdr.ScVal.scvVec([orderMap]);
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // `readOrder` simulates against a throwaway keypair's account and only
+    // parses the result when that lookup does not resolve to an account, so the
+    // mocked server must not report one.
+    vi.spyOn(rpc.Server.prototype, "getAccount").mockRejectedValue(
+      new Error("account not found"),
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("asserts status, amount, token, buyer and timestamp for a found order", async () => {
+    vi.spyOn(rpc.Server.prototype, "simulateTransaction").mockResolvedValue({
+      transactionData: {},
+      result: { retval: buildOrderRetval() },
+    } as never);
+
+    const order = await readOrder(ORDER_ID_HEX);
+
+    expect(order).not.toBeNull();
+    expect(order?.status).toBe("Paid");
+    expect(order?.amount).toBe(50_000_000n);
+    expect(order?.amountDisplay).toBe("5.00");
+    expect(order?.token).toBe(ORDER_TOKEN);
+    expect(order?.buyer).toBe(ORDER_BUYER);
+    expect(order?.timestamp).toBe(ORDER_TIMESTAMP);
+  });
+
+  it("returns null when the order is absent", async () => {
+    // `None` is an empty vec / void retval; either way there is no order map.
+    vi.spyOn(rpc.Server.prototype, "simulateTransaction").mockResolvedValue({
+      transactionData: {},
+      result: { retval: xdr.ScVal.scvVoid() },
+    } as never);
+
+    await expect(readOrder(ORDER_ID_HEX)).resolves.toBeNull();
+  });
+
+  it("returns null when the RPC simulation reports an error", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(rpc.Server.prototype, "simulateTransaction").mockResolvedValue({
+      error: "host invocation failed",
+    } as never);
+
+    await expect(readOrder(ORDER_ID_HEX)).resolves.toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+    expect(errorSpy.mock.calls.flat().join(" ")).toContain("host invocation failed");
   });
 });

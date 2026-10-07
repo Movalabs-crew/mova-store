@@ -25,7 +25,10 @@ import { requestOtp, verifyOtp } from "../../lib/otp-client";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 import StellarWalletButton from "../../components/StellarWalletButton";
 import StellarOrderWatch from "../../components/StellarOrderWatch";
+import { recordBuyerOrder } from "../../lib/buyer-orders";
+import type { PayResult } from "../../lib/stellar/checkout";
 import { SUPPORTED_TOKENS, defaultToken, TokenConfig, NETWORK } from "../../lib/stellar/config";
+import { generateOrderId } from "../../lib/stellar/orders";
 import { resolveXlmUsdRate, TESTNET_REFERENCE_XLM_USD_PRICE } from "../../lib/stellar/price";
 import {
   validateOTP,
@@ -120,13 +123,37 @@ const Checkout = () => {
     subject: "YOUR ORDER CONFIRMATION",
   });
 
-  const [orderId] = useState(() => `SS-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+  const [orderId] = useState(() => generateOrderId());
 
-  const handleStellarSuccess = (result: { amountUsd: number | string; tokenSymbol?: string }) => {
+  const handleStellarSuccess = async (result: PayResult) => {
     const symbol = result.tokenSymbol || selectedToken.symbol;
     showToast(
       `${symbol} payment received ✓ $${Number(result.amountUsd).toFixed(2)} · order ${orderId}`
     );
+
+    // Record the order through the server route, which re-verifies the payment
+    // against the checkout contract before writing the row. The browser never
+    // writes a "Paid" order directly, so it cannot forge one.
+    try {
+      await recordBuyerOrder({
+        id: crypto.randomUUID(),
+        orderId,
+        userEmail: formData.email.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        total: Number(result.amountUsd),
+        status: "Paid",
+        paymentMethod: "stellar",
+        tokenSymbol: symbol,
+        tokenAmount: result.tokenAmount,
+        txHash: result.hash,
+        ledger: result.receipt?.ledger,
+        items: cartItems,
+      });
+    } catch (err) {
+      console.error("Failed to record the order:", err);
+      showToast(err instanceof Error ? err.message : "Order could not be recorded.");
+    }
+
     setStage(3);
     localStorage.removeItem(CART_STORAGE_KEY);
     localStorage.removeItem("itemCount");

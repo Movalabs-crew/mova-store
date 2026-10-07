@@ -1,13 +1,12 @@
 # Product image cleanup
 
-This guide describes the implementation submitted in
-[PR377](https://github.com/Movalabs-crew/mova-store/pull/377), using source commit
-`9d1c7ab0a869241ccc9e72cbbdb0e1a44a8edc46`. The documentation addition changes no
-product code or tests.
+This note records the implementation submitted in
+[PR 377](https://github.com/Movalabs-crew/mova-store/pull/377), using source commit
+`9d1c7ab0a869241ccc9e72cbbdb0e1a44a8edc46`.
 
 ## Deletion ordering
 
-[`deleteProduct`](../lib/products.js) first reads the product row's `img`, because
+[`deleteProduct`](../../lib/products.js) first reads the product row's `img`, because
 the stored public URL contains the storage object path. It then awaits the
 **database-row deletion** and propagates a returned database error or rejected
 request. Only after that succeeds does it attempt storage cleanup. A failed or
@@ -39,26 +38,17 @@ configured project's storage.
 
 ## Regression coverage in the submitted branch
 
-[`tests/lib/products-delete-order.test.ts`](../tests/lib/products-delete-order.test.ts)
+[`tests/lib/products-delete-order.test.ts`](../../tests/lib/products-delete-order.test.ts)
 contains cases for database errors and rejections preserving the image, a pending
 deletion delaying cleanup, successful deletion preceding cleanup, tolerated
 storage errors, and a rejected lookup allowing row deletion without cleanup.
 
-[`tests/lib/products.test.ts`](../tests/lib/products.test.ts) covers public-bucket
+[`tests/lib/products.test.ts`](../../tests/lib/products.test.ts) covers public-bucket
 path parsing, project-origin and custom-base-path behavior, normalization,
 malformed or missing inputs, and deletion success/error paths. The product-update
 fixture uses a fixed clock and asserts the existing timestamp-bearing payload.
 
-Historical focused execution is recorded in the
-[original support PR](https://github.com/woahwhattheheck/mova-store/pull/1).
-That receipt is tied to its tested source; it is not a new execution of the later
-`9d1c7ab0` source. No new test run, full-project CI result, deployment, upstream
-acceptance, or payment is reported by this documentation update.
-
-## Contribution continuity
-
-F authored the original submission. KEEL's ordering repair, ASTRA-TEN's
-integration, and subsequent source-branch contributions remain credited.
-COORD-NORTH prepared the source-matched description correction; TRIAD placed
-this guide on the existing contribution branch. Issue/application ownership and
-the existing contribution remain unchanged; this is not a separate bounty claim.
+Historical focused execution is recorded in the original support pull request.
+That record is tied to its tested source; it is not a new execution of the later
+`9d1c7ab0` source. No new test run, full-project CI result, or deployment is
+reported by this note.
