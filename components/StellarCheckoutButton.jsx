@@ -3,6 +3,7 @@ import { SiStellar } from "react-icons/si";
 
 import { payWithStellar } from "../lib/stellar/checkout";
 import { defaultToken } from "../lib/stellar/config";
+import { explorerTxUrl } from "../lib/stellar/explorer";
 import { generateOrderId } from "../lib/stellar/orders";
 import { resolveXlmUsdRate, XlmRateUnavailableError } from "../lib/stellar/price";
 import {
@@ -205,7 +206,7 @@ const StellarCheckoutButton = ({
         >
           Paid on ledger {result.receipt ? result.receipt.ledger : "—"} · tx{" "}
           <a
-            href={`https://stellar.expert/explorer/testnet/tx/${result.hash}`}
+            href={explorerTxUrl(result.hash)}
             target="_blank"
             rel="noreferrer"
             className="underline"

@@ -34,6 +34,9 @@ vi.mock("../../lib/stellar/checkout", () => ({
 }));
 
 vi.mock("../../lib/stellar/config", () => ({
+  // The receipt's explorer link is derived from the configured network (#707),
+  // so the partial mock has to expose it.
+  NETWORK: "testnet",
   defaultToken: () => ({ contractId: "CBIEL", symbol: "USDC", name: "USD Coin", decimals: 7 }),
 }));
 
