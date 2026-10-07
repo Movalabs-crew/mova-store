@@ -68,4 +68,45 @@ describe("Stellar Price Conversion Utilities", () => {
     expect(price.formatTokenPrice(100, "XLM")).toBe("100.00 XLM");
     expect(price.formatTokenPrice(12.3456, "XLM")).toBe("12.3456 XLM");
   });
+
+  describe("formatTokenPrice", () => {
+    it("pins the display locale so output cannot drift with the host locale", async () => {
+      const price = await loadPrice({});
+      expect(price.TOKEN_PRICE_LOCALE).toBe("en-US");
+      // Under a `de-DE` (or any non-`en-US`) default locale the previous
+      // `toLocaleString(undefined, ...)` rendered this as "1.234,50 XLM".
+      expect(price.formatTokenPrice(1234.5)).toBe("1,234.50 XLM");
+    });
+
+    it("group-separates amounts and clamps at 2-4 fraction digits", async () => {
+      const price = await loadPrice({});
+      expect(price.formatTokenPrice(1234567.891)).toBe("1,234,567.891 XLM");
+      expect(price.formatTokenPrice(1.23456)).toBe("1.2346 XLM");
+      expect(price.formatTokenPrice(1.99999)).toBe("2.00 XLM");
+      expect(price.formatTokenPrice(0.5)).toBe("0.50 XLM");
+    });
+
+    it("keeps the sign for negatives but never renders an unsigned zero as -0.00", async () => {
+      const price = await loadPrice({});
+      expect(price.formatTokenPrice(-5)).toBe("-5.00 XLM");
+      expect(price.formatTokenPrice(-12.3456)).toBe("-12.3456 XLM");
+      expect(price.formatTokenPrice(0)).toBe("0.00 XLM");
+      expect(price.formatTokenPrice(-0)).toBe("0.00 XLM");
+      expect(price.formatTokenPrice(-0.00001)).toBe("0.00 XLM");
+    });
+
+    it("appends the symbol verbatim for any token", async () => {
+      const price = await loadPrice({});
+      expect(price.formatTokenPrice(100, "USDC")).toBe("100.00 USDC");
+      expect(price.formatTokenPrice(100, "")).toBe("100.00 ");
+    });
+
+    it("refuses non-finite amounts instead of printing NaN or Infinity", async () => {
+      const price = await loadPrice({});
+      expect(() => price.formatTokenPrice(Number.NaN)).toThrow(RangeError);
+      expect(() => price.formatTokenPrice(Number.POSITIVE_INFINITY)).toThrow(RangeError);
+      expect(() => price.formatTokenPrice(Number.NEGATIVE_INFINITY)).toThrow(RangeError);
+      expect(() => price.formatTokenPrice("100" as unknown as number)).toThrow(RangeError);
+    });
+  });
 });

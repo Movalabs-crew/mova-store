@@ -92,11 +92,45 @@ export function convertXlmToUsd(amountXlm: number, xlmPriceUsd: number): number 
 }
 
 /**
+ * Locale used when rendering token prices.
+ *
+ * Pinned explicitly rather than letting `toLocaleString` fall back to the host
+ * default: with `undefined` the same amount renders as `"100.00 XLM"` on an
+ * `en-US` machine but `"100,00 XLM"` under `LANG=de_DE`, so the storefront text
+ * (and any test asserting it) drifts with the runtime it happens to execute on.
+ * The rest of the app pins its display locale the same way, e.g.
+ * `app/admin/orders/page.tsx`.
+ */
+export const TOKEN_PRICE_LOCALE = "en-US";
+
+/**
  * Formats a token amount with human-readable decimals and symbol.
+ *
+ * Spec:
+ * - Finite amounts are group-separated and rendered with a minimum of 2 and a
+ *   maximum of 4 fraction digits: `100` -> `"100.00 XLM"`, `12.3456` ->
+ *   `"12.3456 XLM"`, `1234.5` -> `"1,234.50 XLM"`, `1.23456` -> `"1.2346 XLM"`.
+ * - Negative amounts keep their sign (`-5` -> `"-5.00 XLM"`), except when the
+ *   amount rounds to zero, which is rendered unsigned (`-0.00001` -> `"0.00 XLM"`).
+ * - `symbol` is appended verbatim after a single space and is not validated, so
+ *   any display symbol (`"USDC"`) is passed through as-is.
+ * - Non-finite amounts (`NaN`, `±Infinity`) have no price representation and
+ *   throw a `RangeError` instead of rendering `"NaN XLM"` / `"∞ XLM"`.
+ *
+ * @param amount Token amount to render. Must be a finite number.
+ * @param symbol Display symbol appended after the amount. Defaults to `"XLM"`.
+ * @throws {RangeError} When `amount` is not a finite number.
  */
 export function formatTokenPrice(amount: number, symbol = "XLM"): string {
-  return `${amount.toLocaleString(undefined, {
+  if (!Number.isFinite(amount)) {
+    throw new RangeError(`formatTokenPrice: amount must be a finite number, received ${amount}`);
+  }
+  const rendered = amount.toLocaleString(TOKEN_PRICE_LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
-  })} ${symbol}`;
+  });
+  // `Intl` renders `-0` and negative values that round to zero as `"-0.00"`;
+  // a zero price must not display a negative sign.
+  const digits = rendered.startsWith("-") && !/[1-9]/.test(rendered) ? rendered.slice(1) : rendered;
+  return `${digits} ${symbol}`;
 }
