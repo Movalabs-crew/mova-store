@@ -683,7 +683,7 @@ describe("PaymentEventIndexer.decodeEvent (Issue #85)", () => {
       expect(decoded?.fields.topic2).toBe(BUYER);
       expect(decoded?.fields.topic3).toBe(MERCHANT);
 
-      // Regression guard: StellarOrderWatch checks (event.fields.topic4 || "").toLowerCase()
+      // The shared decoder (eventOrderId/eventToOrder) maps pay order ids from topic4.
       expect(decoded?.fields.topic4).toBe(ORDER_ID_HEX);
       expect(decoded?.fields.topic4).toHaveLength(64);
       expect(decoded?.fields.topic4.toLowerCase()).toBe(ORDER_ID_HEX.toLowerCase());

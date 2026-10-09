@@ -58,19 +58,13 @@ const REAL_TOPIC_LAYOUT = {
   },
 } as const;
 
-const TOKEN_ADDRESS =
-  "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
-const MERCHANT =
-  "GCMERCHANT7BZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+const TOKEN_ADDRESS = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+const MERCHANT = "GCMERCHANT7BZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 
-const ORDER_ID_A =
-  "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
-const ORDER_ID_B =
-  "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-const BUYER =
-  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-const TX_HASH =
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const ORDER_ID_A = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+const ORDER_ID_B = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+const TX_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 /**
  * Builds an event fixture from the layout the contract declares for that event
@@ -82,7 +76,7 @@ function buildRealTopicEvent(
   orderId: string,
   buyer: string,
   amount: string,
-  ledger: number,
+  ledger: number
 ) {
   const layout = REAL_TOPIC_LAYOUT[eventName];
   const fields: Record<string, string> = {};
@@ -109,13 +103,7 @@ function buildRealTopicEvent(
 
 describe("eventToOrder real topic mapping (Issue #67)", () => {
   it("maps create_order using the real topic layout", () => {
-    const event = buildRealTopicEvent(
-      "create_order",
-      ORDER_ID_A,
-      BUYER,
-      "50000000",
-      1000,
-    );
+    const event = buildRealTopicEvent("create_order", ORDER_ID_A, BUYER, "50000000", 1000);
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
@@ -126,13 +114,7 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
   });
 
   it("maps pay using the real topic layout", () => {
-    const event = buildRealTopicEvent(
-      "pay",
-      ORDER_ID_A,
-      BUYER,
-      "50000000",
-      1001,
-    );
+    const event = buildRealTopicEvent("pay", ORDER_ID_A, BUYER, "50000000", 1001);
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
@@ -143,13 +125,7 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
   });
 
   it("maps dispatch using the real topic layout", () => {
-    const event = buildRealTopicEvent(
-      "dispatch",
-      ORDER_ID_B,
-      BUYER,
-      "50000000",
-      1002,
-    );
+    const event = buildRealTopicEvent("dispatch", ORDER_ID_B, BUYER, "50000000", 1002);
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
@@ -165,13 +141,7 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
   });
 
   it("maps refund using the real topic layout", () => {
-    const event = buildRealTopicEvent(
-      "refund",
-      ORDER_ID_B,
-      BUYER,
-      "50000000",
-      1003,
-    );
+    const event = buildRealTopicEvent("refund", ORDER_ID_B, BUYER, "50000000", 1003);
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
@@ -182,13 +152,7 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
   });
 
   it("reads a create_order event's timestamp from its data map", () => {
-    const event = buildRealTopicEvent(
-      "create_order",
-      ORDER_ID_A,
-      BUYER,
-      "50000000",
-      1005,
-    );
+    const event = buildRealTopicEvent("create_order", ORDER_ID_A, BUYER, "50000000", 1005);
     // create_order's data map is (amount, timestamp); the timestamp arrives in
     // seconds and has to be surfaced in milliseconds.
     event.fields.timestamp = "1700000000";
@@ -199,13 +163,7 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
   });
 
   it("never reports the token address as the order id for a pay event", () => {
-    const event = buildRealTopicEvent(
-      "pay",
-      ORDER_ID_A,
-      BUYER,
-      "50000000",
-      1004,
-    );
+    const event = buildRealTopicEvent("pay", ORDER_ID_A, BUYER, "50000000", 1004);
 
     const order = eventToOrder(event);
     expect(order).not.toBeNull();
@@ -222,8 +180,7 @@ describe("eventToOrder real topic mapping (Issue #67)", () => {
 });
 
 describe("resolveOrderIdHash (Issue #67)", () => {
-  const SAMPLE_64_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
   it("passes 64-hex order IDs through unchanged as raw 32-byte Uint8Array", async () => {
     const resolved = await resolveOrderIdHash(SAMPLE_64_HEX);
@@ -284,8 +241,7 @@ describe("resolveOrderIdHash (Issue #67)", () => {
 });
 
 describe("dispatchOrder and refundOrder order ID resolution", () => {
-  const SAMPLE_64_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
   const DUMMY_PUBLIC_KEY = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
   beforeEach(() => {
@@ -308,8 +264,7 @@ describe("dispatchOrder and refundOrder order ID resolution", () => {
 
 describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteria)", () => {
   it("derives the 64-hex order ID from indexed event topics and preserves it unmodified", () => {
-    const SAMPLE_64_HEX =
-      "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+    const SAMPLE_64_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
     // (pay, token, buyer, merchant, order_id) exactly as the indexer emits it:
     // there is no `order_id` key in `fields` for a pay event.
@@ -356,12 +311,38 @@ describe("Admin Orders Dashboard Event Integration (Issue #67 Acceptance Criteri
     expect(order?.orderId).toBe(SAMPLE_64_HEX);
     expect(order?.status).toBe("Shipped");
   });
+
+  it("reads the pay order id from the real topic layout (topic4) without an injected order_id (Issue #716)", () => {
+    const ORDER_ID = "feedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface";
+    const TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+    const BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
+    // topics: [pay, token, buyer, merchant, order_id]
+    const realPayEvent = {
+      symbol: "pay",
+      ledger: 2000,
+      txHash: "abcdef",
+      fields: {
+        topic1: TOKEN,
+        topic2: BUYER,
+        topic3: "GMERCHANTMERCHANTMERCHANTMERCHANTMERCHANTMERCHANTMERCHANTMERCHA",
+        topic4: ORDER_ID,
+        amount: "50000000",
+      },
+    };
+
+    const order = eventToOrder(realPayEvent);
+
+    expect(order?.orderId).toBe(ORDER_ID);
+    // The order id is the real topic, never the token address.
+    expect(order?.orderId).not.toBe(TOKEN);
+    expect(order?.token).toBe(TOKEN);
+  });
 });
 
 describe("Checkout contract configuration validation", () => {
   const ORIGINAL_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
-  const VALID_CONTRACT_ID =
-    "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+  const VALID_CONTRACT_ID = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -371,12 +352,12 @@ describe("Checkout contract configuration validation", () => {
   it("throws a clear error from dispatchOrder when the contract id is missing", async () => {
     delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
 
-    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(
-      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-    );
+    const connectSpy = vi
+      .spyOn(freighterMod, "connectWallet")
+      .mockResolvedValue("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
 
     await expect(
-      dispatchOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"),
+      dispatchOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90")
     ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
 
     // Fail fast: no RPC/network call should have been attempted.
@@ -386,12 +367,12 @@ describe("Checkout contract configuration validation", () => {
   it("throws a clear error from refundOrder when the contract id is missing", async () => {
     delete process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID;
 
-    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(
-      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-    );
+    const connectSpy = vi
+      .spyOn(freighterMod, "connectWallet")
+      .mockResolvedValue("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
 
     await expect(
-      refundOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"),
+      refundOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90")
     ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
 
     expect(connectSpy).not.toHaveBeenCalled();
@@ -400,12 +381,12 @@ describe("Checkout contract configuration validation", () => {
   it("throws a clear error when the contract id is blank", async () => {
     process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = "   ";
 
-    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockResolvedValue(
-      "GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-    );
+    const connectSpy = vi
+      .spyOn(freighterMod, "connectWallet")
+      .mockResolvedValue("GBBD47IF6LWK7P7MDEVSCWR7DPWWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5");
 
     await expect(
-      dispatchOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"),
+      dispatchOrder("a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90")
     ).rejects.toThrow(/NEXT_PUBLIC_CHECKOUT_CONTRACT_ID/);
 
     expect(connectSpy).not.toHaveBeenCalled();
@@ -414,12 +395,12 @@ describe("Checkout contract configuration validation", () => {
   it("does not report the configuration error when the contract id is set", async () => {
     process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID = VALID_CONTRACT_ID;
 
-    const connectSpy = vi.spyOn(freighterMod, "connectWallet").mockRejectedValue(
-      new Error("connect failed"),
-    );
+    const connectSpy = vi
+      .spyOn(freighterMod, "connectWallet")
+      .mockRejectedValue(new Error("connect failed"));
 
     const result = await dispatchOrder(
-      "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"
     );
 
     // Reaching the wallet proves the configuration gate opened; the transport
@@ -432,12 +413,9 @@ describe("Checkout contract configuration validation", () => {
 });
 
 describe("readOrder (mocked RPC)", () => {
-  const ORDER_ID_HEX =
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
-  const ORDER_BUYER =
-    "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-  const ORDER_TOKEN =
-    "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+  const ORDER_ID_HEX = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+  const ORDER_BUYER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const ORDER_TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
   const ORDER_TIMESTAMP = 1_700_000_000;
 
   /**
@@ -478,9 +456,7 @@ describe("readOrder (mocked RPC)", () => {
     // `readOrder` simulates against a throwaway keypair's account and only
     // parses the result when that lookup does not resolve to an account, so the
     // mocked server must not report one.
-    vi.spyOn(rpc.Server.prototype, "getAccount").mockRejectedValue(
-      new Error("account not found"),
-    );
+    vi.spyOn(rpc.Server.prototype, "getAccount").mockRejectedValue(new Error("account not found"));
   });
 
   afterEach(() => {

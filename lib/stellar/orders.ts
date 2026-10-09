@@ -235,7 +235,7 @@ function requireCheckoutContractId(): string {
   const contractId = (process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID ?? "").trim();
   if (!contractId) {
     throw new Error(
-      "NEXT_PUBLIC_CHECKOUT_CONTRACT_ID is not configured. Set it to the deployed checkout contract id (C...) before dispatching or refunding orders.",
+      "NEXT_PUBLIC_CHECKOUT_CONTRACT_ID is not configured. Set it to the deployed checkout contract id (C...) before dispatching or refunding orders."
     );
   }
   return contractId;
@@ -441,6 +441,44 @@ export interface OrderEvent {
 }
 
 /**
+ * Contract topic layout per event (see contracts/checkout/src/events.rs):
+ *
+ *   pay          -> [pay, token, buyer, merchant, order_id]
+ *   create_order -> [create_order, token, buyer, order_id]
+ *   dispatch     -> [dispatch, order_id, merchant]
+ *   refund       -> [refund, order_id, buyer]
+ *
+ * Keeping the mapping here — instead of positional reads at each call site —
+ * means a future contract revision only has to teach one decoder the new
+ * layout. `eventToOrder` and the live order watch share this.
+ */
+const EVENT_ORDER_ID_TOPIC: Record<string, string> = {
+  pay: "topic4",
+  create_order: "topic3",
+  dispatch: "topic1",
+  refund: "topic1",
+};
+
+const EVENT_TOKEN_TOPIC: Record<string, string> = {
+  pay: "topic1",
+  create_order: "topic1",
+};
+
+/**
+ * Resolves the order id from an indexed event using the contract's declared
+ * topic layout. The single source of truth shared by {@link eventToOrder} and
+ * `components/StellarOrderWatch.jsx`.
+ */
+export function eventOrderId(event: { symbol: string; fields: Record<string, string> }): string {
+  const explicit = event.fields.order_id;
+  if (explicit) return explicit;
+  const layoutTopic = EVENT_ORDER_ID_TOPIC[event.symbol];
+  // Unknown symbols keep the legacy `topic1` fallback so an unrecognised event
+  // is not silently dropped.
+  return layoutTopic ? (event.fields[layoutTopic] ?? "") : (event.fields.topic1 ?? "");
+}
+
+/**
  * Converts an indexed event to an OrderEvent for display.
  */
 export function eventToOrder(
@@ -478,47 +516,36 @@ export function eventToOrder(
   // as `topic1..topicN`. Reading `topic1` as the order id for every event made
   // a `pay`/`create_order` event resolve to the token contract address, which
   // the dashboard then hashed and sent to `dispatchOrder`/`refundOrder`, where
-  // it failed with `OrderNotFound`.
+  // it failed with `OrderNotFound`. The id and token now resolve through the
+  // shared topic maps, so a contract revision only changes one place.
   const topic = (position: number): string => fields[`topic${position}`] ?? "";
 
-  let orderId = "";
   let buyer = "";
-  let token = "";
   switch (symbol) {
     // topics: (pay, token, buyer, merchant, order_id)
     case "pay":
-      token = topic(1);
-      buyer = topic(2);
-      orderId = topic(4);
-      break;
     // topics: (create_order, token, buyer, order_id)
     case "create_order":
-      token = topic(1);
       buyer = topic(2);
-      orderId = topic(3);
       break;
     // topics: (dispatch, order_id, merchant) - the event carries no buyer, so
     // `buyer` stays empty rather than reporting the merchant as the buyer.
     case "dispatch":
-      orderId = topic(1);
       break;
     // topics: (refund, order_id, buyer)
     case "refund":
-      orderId = topic(1);
       buyer = topic(2);
       break;
     default:
-      // Unknown event: fall back to the positional field, then to the old
-      // `topic1` behaviour so an unrecognised symbol is not silently dropped.
-      orderId = topic(1);
       break;
   }
 
   // A field emitted by the event's data map wins over the positional read, so
   // a layout that carries these values in `data` keeps working unchanged.
-  const resolvedOrderId = fields.order_id || orderId;
+  const resolvedOrderId = eventOrderId(event);
   const resolvedBuyer = fields.buyer || buyer;
-  const resolvedToken = fields.token || token;
+  const tokenTopic = EVENT_TOKEN_TOPIC[symbol];
+  const resolvedToken = fields.token || (tokenTopic ? fields[tokenTopic] : "");
 
   const amountStr = fields.amount || "0";
 

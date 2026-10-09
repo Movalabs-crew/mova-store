@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { PaymentEventIndexer } from "../lib/stellar/indexer";
+import { eventToOrder } from "../lib/stellar/orders";
 import { bytesToHex, hashOrderId } from "../lib/stellar/scval";
 
 /**
@@ -50,10 +51,13 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
         onError: (err) => setError(err.message),
         onEvent: (event) => {
           if (event.symbol !== "pay") return;
-          const orderHex = (event.fields.topic4 || "").toLowerCase();
-          if (orderHex !== expected) return;
+          // Resolve the order id through the shared decoder so the watch and
+          // `eventToOrder` agree on the layout by construction. No positional
+          // `topicN` reads here — a contract revision only changes one place.
+          const decoded = eventToOrder(event);
+          if (!decoded || decoded.orderId.toLowerCase() !== expected) return;
           setError("");
-          setMatched(event);
+          setMatched(decoded);
           if (onEventRef.current) onEventRef.current(event);
           indexer.stop();
         },
@@ -87,9 +91,9 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
             <span>Ledger</span>
             <span className="text-right font-mono">{matched.ledger}</span>
             <span>Amount</span>
-            <span className="text-right font-mono">{matched.fields.amount ?? "—"}</span>
+            <span className="text-right font-mono">{matched.amount ?? "—"}</span>
             <span>Token</span>
-            <span className="text-right font-mono truncate">{matched.fields.topic1 ?? "—"}</span>
+            <span className="text-right font-mono truncate">{matched.token || "—"}</span>
             <span>Tx</span>
             <span className="text-right font-mono truncate">{matched.txHash}</span>
           </div>

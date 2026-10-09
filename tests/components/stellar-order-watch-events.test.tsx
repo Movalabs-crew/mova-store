@@ -126,7 +126,7 @@ describe("StellarOrderWatch Component", () => {
       fields: {
         topic1: "CA7TOKENADDRESS",
         topic4: expectedHex,
-        amount: "50.00 USDC",
+        amount: "50000000",
       },
     };
 
@@ -140,7 +140,7 @@ describe("StellarOrderWatch Component", () => {
 
     expect(screen.getByText("Payment detected on-chain ✓")).toBeInTheDocument();
     expect(screen.getByText("1234567")).toBeInTheDocument();
-    expect(screen.getByText("50.00 USDC")).toBeInTheDocument();
+    expect(screen.getByText("5.00")).toBeInTheDocument();
     expect(screen.getByText("CA7TOKENADDRESS")).toBeInTheDocument();
     expect(screen.getByText("0xabc123txhash456789")).toBeInTheDocument();
   });
@@ -176,5 +176,43 @@ describe("StellarOrderWatch Component", () => {
     // …but the current one is the callback that fires.
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("matches the order id through the shared decoder when the decoded fields change (acceptance #716)", async () => {
+    const orderId = "renamed-field-716";
+    const onEvent = vi.fn();
+    render(<StellarOrderWatch orderId={orderId} onEvent={onEvent} />);
+
+    await vi.waitFor(() => {
+      expect(mockStart).toHaveBeenCalled();
+    });
+
+    const expectedHex = bytesToHex(await hashOrderId(orderId)).toLowerCase();
+
+    // Same order id, but no positional `topic4`: it arrives as an explicit
+    // `order_id` field. The watch must still match because it delegates to
+    // `eventToOrder` rather than reading a fixed topic index.
+    const renamedEvent = {
+      id: "ev-716",
+      ledger: 7654321,
+      ledgerClosedAt: "2026-09-30T12:00:00Z",
+      txHash: "0xrenamed716txhash",
+      symbol: "pay",
+      topics: [],
+      fields: {
+        order_id: expectedHex,
+        amount: "25000000",
+      },
+    };
+
+    act(() => {
+      lastIndexerCallbacks.onEvent(renamedEvent);
+    });
+
+    expect(onEvent).toHaveBeenCalledTimes(1);
+    expect(mockStop).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Payment detected on-chain ✓")).toBeInTheDocument();
+    expect(screen.getByText("7654321")).toBeInTheDocument();
+    expect(screen.getByText("2.50")).toBeInTheDocument();
   });
 });
