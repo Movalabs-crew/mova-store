@@ -301,7 +301,7 @@ export function getCachedBuyerOrders(): BuyerOrder[] {
 }
 
 /**
-* Removes every cached buyer order from localStorage.
+ * Removes every cached buyer order from localStorage.
  *
  * Sign-out must not leave a previous buyer's order history behind on a shared
  * browser: `getCachedBuyerOrders()` is a public read used by the orders pages,
@@ -438,7 +438,7 @@ export async function fetchBuyerOrders(userEmailOrId?: string): Promise<BuyerOrd
  */
 export async function verifyOrderOnChain(
   orderId: string,
-  claimant?: string,
+  claimant?: string
 ): Promise<{
   verified: boolean;
   onChainStatus?: string;
@@ -454,15 +454,14 @@ export async function verifyOrderOnChain(
 
     // An order whose buyer is not the claimant belongs to someone else and
     // must not be reported as verified for this caller.
-    const ownershipMatches =
-      claimant === undefined || onChain.buyer === claimant;
+    const ownershipMatches = claimant === undefined || onChain.buyer === claimant;
 
     return {
       verified: ownershipMatches && onChain.status !== "Unknown",
       onChainStatus: onChain.status,
-      buyer: onChain.buyer,
-      amountDisplay: onChain.amountDisplay,
-      tokenSymbol: onChain.tokenSymbol,
+      buyer: ownershipMatches ? onChain.buyer : undefined,
+      amountDisplay: ownershipMatches ? onChain.amountDisplay : undefined,
+      tokenSymbol: ownershipMatches ? onChain.tokenSymbol : undefined,
     };
   } catch {
     return { verified: false };
