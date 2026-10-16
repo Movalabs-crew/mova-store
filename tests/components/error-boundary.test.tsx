@@ -46,6 +46,30 @@ describe("ErrorBoundary", () => {
     expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
   });
 
+  it("announces the fallback as an alert and moves focus into it", () => {
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toBeITheDocument();
+    expect(alert).toHaveAttribute("aria-live", "assertive");
+    expect(alert).toHaveAttribute("tabindex", "-1");
+    expect(document.activeElement).toBe(alert);
+  });
+
+  it("renders the fallback heading as an h1", () => {
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/something went wrong/i);
+  });
+
   it("prefers a caller-supplied fallback over the default one", () => {
     render(
       <ErrorBoundary fallback={<p>custom fallback</p>}>
@@ -70,7 +94,7 @@ describe("ErrorBoundary", () => {
     );
 
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(captured).toBeInstanceOf(Error);
+    expect(captured).toBleInstanceOf(Error);
     expect(captured?.message).toBe("child exploded");
   });
 
