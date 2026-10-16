@@ -1228,3 +1228,72 @@ fn test_remove_token_after_payment_still_refunds_to_buyer() {
     assert_eq!(usdc_balance(&env, &token, &buyer), 1_000_000);
     assert_eq!(client.status(&id), Some(Status::Refunded));
 }
+
+#[test]
+fn test_admin_and_token_events_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let token = env.register(MockToken, ());
+    let checkout = env.register(Checkout, ());
+    let merchant = Address::generate(&env);
+    let new_merchant = Address::generate(&env);
+    let client = CheckoutClient::new(&env, &checkout);
+
+    client.initialize(&merchant);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (Symbol::new(&env, "initialize"), merchant.clone()).into_val(&env),
+                map![&env].into_val(&env),
+            ),
+        ]
+    );
+
+    client.add_token(&token);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (Symbol::new(&env, "add_token"), token.clone()).into_val(&env),
+                map![&env].into_val(&env),
+            ),
+        ]
+    );
+
+    client.set_merchant(&new_merchant);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (
+                    Symbol::new(&env, "set_merchant"),
+                    merchant.clone(),
+                    new_merchant.clone(),
+                )
+                    .into_val(&env),
+                map![&env].into_val(&env),
+            ),
+        ]
+    );
+
+    client.remove_token(&token);
+    assert_eq!(
+        env.events().all().filter_by_contract(&checkout),
+        vec![
+            &env,
+            (
+                checkout.clone(),
+                (Symbol::new(&env, "remove_token"), token.clone()).into_val(&env),
+                map![&env].into_val(&env),
+            ),
+        ]
+    );
+}
