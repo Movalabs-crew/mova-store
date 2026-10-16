@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import RootLayout from "@/app/layout";
+import RootLayout from "@app/layout";
 
 /**
  * `app/layout.jsx` imported `ErrorBoundary` but never rendered it, so no route
@@ -68,6 +68,18 @@ describe("app/layout.jsx", () => {
 
     expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it("announces the route error and moves focus into the fallback", () => {
+    render(
+      <RootLayout>
+        <Boom />
+      </RootLayout>
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toBeInTheDocument();
+    expect(document.activeElement).toBe(alert);
   });
 
   it("does not render a blank page when a route child throws", () => {

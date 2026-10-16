@@ -29,6 +29,8 @@ interface State {
  * ```
  */
 class ErrorBoundary extends Component<Props, State> {
+  private rootRef = React.createRef<HTMLDivElement>();
+
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -58,6 +60,21 @@ class ErrorBoundary extends Component<Props, State> {
     // logErrorToService(error, errorInfo);
   }
 
+  componentDidMount() {
+    // Move focus into the fallback so keyboard and screen-reader users are
+    // not stranded on <body> after the previous content unmounts.
+    if (this.state.hasError && !this.props.fallback) {
+      this.rootRef.current?.focus();
+    }
+  }
+
+  componentDidUpdate(_prevProps: Props, prevState: State) {
+    // Focus the fallback when the boundary transitions into the error state.
+    if (!prevState.hasError && this.state.hasError && !this.props.fallback) {
+      this.rootRef.current?.focus();
+    }
+  }
+
   handleReset = () => {
     this.setState({
       hasError: false,
@@ -75,13 +92,19 @@ class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div className="min-h-[400px] flex items-center justify-center p-8">
+        <div
+          ref={this.rootRef}
+          role="alert"
+          aria-live="assertive"
+          tabIndex={-1}
+          className="min-h-[400px] flex items-center justify-center p-8 focus:outline-none"
+        >
           <div className="max-w-md w-full text-center">
             <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
-              <MdError className="w-8 h-8 text-red-500" />
+              <MdError className="w-8 h-8 text-red-500" aria-hidden="true" />
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h2>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h1>
 
             <p className="text-gray-600 mb-6">
               We're sorry, but something unexpected happened. Please try refreshing the page or go
@@ -105,7 +128,7 @@ class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
-                <MdRefresh className="w-5 h-5" />
+                <MdRefresh className="w-5 h-5" aria-hidden="true" />
                 Try Again
               </button>
 
@@ -113,7 +136,7 @@ class ErrorBoundary extends Component<Props, State> {
                 href="/"
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
-                <MdHome className="w-5 h-5" />
+                <MdHome className="w-5 h-5" aria-hidden="true" />
                 Go Home
               </Link>
             </div>
