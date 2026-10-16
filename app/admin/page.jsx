@@ -94,12 +94,13 @@ const ProductsAdminContent = () => {
         <h2 className="text-3xl font-bold mb-6">Product List</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border border-gray-300 rounded-lg shadow-md">
+            <caption className="sr-only">Product list</caption>
             <thead className="bg-purple-600 text-white">
               <tr>
-                <th className="py-3 px-6 border-b text-left">Name</th>
-                <th className="py-3 px-6 border-b text-left">Price</th>
-                <th className="py-3 px-6 border-b text-left">Image</th>
-                <th className="py-3 px-6 border-b text-left">Actions</th>
+                <th scope="col" className="py-3 px-6 border-b text-left">Name</th>
+                <th scope="col" className="py-3 px-6 border-b text-left">Price</th>
+                <th scope="col" className="py-3 px-6 border-b text-left">Image</th>
+                <th scope="col" className="py-3 px-6 border-b text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
