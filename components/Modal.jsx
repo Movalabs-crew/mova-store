@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { ImCancelCircle } from "react-icons/im";
 import { trapFocus, saveFocus } from "../lib/accessibility";
 
-
 function Modal({ show, onClose, title = "Dialog", children }) {
   const modalRef = useRef(null);
 
@@ -46,7 +45,7 @@ function Modal({ show, onClose, title = "Dialog", children }) {
       onClick={handleBackdropClick}
       aria-label={title}
     >
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 relative mx-2 max-h-[80vh] overflow-y-auto">
+      <div ref={modalRef} className="bg-white rounded-lg shadow-lg w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 relative mx-2 max-h-[80vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         <button
           type="button"
