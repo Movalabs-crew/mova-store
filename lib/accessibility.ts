@@ -83,17 +83,24 @@ export function trapFocus(container: HTMLElement): () => void {
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key !== Keys.TAB) return;
 
+    // Re-query focusable elements on each Tab so dynamically added or
+    // removed controls (e.g. a submit button that becomes disabled) are
+    // respected and focus cannot escape the container.
+    const currentFocusable = getFocusableElements(container);
+    const first = currentFocusable[0];
+    const last = currentFocusable[currentFocusable.length - 1];
+
     if (event.shiftKey) {
       // Shift + Tab: go backwards
-      if (document.activeElement === firstElement) {
+      if (document.activeElement === first) {
         event.preventDefault();
-        lastElement?.focus();
+        last?.focus();
       }
     } else {
       // Tab: go forwards
-      if (document.activeElement === lastElement) {
+      if (document.activeElement === last) {
         event.preventDefault();
-        firstElement?.focus();
+        first?.focus();
       }
     }
   };
@@ -103,15 +110,46 @@ export function trapFocus(container: HTMLElement): () => void {
   // Focus first element
   firstElement?.focus();
 
+  // If focus is moved outside the container (e.g. by a click on the
+  // background or programmatically), pull it back in.
+  const handleFocusIn = (event: FocusEvent) => {
+    if (!container.contains(event.target as Node)) {
+      const currentFocusable = getFocusableElements(container);
+      (currentFocusable[0] ?? container).focus();
+    }
+  };
+
+  document.addEventListener("focusin", handleFocusIn);
+
   // Return cleanup function
   return () => {
     container.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("focusin", handleFocusIn);
   };
 }
 
 // =============================================================================
 // ARIA Helpers
 // =============================================================================
+
+/**
+ * Adds an Escape key handler to a container (useful for modals/dialogs).
+ * Returns a cleanup function to remove the listener.
+ */
+export function handleEscape(
+  container: HTMLElement,
+  onEscape: () => void
+): () => void {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === Keys.ESCAPE) {
+      event.stopPropagation();
+      onEscape();
+    }
+  };
+
+  container.addEventListener("keydown", handleKeyDown);
+  return () => container.removeEventListener("keydown", handleKeyDown);
+}
 
 /**
  * Generates a unique ID for ARIA relationships.
@@ -217,6 +255,20 @@ export function saveFocus(): () => void {
   };
 }
 
+/**
+ * Ensures the container is focusable (adds tabindex="-1" if needed) and
+ * moves focus to it. Useful for dialogs that have no focusable children.
+ */
+export function focusContainer(container: HTMLElement): void {
+  if (!container.hasAttribute("tabindex")) {
+    container.setAttribute("tabindex", "-1");
+  }
+  container.focus();
+}
+
+/**
+ * Moves focus to the first error in a form.
+ */
 /**
  * Moves focus to the first error in a form.
  */

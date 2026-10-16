@@ -28,6 +28,7 @@ import {
 } from "react-icons/md";
 import { SiStellar } from "react-icons/si";
 import Link from "next/link";
+import { trapFocus, saveFocus } from "../../../lib/accessibility";
 
 // Status badge component
 const StatusBadge = ({ status }: { status: OrderStatus }) => {
@@ -627,6 +628,17 @@ const OrdersManagementContent = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-action-title"
+          ref={(node) => {
+            if (!node) return;
+            const restore = saveFocus();
+            const release = trapFocus(node, {
+              onEscape: () => resolveConfirmation(false),
+            });
+            return () => {
+              release();
+              restore();
+            };
+          }}
         >
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h2
@@ -667,6 +679,7 @@ const OrdersManagementContent = () => {
               <button
                 type="button"
                 onClick={() => resolveConfirmation(true)}
+                autoFocus
                 className={`px-4 py-2 text-white rounded ${
                   confirmAction.type === "dispatch"
                     ? "bg-green-600 hover:bg-green-700"
