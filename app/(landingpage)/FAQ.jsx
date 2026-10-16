@@ -49,7 +49,7 @@ export default function FAQ() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-3">
-            FAP
+            FAQ
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Frequently asked questions
