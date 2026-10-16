@@ -10,7 +10,10 @@ use soroban_sdk::token::TokenClient;
 use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, MuxedAddress};
 
 use crate::errors::Error;
-use crate::events::{OrderCreated, OrderRefunded, OrderShipped, PaymentReceived};
+use crate::events::{
+    ContractInitialized, MerchantUpdated, OrderCreated, OrderRefunded, OrderShipped,
+    PaymentReceived, TokenAdded, TokenRemoved,
+};
 use crate::order::{Order, Status};
 use crate::storage::{
     get_admin, get_order, has_admin, is_token_allowed, set_admin, set_order, set_token_allowed,
@@ -29,6 +32,7 @@ impl Checkout {
         }
         merchant.require_auth();
         set_admin(&env, &merchant);
+        ContractInitialized { merchant }.publish(&env);
         Ok(())
     }
 
@@ -38,6 +42,11 @@ impl Checkout {
         let admin = get_admin(&env)?;
         admin.require_auth();
         set_admin(&env, &new_merchant);
+        MerchantUpdated {
+            old_merchant: admin,
+            new_merchant,
+        }
+        .publish(&env);
         Ok(())
     }
 
@@ -53,6 +62,7 @@ impl Checkout {
         let admin = get_admin(&env)?;
         admin.require_auth();
         set_token_allowed(&env, &token, true);
+        TokenAdded { token }.publish(&env);
         Ok(())
     }
 
@@ -61,6 +71,7 @@ impl Checkout {
         let admin = get_admin(&env)?;
         admin.require_auth();
         set_token_allowed(&env, &token, false);
+        TokenRemoved { token }.publish(&env);
         Ok(())
     }
 
