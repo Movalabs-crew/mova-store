@@ -218,4 +218,25 @@ describe("Error Classification & Handling Tests (lib/errors.ts)", () => {
       expect(isRecoverable(new WalletError("FREIGHTER_NOT_FOUND", "Wallet missing"))).toBe(true);
     });
   });
+
+  describe("narrowed substring matching prevents false-positive classifications (#1075)", () => {
+    it("does not misclassify unrelated messages mentioning 'balance' as INSUFFICIENT_BALANCE", () => {
+      const parsed = parseError("Failed to fetch account balance from Horizon");
+      expect(parsed.code).toBe("UNKNOWN_ERROR");
+      expect(parsed.code).not.toBe(STELLAR_ERRORS.INSUFFICIENT_BALANCE.code);
+    });
+
+    it("does not misclassify network/node rejections as USER_REJECTED", () => {
+      const parsed = parseError("Transaction rejected by network: bad_seq");
+      expect(parsed.code).toBe("UNKNOWN_ERROR");
+      expect(parsed.code).not.toBe(STELLAR_ERRORS.USER_REJECTED.code);
+    });
+
+    it("does not misclassify generic 'Network error' as WRONG_NETWORK or FREIGHTER_NETWORK_ERROR", () => {
+      const parsed = parseError("Network error while loading products");
+      expect(parsed.code).toBe("UNKNOWN_ERROR");
+      expect(parsed.code).not.toBe(STELLAR_ERRORS.WRONG_NETWORK.code);
+      expect(parsed.code).not.toBe(STELLAR_ERRORS.FREIGHTER_NETWORK_ERROR.code);
+    });
+  });
 });

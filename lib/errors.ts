@@ -333,9 +333,17 @@ export function parseError(error: unknown): AppError {
  * Parses an error message string and matches it to known errors.
  */
 function parseErrorMessage(message: string): AppError {
-  const lowerMessage = message.toLowerCase();
+  const trimmed = message.trim();
+  const lowerMessage = trimmed.toLowerCase();
 
-  // Check auth errors by message key or code first
+  // 1. Exact matches against AUTH_ERRORS keys, codes, or SUPABASE_AUTH_CODE_MAP
+  if (AUTH_ERRORS[trimmed]) {
+    return AUTH_ERRORS[trimmed];
+  }
+  const mappedAuth = SUPABASE_AUTH_CODE_MAP[lowerMessage];
+  if (mappedAuth && AUTH_ERRORS[mappedAuth]) {
+    return AUTH_ERRORS[mappedAuth];
+  }
   for (const [key, appError] of Object.entries(AUTH_ERRORS)) {
     if (
       lowerMessage.includes(key.toLowerCase()) ||
@@ -345,28 +353,44 @@ function parseErrorMessage(message: string): AppError {
     }
   }
 
-  // Check Stellar errors by key or code
+  // 2. Exact matches against STELLAR_ERRORS keys, codes, or PascalCase contract error names
+  const upperTrimmed = trimmed.toUpperCase();
+  if (STELLAR_ERRORS[upperTrimmed]) {
+    return STELLAR_ERRORS[upperTrimmed];
+  }
+  const normalizedMsg = lowerMessage.replace(/[\s_]/g, "");
   for (const [key, appError] of Object.entries(STELLAR_ERRORS)) {
     const normalizedKey = key.toLowerCase().replace(/_/g, "");
-    const normalizedMsg = lowerMessage.replace(/[\s_]/g, "");
     if (
-      lowerMessage.includes(key.toLowerCase()) ||
-      lowerMessage.includes(appError.code.toLowerCase()) ||
-      lowerMessage.includes(appError.message.toLowerCase()) ||
-      normalizedMsg.includes(normalizedKey)
+      lowerMessage === key.toLowerCase() ||
+      lowerMessage === appError.code.toLowerCase() ||
+      lowerMessage === appError.message.toLowerCase() ||
+      normalizedMsg === normalizedKey
     ) {
       return appError;
     }
   }
 
-  // Check for common error patterns
+  // 3. Targeted, unambiguous phrase patterns
   if (lowerMessage.includes("order already paid") || lowerMessage.includes("orderalreadypaid")) {
     return STELLAR_ERRORS.ORDER_ALREADY_PAID;
   }
-  if (lowerMessage.includes("insufficient") || lowerMessage.includes("balance")) {
+  if (
+    lowerMessage.includes("insufficient balance") ||
+    lowerMessage.includes("insufficient funds") ||
+    (lowerMessage.includes("insufficient") && lowerMessage.includes("balance"))
+  ) {
     return STELLAR_ERRORS.INSUFFICIENT_BALANCE;
   }
-  if (lowerMessage.includes("rejected") || lowerMessage.includes("cancelled")) {
+  if (
+    lowerMessage.includes("rejected by user") ||
+    lowerMessage.includes("user rejected") ||
+    lowerMessage.includes("user declined") ||
+    lowerMessage.includes("cancelled by user") ||
+    lowerMessage.includes("canceled by user") ||
+    lowerMessage.includes("user cancelled") ||
+    lowerMessage.includes("user canceled")
+  ) {
     return STELLAR_ERRORS.USER_REJECTED;
   }
   if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
