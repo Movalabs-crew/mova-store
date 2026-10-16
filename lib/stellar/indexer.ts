@@ -76,6 +76,8 @@ export class PaymentEventIndexer {
   private eventsSeen = 0;
   private lastError: string | undefined;
   private readonly seenIds = new Set<string>();
+  private readonly seenIdsQueue: string[] = [];
+  private readonly maxSeenIds: number;
 
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Prevents a new poll from starting while the previous one is still running. */
@@ -96,6 +98,7 @@ export class PaymentEventIndexer {
       watchedSymbols?: string[];
       startLedger?: number;
       cursorStorageKey?: string;
+      maxSeenIds?: number;
     } = {}
   ) {
     this.server = new rpc.Server(opts.rpcUrl ?? RPC_URL);
@@ -108,6 +111,7 @@ export class PaymentEventIndexer {
     this.durableStartLedger =
       opts.startLedger !== undefined && opts.startLedger > 0 ? opts.startLedger : undefined;
     this.cursorStorageKey = opts.cursorStorageKey;
+    this.maxSeenIds = opts.maxSeenIds ?? 10000;
   }
 
   get status(): IndexerStatus {
@@ -338,6 +342,11 @@ export class PaymentEventIndexer {
         if (!raw.inSuccessfulContractCall) continue;
         if (this.seenIds.has(raw.id)) continue;
         this.seenIds.add(raw.id);
+        this.seenIdsQueue.push(raw.id);
+        if (this.seenIds.size > this.maxSeenIds) {
+          const oldest = this.seenIdsQueue.shift();
+          if (oldest) this.seenIds.delete(oldest);
+        }
 
         const decoded = this.decodeEvent(raw);
         if (decoded) {
