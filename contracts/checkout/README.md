@@ -70,12 +70,16 @@ happened, and the token named by `create_order` is never charged.
 
 ### Events
 
-| Event            | Topics                                    | Data                      |
-| ---------------- | ----------------------------------------- | ------------------------- |
-| `PaymentReceived`| `pay`, token, buyer, merchant, order_id   | `{ amount }`              |
-| `OrderCreated`   | `create_order`, token, buyer, order_id    | `{ amount, timestamp }`   |
-| `OrderShipped`   | `dispatch`, order_id, merchant            | `{ amount }`              |
-| `OrderRefunded`  | `refund`, order_id, buyer                 | `{ amount }`              |
+| Event                 | Topics                                          | Data                      |
+| --------------------- | ----------------------------------------------- | ------------------------- |
+| `ContractInitialized` | `initialize`, merchant                          | `{}`                      |
+| `MerchantUpdated`     | `set_merchant`, old_merchant, new_merchant      | `{}`                      |
+| `TokenAdded`          | `add_token`, token                              | `{}`                      |
+| `TokenRemoved`        | `remove_token`, token                           | `{}`                      |
+| `PaymentReceived`     | `pay`, token, buyer, merchant, order_id         | `{ amount }`              |
+| `OrderCreated`        | `create_order`, token, buyer, order_id          | `{ amount, timestamp }`   |
+| `OrderShipped`        | `dispatch`, order_id, merchant                  | `{ amount }`              |
+| `OrderRefunded`       | `refund`, order_id, buyer                       | `{ amount }`              |
 
 ### Errors
 
