@@ -487,23 +487,32 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 
 ## Environment Variables Reference
 
-| Variable                                 | Required | Purpose                                           |
-| ---------------------------------------- | -------- | ------------------------------------------------- |
-| `NEXT_PUBLIC_STELLAR_NETWORK`            | no       | `testnet` (default) or `mainnet`                  |
-| `NEXT_PUBLIC_STELLAR_RPC_URL`            | no       | Soroban RPC endpoint (testnet default)            |
-| `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | no       | Network passphrase (testnet default)              |
-| `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`       | yes*     | Deployed checkout contract (C…)                   |
-| `NEXT_PUBLIC_USDC_CONTRACT_ID`           | no       | USDC token contract (testnet default)             |
-| `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`   | no       | Native XLM SAC (verified testnet default)         |
-| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`         | yes      | EmailJS service ID                                |
-| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`        | yes      | EmailJS template ID                               |
-| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`         | yes      | EmailJS public key                                |
-| `NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL`    | no       | Default recipient email for EMAILJS contact forms |
-| `NEXT_PUBLIC_SUPABASE_URL`               | yes      | Supabase project URL                              |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | yes      | Supabase anon/public key                          |
-| `NEXT_PUBLIC_ADMIN_EMAILS`               | no       | Comma-separated admin emails                      |
+| Variable                                 | Scope              | Required | Purpose                                                                 |
+| ---------------------------------------- | ------------------ | -------- | ----------------------------------------------------------------------- |
+| `NEXT_PUBLIC_STELLAR_NETWORK`            | client + server    | no       | `testnet` (default) or `mainnet`                                        |
+| `NEXT_PUBLIC_STELLAR_RPC_URL`            | client + server    | no       | Soroban RPC endpoint (testnet default)                                  |
+| `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | client + server    | no       | Network passphrase (testnet default)                                    |
+| `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`       | client + server    | yes\*    | Deployed checkout contract (`C…`)                                       |
+| `NEXT_PUBLIC_USDC_CONTRACT_ID`           | client + server    | no       | USDC token contract (testnet default)                                   |
+| `NEXT_PUBLIC_NATIVE_ASSET_CONTRACT_ID`   | client + server    | no       | Native XLM SAC (verified testnet default)                               |
+| `NEXT_PUBLIC_SUPABASE_URL`               | client + server    | yes      | Supabase project URL                                                    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | client + server    | yes      | Supabase anon/public key                                                |
+| `SUPABASE_SERVICE_ROLE_KEY`              | **server-only 🔒** | yes\*\*  | Supabase service-role secret used by `POST /api/orders` (`#260`/`#343`) |
+| `EMAILJS_SERVICE_ID`                     | **server-only 🔒** | yes\*\*\*| Server-side EmailJS service ID preferred by `POST /api/otp`             |
+| `EMAILJS_TEMPLATE_ID`                    | **server-only 🔒** | yes\*\*\*| Server-side EmailJS template ID preferred by `POST /api/otp`            |
+| `EMAILJS_PUBLIC_KEY`                     | **server-only 🔒** | yes\*\*\*| Server-side EmailJS key preferred by `POST /api/otp`                    |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`         | client + server    | yes\*\*\*| Legacy/client EmailJS service ID (fallback for `/api/otp`)              |
+| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID`        | client + server    | yes\*\*\*| Legacy/client EmailJS template ID (fallback for `/api/otp`)             |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`         | client + server    | yes\*\*\*| Legacy/client EmailJS public key (fallback for `/api/otp`)              |
+| `NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL`    | client + server    | no       | Default recipient email for EmailJS contact forms                       |
+| `ADMIN_EMAILS`                           | **server-only 🔒** | no       | Server-only comma-separated admin emails gating `/admin` in middleware  |
+| `NEXT_PUBLIC_ADMIN_EMAILS`               | client + server    | no       | Client/fallback comma-separated admin emails                            |
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
+
+\*\* **Order persistence (`POST /api/orders`):** The order write path (`app/api/orders/route.ts`, `lib/supabase-admin.ts`, see issues `#260` and `#343`) verifies the on-chain payment first and then inserts into `public.orders` using `SUPABASE_SERVICE_ROLE_KEY`. Without `SUPABASE_SERVICE_ROLE_KEY`, every checkout order write fails closed with `503 orders_store_unconfigured`. Never expose `SUPABASE_SERVICE_ROLE_KEY` via a `NEXT_PUBLIC_` prefix or client bundle.
+
+\*\*\* `POST /api/otp` (`app/api/otp/route.ts`) prefers the server-only `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, and `EMAILJS_PUBLIC_KEY` variables so credentials remain server-side, falling back to `NEXT_PUBLIC_EMAILJS_*` when unset.
 
 ## Security Notes
 

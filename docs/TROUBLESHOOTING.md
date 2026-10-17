@@ -76,7 +76,7 @@ reported at startup instead of on the first checkout or email attempt.
 
 **Solutions:**
 
-1. Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
+1. Verify `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY` (required by `POST /api/orders` so checkout order writes do not fail with `503 orders_store_unconfigured`) in `.env.local`
 2. Confirm the Supabase project is active
 3. Run `supabase/schema.sql` in the SQL editor
 4. Enable Email and/or Google providers under Authentication → Providers

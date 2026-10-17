@@ -40,8 +40,9 @@ cp .env.local.example .env.local
 | Data Type            | Storage               | Notes                                                       |
 | -------------------- | --------------------- | ----------------------------------------------------------- |
 | API Keys             | Environment variables | Never hardcode                                              |
-| Supabase Config      | Environment variables | Client-side anon key is safe; never commit service role key |
-| EmailJS Credentials  | Environment variables | Required for email functionality                            |
+| Supabase Config      | Environment variables | Client-side anon key is safe; `SUPABASE_SERVICE_ROLE_KEY` is server-only (`lib/supabase-admin.ts`, `/api/orders`) and must never be committed or exposed to the browser |
+| EmailJS Credentials  | Environment variables | Server-only `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY` preferred by `/api/otp` |
+| Admin Allowlist      | Environment variables | Server-only `ADMIN_EMAILS` gates `/admin` in `middleware.js` before rendering |
 | Stellar Contract IDs | Environment variables | Public but environment-specific                             |
 | User Passwords       | Supabase Auth         | Handled by Supabase, never stored locally                   |
 | Payment Data         | On-chain (Stellar)    | Non-custodial, no card data stored                          |
