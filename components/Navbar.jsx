@@ -9,7 +9,7 @@ import Toast from "../components/Toast";
 import useToast from "../hooks/useToast";
 import { usePathname, useRouter } from "next/navigation";
 import { TfiAngleRight } from "react-icons/tfi";
-import { trapFocus } from "../lib/accessibility";
+import { trapFocus, prefersReducedMotion } from "../lib/accessibility";
 
 const navLinkClass =
   "text-md font-medium text-mova-ink/80 hover:text-purple-600 transition-colors duration-200";
@@ -39,7 +39,9 @@ function Navbar() {
       const targetElement = document.getElementById(targetId);
       if (targetElement) {
         event.preventDefault();
-        targetElement.scrollIntoView({ behavior: "smooth" });
+        targetElement.scrollIntoView({
+          behavior: prefersReducedMotion() ? "auto" : "smooth",
+        });
       } else {
         event.preventDefault();
         router.push(`/${href}`);
