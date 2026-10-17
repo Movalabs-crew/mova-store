@@ -114,33 +114,6 @@ export function trapFocus(container: HTMLElement): () => void {
 // =============================================================================
 
 /**
- * Generates a unique ID for ARIA relationships.
- */
-export function generateAriaId(prefix = "aria"): string {
-  return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-/**
- * Creates ARIA props for a button that controls expandable content.
- */
-export function ariaExpanded(isExpanded: boolean, controlsId: string) {
-  return {
-    "aria-expanded": isExpanded,
-    "aria-controls": controlsId,
-  };
-}
-
-/**
- * Creates ARIA props for a live region (for screen reader announcements).
- */
-export function ariaLive(priority: "polite" | "assertive" = "polite") {
-  return {
-    "aria-live": priority,
-    "aria-atomic": true,
-  };
-}
-
-/**
  * Creates ARIA props for an invalid form field.
  */
 export function ariaInvalid(
@@ -157,50 +130,6 @@ export function ariaInvalid(
 
   return props;
 }
-
-// =============================================================================
-// Screen Reader Utilities
-// =============================================================================
-
-/**
- * Announces a message to screen readers.
- */
-export function announceToScreenReader(
-  message: string,
-  priority: "polite" | "assertive" = "polite"
-): void {
-  const announcement = document.createElement("div");
-  announcement.setAttribute("role", "status");
-  announcement.setAttribute("aria-live", priority);
-  announcement.setAttribute("aria-atomic", "true");
-  announcement.className = "sr-only";
-  announcement.textContent = message;
-
-  document.body.appendChild(announcement);
-
-  // Remove after announcement
-  setTimeout(() => {
-    document.body.removeChild(announcement);
-  }, 1000);
-}
-
-/**
- * CSS class for visually hidden but screen-reader accessible content.
- * Include this in your global CSS or Tailwind config.
- */
-export const srOnlyStyles = `
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-  }
-`;
 
 // =============================================================================
 // Focus Management
@@ -237,13 +166,6 @@ export function focusFirstError(container: HTMLElement): void {
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/**
- * Gets animation duration respecting reduced motion preference.
- */
-export function getAnimationDuration(normalDuration: number): number {
-  return prefersReducedMotion() ? 0 : normalDuration;
 }
 
 // =============================================================================
@@ -303,34 +225,4 @@ export function getRelativeLuminance(hex: string): number {
   if (!rgb) return NaN;
   const [r, g, b] = rgb.map(getChannelLuminance);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-/**
- * Calculates the contrast ratio between two colors.
- */
-export function getContrastRatio(foreground: string, background: string): number {
-  const l1 = getRelativeLuminance(foreground);
-  const l2 = getRelativeLuminance(background);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-/**
- * Checks if a color combination meets WCAG AA contrast requirements.
- * WCAG AA requires 4.5:1 for normal text, 3:1 for large text.
- */
-export function meetsContrastRequirement(
-  foreground: string,
-  background: string,
-  largeText = false
-): boolean {
-  const ratio = getContrastRatio(foreground, background);
-  // Fail closed: a colour this helper cannot parse has no meaningful ratio, and
-  // a compliance check must never certify what it could not compute. Previously
-  // an invalid colour inherited black's luminance of 0, so
-  // meetsContrastRequirement("not-a-color", "#ffffff") reported a 21:1 pass.
-  if (!Number.isFinite(ratio)) return false;
-  const threshold = largeText ? 3.0 : 4.5;
-  return ratio >= threshold;
 }
