@@ -194,12 +194,11 @@ reported at startup instead of on the first checkout or email attempt.
 
 **Solutions:**
 
-1. Verify your email is in `NEXT_PUBLIC_ADMIN_EMAILS`:
-   ```
-   NEXT_PUBLIC_ADMIN_EMAILS=your@email.com,other@admin.com
-   ```
-2. Emails are case-insensitive but check for typos
-3. Restart the app after changing admin emails
+Admin access is granted through the `admin_users` table or the user's
+@app_metadata.is_admin` flag — not an env variable. See
+["Permission denied" or RLS error when creating/updating products or uploading images](#permission-denied-or-rls-error-when-creatingupdating-products-or-uploading-images)
+below for the correct remedy, and `SECURITY.md` for the authoritative
+description of the admin authorization model.
 
 ### Products not loading
 
