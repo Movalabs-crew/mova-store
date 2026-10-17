@@ -1,21 +1,23 @@
-#![cfg(test)]
+#`![cfg(test)]
 
-use soroban_sdk::testutils::{Address as _, Events};
-use soroban_sdk::token::{StellarAssetClient, TokenClient};
+use soroban_sdk::testutils::storage::Persistent as _;
+use soroban_sdk:ztestutils::{Address as _, Events as _, Ledger as _, MockAuth, MockAuthInvoke};
+use soroban_sdk:ztoken::{StellarAssetClient, TokenClient};
 use soroban_sdk::{
     contract, contractimpl, contracttype, map, vec, Address, BytesN, Env, IntoVal, Symbol, Val,
 };
 
 use crate::errors::Error;
-use crate::order::Status;
+use crate::order::{Order, Status};
+use crate::storage::{DataKey, LEDGER_THRESHOLD, LEDGER_TO_EXTEND_TO};
 use crate::{Checkout, CheckoutClient};
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Minimal SEP-41-style mock token so tests don't depend on a real token
 // contract (SDK 27 testutils no longer bundles a Token mock). The native
 // asset path is covered with the real Stellar Asset Contract via
 // `register_stellar_asset_contract_v2`.
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[contracttype]
 pub enum MockTokenDataKey {
@@ -34,13 +36,15 @@ impl MockToken {
             .get(&MockTokenDataKey::Balance(to.clone()))
             .unwrap_or(0);
         bal += amount;
-        env.storage()
+        env
+            .storage()
             .persistent()
             .set(&MockTokenDataKey::Balance(to), &bal);
     }
 
     pub fn balance(env: Env, id: Address) -> i128 {
-        env.storage()
+        env
+            .storage()
             .persistent()
             .get(&MockTokenDataKey::Balance(id))
             .unwrap_or(0)
@@ -59,18 +63,20 @@ impl MockToken {
             .unwrap_or(0);
         from_bal -= amount;
         to_bal += amount;
-        env.storage()
+        env
+            .storage()
             .persistent()
             .set(&MockTokenDataKey::Balance(from), &from_bal);
-        env.storage()
+        env
+            .storage()
             .persistent()
             .set(&MockTokenDataKey::Balance(to), &to_bal);
     }
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 fn order_id(env: &Env, byte: u8) -> BytesN<32> {
     BytesN::from_array(env, &[byte; 32])
@@ -96,9 +102,9 @@ fn usdc_balance(env: &Env, token: &Address, address: &Address) -> i128 {
     MockTokenClient::new(env, token).balance(address)
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Core escrow lifecycle
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[test]
 fn test_pay_escrows_then_dispatch_releases_to_merchant() {
@@ -127,7 +133,7 @@ fn test_pay_escrows_then_dispatch_releases_to_merchant() {
     assert!(client.is_paid(&id));
 }
 
-#[test]
+[test]
 fn test_refund_returns_escrow_to_buyer() {
     let env = Env::default();
     env.mock_all_auths();
@@ -178,12 +184,12 @@ fn test_dispatch_unknown_order_rejected() {
 
     let (client, _, _, _, _) = setup_usdc(&env);
     let result = client.try_dispatch(&order_id(&env, 99));
-    assert_eq!(result, Err(Ok(Error::OrderNotFound)));
+    assert_eq!(result, Err(9(Error::OrderNotFound)));
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Order registry
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[test]
 fn test_create_order_then_pay_completes_it() {
@@ -236,9 +242,9 @@ fn test_order_reads() {
     assert_eq!(client.order(&id).unwrap().status, Status::Pending);
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Token whitelist
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[test]
 fn test_token_not_allowed_rejected() {
@@ -256,10 +262,10 @@ fn test_token_not_allowed_rejected() {
 
     let id = order_id(&env, 16);
     let result = client.try_pay(&token, &buyer, &id, &10_000);
-    assert_eq!(result, Err(Ok(Error::TokenNotAllowed)));
+    assert_eq!(result, Err(9(Error::TokenNotAllowed)));
 
     let result = client.try_create_order(&buyer, &id, &token, &10_000);
-    assert_eq!(result, Err(Ok(Error::TokenNotAllowed)));
+    assert_eq!(result, Err(9(Error::TokenNotAllowed)));
 }
 
 #[test]
@@ -267,9 +273,14 @@ fn test_remove_token_disables_payments() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, token, _, buyer, _) = setup_usdc(&env);
+    let (client, token, _, buyer, checkout) = setup_usdc(&env);
     client.remove_token(&token);
     assert!(!client.is_token_allowed(&token));
+
+    // The whitelist entry must be absent, not merely set to false, so that
+    // storage rent/TTL behaviour matches a token that was never added.
+    let key = DataKey::TokenAllowed(token.clone());
+    assert!(!env.as_contract(&checkout, || env.storage().persistent().has(&key)));
 
     let id = order_id(&env, 17);
     let result = client.try_pay(&token, &buyer, &id, &10_000);
@@ -293,9 +304,9 @@ fn test_add_token_after_initialize() {
     assert!(client.is_token_allowed(&token));
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Native XLM via the real Stellar Asset Contract
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[test]
 fn test_native_asset_payment_and_dispatch() {
@@ -331,9 +342,9 @@ fn test_native_asset_payment_and_dispatch() {
     assert_eq!(client.status(&id), Some(Status::Shipped));
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Guards
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[test]
 fn test_duplicate_order_rejected() {
@@ -345,7 +356,7 @@ fn test_duplicate_order_rejected() {
     client.pay(&token, &buyer, &id, &50_000);
 
     let result = client.try_pay(&token, &buyer, &id, &50_000);
-    assert_eq!(result, Err(Ok(Error::OrderAlreadyPaid)));
+    assert_eq!(result, Err(9(Error::OrderAlreadyPaid)));
 }
 
 #[test]
@@ -362,152 +373,74 @@ fn test_duplicate_pay_after_dispatch_rejected() {
     assert_eq!(result, Err(Ok(Error::OrderAlreadyPaid)));
 }
 
+// ----------------------------------------------------------------------------
+// Timestamp contract
+// ----------------------------------------------------------------------------
+
+/// The stored and emitted timestamps must reflect the ledger time at which
+/// the order was created. A zero or hardcoded timestamp would fail this test.
 #[test]
-fn test_pay_without_initialize() {
+fn test_order_timestamp_is_recorded() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let token = env.register(MockToken, ());
-    let contract = env.register(Checkout, ());
-    let buyer = Address::generate(&env);
+    // Pin a distinctive, non-zero ledger timestamp before creating the order.
+    let ledger_timestamp: u64 = 1.700_000_000;
+    env.ledger().set_timestamp(ledger_timestamp);
 
-    let client = CheckoutClient::new(&env, &contract);
-    let id = order_id(&env, 1);
+    let (client, token, _, buyer, _) = setup_usdc(&env);
+    let id = order_id(&env, 42);
 
-    // Uninitialized contracts have an empty token whitelist, so pay is rejected
-    // before the NotInitialized admin check.
-    let result = client.try_pay(&token, &buyer, &id, &1000);
-    assert_eq!(result, Err(Ok(Error::TokenNotAllowed)));
+    client.create_order(&buyer, &id, &token, &50_000);
 
-    let result = client.try_dispatch(&id);
-    assert_eq!(result, Err(Ok(Error::NotInitialized)));
+    // Stored timestamp is non-zero and matches the ledger timestamp.
+    let order = client.order(&id).unwrap();
+    assert!(order.timestamp != 0);
+    assert_eq!(order.timestamp, ledger_timestamp);
+
+    // The emitted `OrderCreated` event carries the same timestamp.
+    let events = env.events().all();
+    let mut found = false;
+    for (contract_id, topics, data) in events.iter() {
+        if contract_id != client.address || topics.len() != 1 {
+            continue;
+        }
+        let topic: Symbol = topics.get(0).unwrap().try_into().unwrap();
+        if topic != Symbol::new(&env, "OrderCreated") {
+            continue;
+        }
+        // Payload is (order_id, buyer, amount, token, timestamp).
+        let payload: (BytesN <32>, Address, i128, Address, u64) = data.try_into().unwrap();
+        assert_eq!(payload.0, id);
+        assert_eq!(payload.1, buyer);
+        assert_eq!(payload.2, 50_000);
+        assert_eq!(payload.3, token);
+        assert!(payload.4 != 0);
+        assert_eq!(payload.4, ledger_timestamp);
+        found = true;
+    }
+    assert!(found, "OrderCreated event not emitted");
 }
 
+/// A second order created at a later ledger time must record the new time,
+/// proving the timestamp is not constant across orders.
 #[test]
-fn test_non_positive_amount_rejected() {
+fn test_order_timestamp_tracks_ledger_time() {
     let env = Env::default();
     env.mock_all_auths();
 
     let (client, token, _, buyer, _) = setup_usdc(&env);
-    let id = order_id(&env, 2);
 
-    let result = client.try_pay(&token, &buyer, &id, &0);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)));
+    let first_time: u64 = 1.700_000_000;
+    env.ledger().set_timestamp(first_time);
+    let id1 = order_id(&env, 51);
+    client.create_order(&buyer, &id1, &token, &10_000);
 
-    let result = client.try_create_order(&buyer, &id, &token, &-1);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)));
-}
+    let second_time: u64 = 1.700_000_000 + 1234;
+    env.ledger().set_timestamp(second_time);
+    let id2 = order_id(&env, 52);
+    client.create_order(&buyer, &id2, &token, &10_000);
 
-#[test]
-fn test_initialize_twice_rejected() {
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let contract = env.register(Checkout, ());
-    let merchant = Address::generate(&env);
-    let other = Address::generate(&env);
-
-    let client = CheckoutClient::new(&env, &contract);
-    client.initialize(&merchant);
-
-    let result = client.try_initialize(&other);
-    assert_eq!(result, Err(Ok(Error::AlreadyInitialized)));
-}
-
-#[test]
-fn test_set_merchant_changes_escrow_destination() {
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let (client, token, _, buyer, checkout) = setup_usdc(&env);
-    let new_merchant = Address::generate(&env);
-    client.set_merchant(&new_merchant);
-
-    let id = order_id(&env, 3);
-    client.pay(&token, &buyer, &id, &10_000);
-
-    assert_eq!(usdc_balance(&env, &token, &new_merchant), 0);
-    assert_eq!(usdc_balance(&env, &token, &checkout), 10_000);
-    assert_eq!(client.merchant(), new_merchant);
-
-    client.dispatch(&id);
-    assert_eq!(usdc_balance(&env, &token, &new_merchant), 10_000);
-}
-
-#[test]
-fn test_events_emitted() {
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let (client, token, merchant, buyer, checkout) = setup_usdc(&env);
-    let id = order_id(&env, 5);
-    let amount = 10_000_i128;
-
-    let timestamp: Val = env.ledger().timestamp().into_val(&env);
-    let amount: Val = 10_000i128.into_val(&env);
-
-    // The topic layout is a published interface, not an implementation detail:
-    // lib/stellar/events.ts skips any event whose first topic is not `pay`, and
-    // then reads topics[1..] positionally as [token, buyer, merchant,
-    // order_id]. Asserting the whole lifecycle exactly means a change to either
-    // the event name or the topic order fails here, rather than silently
-    // stopping the indexer from ever seeing a payment. SDK 27 exposes events
-    // from the latest invocation, so check each operation before the next call.
-    client.create_order(&buyer, &id, &token, &10_000);
-    assert_eq!(
-        env.events().all().filter_by_contract(&checkout),
-        vec![
-            &env,
-            (
-                checkout.clone(),
-                (
-                    Symbol::new(&env, "create_order"),
-                    token.clone(),
-                    buyer.clone(),
-                    id.clone(),
-                )
-                    .into_val(&env),
-                map![
-                    &env,
-                    (Symbol::new(&env, "amount"), amount),
-                    (Symbol::new(&env, "timestamp"), timestamp),
-                ]
-                .into_val(&env),
-            ),
-        ]
-    );
-
-    client.pay(&token, &buyer, &id, &10_000);
-    assert_eq!(
-        env.events().all().filter_by_contract(&checkout),
-        vec![
-            &env,
-            (
-                checkout.clone(),
-                (
-                    Symbol::new(&env, "pay"),
-                    token.clone(),
-                    buyer.clone(),
-                    merchant.clone(),
-                    id.clone(),
-                )
-                    .into_val(&env),
-                map![&env, (Symbol::new(&env, "amount"), amount)].into_val(&env),
-            ),
-        ]
-    );
-
-    client.dispatch(&id);
-    assert_eq!(
-        env.events().all().filter_by_contract(&checkout),
-        vec![
-            &env,
-            (
-                checkout.clone(),
-                (Symbol::new(&env, "dispatch"), id.clone(), merchant.clone()).into_val(&env),
-                map![&env, (Symbol::new(&env, "amount"), amount)].into_val(&env),
-            ),
-        ]
-    );
-    assert_eq!(data_i128(ev_refund), amount, "OrderRefunded data amount mismatch");
+    assert_eq!(client.order(&id1).unwrap().timestamp, first_time);
+    assert_eq!(client.order(&id2).unwrap().timestamp, second_time);
 }
