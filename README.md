@@ -502,14 +502,30 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 | `NEXT_PUBLIC_SUPABASE_URL`               | yes      | Supabase project URL                              |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | yes      | Supabase anon/public key                          |
 | `NEXT_PUBLIC_ADMIN_EMAILS`               | no       | Comma-separated admin emails                      |
+| `SUPABASE_SERVICE_ROLE_KEY`              | yes**    | Supabase service-role key (server-only, secret)   |
+| `ADMIN_EMAILS`                           | no       | Comma-separated admin emails (server-only)        |
+| `EMAILJS_SERVICE_ID`                     | no       | EmailJS service ID (server-only, preferred)       |
+| `EMAILJS_TEMPLATE_ID`                    | no       | EmailJS template ID (server-only, preferred)      |
+| `EMAILJS_PUBLIC_KEY`                     | no       | EmailJS public key (server-only, preferred)       |
 
 \* Required for the Stellar payment stage; empty until you deploy the contract.
+
+\** Required for `/api/orders` to persist a row. Without it every checkout
+returns `503 orders_store_unconfigured`. This key bypasses row-level security,
+so it must **never** be exposed to the browser — do not prefix it with
+`NEXT_PUBLIC_`. The `EMAILJS_*` server-only variables take precedence over
+their `NEXT_PUBLIC_*` counterparts in `app/api/otp/route.ts`; when set, the
+EmailJS keys stay on the server and are not shipped to the client.
 
 ## Security Notes
 
 - **Merchant authorization is on-chain.** The `initialize` transaction sets the
   wallet that owns the contract and can release escrow, and requires that
   merchant's signature. Verify it before submitting, especially on mainnet.
+- **Server-only secrets stay on the server.** `SUPABASE_SERVICE_ROLE_KEY`,
+  `ADMIN_EMAILS`, and the server-only `EMAILJS_*` variables must be set in the
+  server environment only (never with a `NEXT_PUBLIC_` prefix). The service-role
+  key is the sole requirement for the order write path.
 - **Escrow, not custody.** Funds move `buyer → contract → merchant` only via
   `dispatch`, or back to the buyer via `refund`. Neither party can withdraw to
   an arbitrary address, and an order can only be paid once
