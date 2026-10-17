@@ -8,6 +8,7 @@ import { FaCreditCard, FaExternalLinkAlt, FaCheckCircle, FaCopy, FaCheck } from 
 import { MdLocalShipping, MdPayment, MdPending, MdCancel } from "react-icons/md";
 import { BuyerOrder, verifyOrderOnChain } from "../lib/buyer-orders";
 import { NETWORK } from "../lib/stellar/config";
+import { announceToScreenReader } from "../lib/accessibility";
 
 interface OrderCardProps {
   order: BuyerOrder;
@@ -34,12 +35,14 @@ export default function OrderCard({ order }: OrderCardProps) {
     try {
       await navigator.clipboard.writeText(order.orderId);
       setCopied(true);
+      announceToScreenReader("Order ID copied to clipboard");
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
       }
       copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
+      announceToScreenReader("Failed to copy Order ID", "assertive");
     }
   };
 
