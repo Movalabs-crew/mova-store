@@ -322,8 +322,10 @@ npm run dev
 Open http://localhost:3000 — you should land on the storefront home page. To see
 the Stellar checkout, add an item to your cart and visit the checkout page.
 
-> Until you deploy the contract (next section), `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`
-> is empty and the Stellar payment stage stays disabled — that's expected.
+> The app validates its environment on every server start. Before `npm run dev`
+> succeeds you must set `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` (deploy the contract
+> first — next section) plus the EmailJS and Supabase values. Without them the
+> server aborts with "Startup aborted: the environment configuration is invalid."
 
 ## Smart Contract Deployment (Testnet)
 
@@ -503,7 +505,7 @@ It prints the `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` to paste into `.env.local`.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`          | yes      | Supabase anon/public key                          |
 | `NEXT_PUBLIC_ADMIN_EMAILS`               | no       | Comma-separated admin emails                      |
 
-\* Required for the Stellar payment stage; empty until you deploy the contract.
+\* Required — the server refuses to start if it is empty.
 
 ## Security Notes
 

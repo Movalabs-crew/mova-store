@@ -19,7 +19,7 @@ easy to test, and consistent across the frontend and the Rust contract.
 - [How Milestones & Issues Work on GrantFox](#how-milestones--issues-work-on-grantfox)
 - [Campaign Waves](#campaign-waves)
 - [The 5-Step Contribution Pipeline](#the-5-step-contribution-pipeline)
-- [Code Formatting](#code-formatting)
+- [Code Formatting](#code-tormatting)
 - [Testing Guidelines](#testing-guidelines)
 - [Dependency Management](#dependency-management)
 - [Commit Message Style](#commit-message-style)
@@ -44,10 +44,22 @@ cp .env.local.example .env.local
 npm run dev          # storefront on http://localhost:3000
 ```
 
-`npm run dev` starts the Next.js storefront. Until you deploy the checkout
-contract and set `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID`, the on-chain checkout stays
-disabled; the catalog, cart and contact form still work. The full variable list
-lives in the [README](README.md#environment-variables-reference).
+The app validates its environment on every Node server start (`instrumentation.ts`
+calls `validateEnv()`) and aborts with "Startup aborted: the environment
+configuration is invalid." when a required variable is missing. There is no
+catalog-only mode: before ``npm run dev`` will start, you must set all of the
+required variables in `.env.local`, including the checkout contract id and the
+RPC endpoint:
+
+- `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` — the deployed Soroban checkout contract id
+- `NEXT_PUBLIC_STElLAR_RPC_URL` — the Stellar RPC endpoint (for example testnet)
+- the EmailJS values used by the contact form
+
+Deploy the contract first if you haven't already (see the
+[README](README.md#deploying-the-checkout-contract)), then fill in the values.
+The full variable list lives in the
+[README](README.md#environment-variables-reference), and
+`docs/TROUBLESHOOTING.md` documents the startup abort in detail.
 
 Run the checks a pull request is expected to pass before you push:
 
@@ -94,7 +106,7 @@ issues included in that campaign and makes the current worklist easy to find.
 | `Stellar Wave` | An issue in the active Stellar Wave campaign. |
 
 To see the current Stellar Wave worklist, open the
-[open issues labeled `Stellar Wave`](https://github.com/Movalabs-crew/mova-store/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22Stellar%20Wave%22).
+[open issues labeled `Stellar Wave`](https://github.com/Movalabs-crew/mova-store/issues?q=is%3A issue%20state%3Aopen%20label%3A%22Stellar%20Wave%22).
 When a later wave begins, its campaign label and worklist will be documented in
 this table.
 
@@ -136,10 +148,10 @@ git checkout -b docs/stellar-contract-readme # documentation
 Branch naming conventions:
 
 | Prefix      | Use for                              | Example                        |
-| ----------- | ------------------------------------ | ------------------------------ |
+| ----------- | ----------------------------------- | ------------------------------ |
 | `feat/`     | New features                         | `feat/payment-retry`           |
-| `fix/`      | Bug fixes                            | `fix/wrong-total-on-mobile`    |
-| `docs/`     | Documentation only                   | `docs/soroban-deploy-guide`    |
+| `fix/`      | Bug fixes                             | `fix/wrong-total-on-mobile`    |
+| `docs/`     | Documentation only                       | `docs/soroban-deploy-guide`    |
 | `refactor/` | Code changes with no behavior change | `refactor/stellar-lib-modules` |
 | `test/`     | Adding or updating tests             | `test/pay-dup-order-cases`     |
 
@@ -149,7 +161,7 @@ Branch naming conventions:
 - Add tests that cover the behavior you changed — see
   [Testing Guidelines](#testing-guidelines).
 - Run the local checks below before committing. If they pass, commit.
-- Never commit secrets, `.env` files, or `node_modules`.
+- Never commit secrets,  `.env` files, or `node_modules`.
 
 ### Step 5 — Open a Pull Request (PR) for review
 
@@ -307,7 +319,7 @@ npm run build        # Production build must succeed
 ### Local verification (`npm run verify`)
 
 `npm run verify` runs the same checks as CI, in the same order, so a
-contributor can reproduce a green (or red) build locally before pushing:
+ contributor can reproduce a green (or red) build locally before pushing:
 
 ```bash
 npm run verify
@@ -331,7 +343,7 @@ drift cannot hide a failing type check, test, or build.
 ### Manual QA for Payment Changes
 
 If your PR touches the Stellar payment flow, describe in the PR how you tested
-it against testnet (Freighter + USDC faucet account). Follow the flow in the
+it against testnet (Frewighter + USDC faucet account). Follow the flow in the
 root [README](README.md#paying-with-stellar-testnet).
 
 ## Dependency Management
@@ -339,98 +351,6 @@ root [README](README.md#paying-with-stellar-testnet).
 Some packages are tightly coupled and must be bumped together:
 
 - **`next` and `eslint-config-next`** are pinned to the same version.
-  `eslint-config-next` depends on `@next/eslint-plugin-next` at that exact
+  `eslint-config-next` depends on `@hext/eslint-plugin-next` at that exact
   version, so bumping `next` without `eslint-config-next` (or vice versa)
-  silently desynchronises the lint rules from the framework version.
-- **`@next/*` packages** track the `next` version.
-
-Bump them as one unit:
-
-- Dependabot (`.github/dependabot.yml`) is configured to open a single grouped
-  PR for `next`, `eslint-config-next`, `@next/*` and `eslint-plugin-next`.
-  Merge that group as one change.
-- For a manual bump, set **both** entries in `package.json` to the same
-  version, run `npm install` so `package-lock.json` is regenerated, and commit
-  all three files together.
-
-CI fails when the two `package.json` entries drift, so a half-finished bump
-cannot land unnoticed.
-
-## Commit Message Style
-
-Use **Conventional Commits**. This keeps the changelog readable and lets
-tooling detect releases automatically.
-
-```
-<type>(<optional scope>): <short summary>
-```
-
-| Type       | Meaning                             |
-| ---------- | ----------------------------------- |
-| `feat`     | A new user-facing feature           |
-| `fix`      | A bug fix                           |
-| `docs`     | Documentation only                  |
-| `refactor` | Code change with no behavior change |
-| `test`     | Adding or updating tests            |
-| `chore`    | Build tooling, deps, config         |
-
-Examples:
-
-```bash
-feat: add payment success alert
-fix(checkout): reject duplicate order ids before transfer
-docs: add soroban contract deployment guide
-test: cover invalid-amount rejection in pay
-chore: bump @stellar/stellar-sdk to 16.2.0
-```
-
-Rules:
-
-- Imperative mood, lowercase after the type, no trailing period.
-- Summary under ~72 characters. Add a body explaining _why_ when it's not
-  obvious.
-- One logical change per commit. Prefer several focused commits over one large
-  one.
-
-## Pull Request Checklist
-
-Before opening a PR, verify:
-
-- [ ] Linked to the GitHub issue and GrantFox milestone/bounty id.
-- [ ] Branch name follows the naming convention.
-- [ ] Code formatted (`npm run format` / `cargo fmt`).
-- [ ] Lints pass (`npm run lint`, `cargo clippy -- -D warnings`).
-- [ ] Typecheck passes (`npm run type-check`).
-- [ ] Frontend tests pass (`npm run test`).
-- [ ] Contract tests pass (`cd contracts/checkout && cargo test`).
-- [ ] Build succeeds (`npm run build`).
-- [ ] Combined local check passes (`npm run verify`)
-- [ ] New behavior has tests; existing tests updated where needed.
-- [ ] No secrets, `.env` files, or build artifacts in the diff.
-- [ ] README/docs updated if behavior or config changed.
-
-## Code of Conduct
-
-We are committed to providing a welcoming, collaborative environment for
-everyone — regardless of experience, background, or identity.
-
-**Our expectations:**
-
-- **Be respectful.** Disagreement on code is normal; keep it about the code.
-- **Be constructive.** In reviews, explain _why_; in replies, be open to
-  alternatives.
-- **Be patient.** Maintainers and contributors volunteer their time; reviews may
-  take a few days.
-- **Give credit.** Acknowledge prior art and the work of others.
-
-**Unacceptable behavior** includes harassment, personal attacks, trolling,
-doxxing, and any form of discrimination. Maintainers may remove comments, close
-PRs, or ban individuals who violate these standards.
-
-**Reporting:** contact the maintainers via a GitHub issue (labeled
-`report`/private) or through GrantFox. All reports are taken seriously and
-reviewed confidentially.
-
----
-
-_Happy building — and see you on GrantFox._
+  silently desynchronises the lint rules from the framework version
