@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "fix/issue-1065-test-scripts-cover-the-ci-helper-scripts",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "fix/issue-1065-test-scripts-cover-the-ci-helper-scripts": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "fix/issue-1065-test-scripts-cover-the-ci-helper-scripts",
+    "origin"
+  ]
+}
