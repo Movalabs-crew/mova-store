@@ -340,7 +340,7 @@ function Navbar() {
           </>
         )}
       </nav>
-      {toast && <Toast message={toast.message} onClose={hideToast} />}
+      {toast && <Toast message={toast.message} show={toast.show} onClose={hideToast} />}
     </>
   );
 }
