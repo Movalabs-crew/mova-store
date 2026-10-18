@@ -39,3 +39,6 @@ contracts/checkout/test_snapshots/
 
 # Test coverage output
 coverage/
+
+# Local-only issue roadmap — never publish future bounty issues
+ISSUE_DRAFTS.md
