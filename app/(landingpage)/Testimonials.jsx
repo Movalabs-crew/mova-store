@@ -35,7 +35,7 @@ const testimonials = [
 export default function Testimonials() {
   return (
     <section className="bg-mova-surface/60 py-20 px-4 md:px-10">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6x mx-auto">
         <div className="text-center mb-14">
           <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-3">
             Customer stories
@@ -56,7 +56,7 @@ export default function Testimonials() {
               className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start gap-4">
-                <FaQuoteLeft className="text-purple-200 text-2xl flex-shrink-0 mt-1" />
+                <FaQuoteLeft className="text-purple-200 text-2xl flex-shrink-0 mt-1" aria-hidden="true" />
                 <div className="flex-1">
                   <p className="text-gray-700 leading-relaxed mb-4">
                     "{testimonial.text}"
@@ -73,13 +73,15 @@ export default function Testimonials() {
                     </div>
 
                     <div className="flex flex-col items-end gap-1">
-                      <div className="flex gap-0.5">
+                      <div className="flex gap-0.5" aria-hidden="true">
                         {[...Array(testimonial.rating)].map((_, i) => (
                           <FaStar key={i} className="text-yellow-400 text-sm" />
                         ))}
                       </div>
+                      <span className="sr-only">{testimonial.rating} out of 5 stars</span>
+                      <span className="sr-only">{testimonial.rating} out of 5 stars</span>
                       <div className="flex items-center gap-1 text-xs text-gray-400">
-                        <SiStellar size={12} />
+                        <SiStellar size={12} aria-hidden="true" />
                         Paid with {testimonial.paidWith}
                       </div>
                     </div>

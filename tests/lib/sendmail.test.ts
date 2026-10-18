@@ -8,6 +8,17 @@ vi.mock("@emailjs/browser", () => ({
   },
 }));
 
+const BASE_ENV = {
+  NEXT_PUBLIC_EMAILJS_SERVICE_ID: "srv_test_id",
+  NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: "tmpl_test_id",
+  NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: "pub_key_test",
+  NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL: "default_recipient@example.com",
+};
+
+const stubBaseEnv = () => {
+  for (const [key, value] of Object.entries(BASE_ENV)) vi.stubEnv(key, value);
+};
+
 describe("lib/sendmail.js", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -59,101 +70,98 @@ describe("lib/sendmail.js", () => {
     });
   });
 
-  describe("sendMail execution", () => {
-    beforeEach(() => {
-      vi.stubEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", "srv_test_id");
-      vi.stubEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", "tmpl_test_id");
-      vi.stubEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", "pub_key_test");
-      vi.stubEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL", "default_recipient@example.com");
-    });
+  describe("recipient pinning and header injection", () => {
+    beforeEach(stubBaseEnv);
 
-    it("resolves the emailjs response and passes correct service, template, params, and key", async () => {
-      mockSend.mockResolvedValueOnce({
-        status: 200,
-        text: "OK",
-      });
+    it("sends to the validated sender and ignores a caller-chosen recipient", async () => {
+      mockSend.mockResolvedValueOnce({ status: 200, text: "OK" });
 
       const { default: sendMail } = await import("../../lib/sendmail");
 
       const result = await sendMail({
         name: "Carol",
-        email: "carol@example.com",
+        email: "Carol@Example.com",
         message: "Message text here",
-        recipientEmail: "custom_dest@example.com",
+        // Legacy caller-supplied recipient must not be honoured.
+        recipientEmail: "attacker@evil.example",
         subject: "Custom Subject",
-      });
+      } as Parameters<typeof sendMail>[0] & { recipientEmail: string });
 
       expect(result).toEqual({ status: 200, text: "OK" });
       expect(mockSend).toHaveBeenCalledTimes(1);
-      expect(mockSend).toHaveBeenCalledWith(
-        "srv_test_id",
-        "tmpl_test_id",
-        {
-          name: "Carol",
+      expect(mockSend.mock.calls[0][2]).toMatchObject({
+        name: "Carol",
+        email: "carol@example.com",
+        recipient_email: "carol@example.com",
+      });
+      expect(mockSend.mock.calls[0][2].recipient_email).not.toBe("attacker@evil.example");
+    });
+
+    it("strips CRLF from the subject so it cannot inject a header", async () => {
+      mockSend.mockResolvedValueOnce({ status: 200, text: "OK" });
+
+      const { default: sendMail } = await import("../../lib/sendmail");
+
+      await sendMail({
+        name: "Carol",
+        email: "carol@example.com",
+        message: "Hi",
+        subject: "Hello\r\nBcc: evil@evil.example",
+      });
+
+      const params = mockSend.mock.calls[0][2];
+      expect(params.subject).toBe("Hello Bcc: evil@evil.example");
+      expect(params.subject).not.toMatch(/[\r\n]/);
+    });
+
+    it("rejects a name carrying a header-injection payload", async () => {
+      const { default: sendMail } = await import("../../lib/sendmail");
+
+      await expect(
+        sendMail({
+          name: "Carol\r\nBcc: evil@evil.example",
           email: "carol@example.com",
-          message: "Message text here",
-          recipient_email: "custom_dest@example.com",
-          subject: "Custom Subject",
-        },
-        "pub_key_test"
-      );
+          message: "Hi",
+        })
+      ).rejects.toThrow(/Name/);
+
+      expect(mockSend).not.toHaveBeenCalled();
     });
 
-    it("falls back recipient_email to NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL when recipientEmail is omitted", async () => {
-      mockSend.mockResolvedValueOnce({
-        status: 200,
-        text: "OK",
-      });
+    it("rejects an invalid sender email", async () => {
+      const { default: sendMail } = await import("../../lib/sendmail");
+
+      await expect(
+        sendMail({ name: "Carol", email: "not-an-email", message: "Hi" })
+      ).rejects.toThrow(/valid email/i);
+
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("rate limiting", () => {
+    beforeEach(() => {
+      stubBaseEnv();
+      vi.stubEnv("NEXT_PUBLIC_EMAILJS_RATE_LIMIT_MAX", "1");
+      vi.stubEnv("NEXT_PUBLIC_EMAILJS_RATE_LIMIT_WINDOW_MS", "60000");
+    });
+
+    it("blocks a burst beyond the configured send budget", async () => {
+      mockSend.mockResolvedValue({ status: 200, text: "OK" });
 
       const { default: sendMail } = await import("../../lib/sendmail");
 
-      const result = await sendMail({
-        name: "Dave",
-        email: "dave@example.com",
-        message: "Default recipient test",
-        subject: "Default Recipient",
-      });
+      await sendMail({ name: "Carol", email: "carol@example.com", message: "one" });
+      await expect(
+        sendMail({ name: "Carol", email: "carol@example.com", message: "two" })
+      ).rejects.toThrow(/Too many email requests/i);
 
-      expect(result).toEqual({ status: 200, text: "OK" });
-      expect(mockSend).toHaveBeenCalledWith(
-        "srv_test_id",
-        "tmpl_test_id",
-        {
-          name: "Dave",
-          email: "dave@example.com",
-          message: "Default recipient test",
-          recipient_email: "default_recipient@example.com",
-          subject: "Default Recipient",
-        },
-        "pub_key_test"
-      );
+      expect(mockSend).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it("handles default empty strings for omitted optional arguments", async () => {
-      mockSend.mockResolvedValueOnce({
-        status: 200,
-        text: "OK",
-      });
-
-      const { default: sendMail } = await import("../../lib/sendmail");
-
-      // @ts-expect-error test optional fields defaulting
-      const result = await sendMail({});
-
-      expect(result).toEqual({ status: 200, text: "OK" });
-      expect(mockSend).toHaveBeenCalledWith(
-        "srv_test_id",
-        "tmpl_test_id",
-        {
-          name: "",
-          email: "",
-          message: "",
-          recipient_email: "default_recipient@example.com",
-          subject: undefined,
-        },
-        "pub_key_test"
-      );
-    });
+  describe("sendMail execution", () => {
+    beforeEach(stubBaseEnv);
 
     it("rejects and rethrows when emailjs.send fails", async () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});

@@ -111,7 +111,7 @@ frontend registry entry — no new code.
 This is the core design decision. Funds never go straight to the merchant.
 
 - `pay(token, buyer, order_id, amount)` → `buyer → contract` (escrow),
-  order → `Paid`. Emits `payment_received`.
+  order → `Paid`. Emits `pay`.
 - `dispatch(order_id)` → `contract → merchant`, order → `Shipped`.
   Merchant-authorized. Irreversible.
 - `refund(order_id)` → `contract → buyer`, order → `Refunded`.

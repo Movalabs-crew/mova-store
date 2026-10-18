@@ -128,8 +128,8 @@ describe("Checkout OTP flow (server-side verification)", () => {
   });
 
   it("keeps the shopper on the OTP stage when the server rejects the code", async () => {
-    vi.mocked(requestOtp).mockResolvedOnce({ ok: true } as any);
-    vi.mocked(verifyOtp).mockResolvedOnce({ ok: false, error: "mismatch" } as any);
+    vi.mocked(requestOtp).mockResolvedValueOnce({ ok: true } as any);
+    vi.mocked(verifyOtp).mockResolvedValueOnce({ ok: false, error: "mismatch" } as any);
 
     seedCart();
     const { container } = render(<Checkout />);
@@ -317,7 +317,7 @@ describe("Checkout per-field validation blocks submission (#477)", () => {
   );
 
   it("accepts a card number typed with spaces", async () => {
-    vi.mocked(requestOtp).mockResolvedOnce({ ok: true } as any);
+    vi.mocked(requestOtp).mockResolvedValueOnce({ ok: true } as any);
 
     seedCart();
     const { container } = render(<Checkout />);

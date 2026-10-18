@@ -31,6 +31,17 @@ describe("usdToRawUnits", () => {
     expect(usdToRawUnits(1)).toBe(10_000_000n);
   });
 
+  it("converts with an explicit non-7-decimal token's decimals (#527)", () => {
+    // A 6-decimal SEP-41 token: $12.34 is 12_340_000 raw units, not 123_400_000.
+    expect(usdToRawUnits(12.34, 6)).toBe(12_340_000n);
+    expect(usdToRawUnits(1, 6)).toBe(1_000_000n);
+    // An 8-decimal token: $12.34 is 1_234_000_000 raw units.
+    expect(usdToRawUnits(12.34, 8)).toBe(1_234_000_000n);
+    // Omitting the argument keeps the USDC default, so existing callers are
+    // unaffected.
+    expect(usdToRawUnits(12.34)).toBe(usdToRawUnits(12.34, 7));
+  });
+
   const cases: Array<[string, number]> = [
     ["zero", 0],
     ["negative", -5],
@@ -75,6 +86,117 @@ describe("payWithStellar", () => {
       .setTimeout(0)
       .build();
   };
+
+  const readiness = {
+    account: dummyAccount,
+    funded: true,
+    nativeBalanceRaw: 50_000_000n,
+    tokenBalanceRaw: 100_000_000n,
+    decimals: 7,
+    hasTrustline: true,
+    trustlineAuthorized: true,
+    requiredRaw: 10_000_000n,
+    sufficientBalance: true,
+    sufficientReserve: true,
+    issues: [],
+  };
+
+  // The decoded receipt has to describe the same payment the request did, or
+  // `payWithStellar` (correctly) refuses to report success. `orderId` is the
+  // hash of the submitted order id, `token` is the contract actually paid, and
+  // `amount` is the raw i128 the chain recorded.
+  const matchingReceipt = async (
+    orderId: string,
+    overrides: Record<string, unknown> = {}
+  ) => ({
+    txHash: "abc123mocktxhash",
+    ledger: 456,
+    amount: "10000000",
+    buyer: dummyPublicKey,
+    orderId: await orderIdHash(orderId),
+    token: configMod.defaultToken().contractId,
+    ...overrides,
+  });
+
+  const mockSuccessfulFlow = async (orderId: string) => {
+    const tx = buildDummyTx();
+    const xdrString = tx.toXDR();
+    vi.spyOn(freighterMod, "ensureNetwork").mockResolvedValue();
+    vi.spyOn(accountMod, "assertPaymentReady").mockResolvedValue(readiness);
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolvedValue({
+      tx,
+      report: { ok: true, minResourceFee: 1200n, instructions: 5000 },
+    });
+    vi.spyOn(simulateMod, "budgetFee").mockResolvedValue("51200");
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolvedValue(xdrString);
+    vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolvedValue({
+      status: "PENDING",
+      hash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "waitForTransaction").mockResolvedValue({
+      status: rpc.Api.GetTransactionStatus.SUCCESS,
+      ledger: 456,
+      txHash: "abc123mocktxhash",
+    } as never);
+    // `decodePaymentEvent` is synchronous: it decodes the already-fetched
+    // transaction result rather than awaiting anything itself.
+    vi.spyOn(eventsMod, "decodePaymentEvent").mockReturnValue(
+      (await matchingReceipt(orderId)) as never
+    );
+  };
+
+  it("writes nothing to the console for a production payment without onStatus (#718)", async () => {
+    const previous = process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await mockSuccessfulFlow("ORD-NO-LOGS");
+
+    await payWithStellar({
+      amountUsd: 1,
+      orderId: "ORD-NO-LOGS",
+      publicKey: dummyPublicKey,
+    });
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(infoSpy).not.toHaveBeenCalled();
+    expect(debugSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    } else {
+      process.env.NEXT_PUBLIC_STELLAR_DEBUG = previous;
+    }
+    vi.restoreAllMocks();
+  });
+
+  it("only emits [stellar] progress logs when NEXT_PUBLIC_STELLAR_DEBUG is enabled (#718)", async () => {
+    const previous = process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    process.env.NEXT_PUBLIC_STELLAR_DEBUG = "true";
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await mockSuccessfulFlow("ORD-DEBUG-LOGS");
+
+    await payWithStellar({
+      amountUsd: 1,
+      orderId: "ORD-DEBUG-LOGS",
+      publicKey: dummyPublicKey,
+    });
+
+    expect(logSpy).toHaveBeenCalled();
+    expect(logSpy.mock.calls.some(([msg]) => String(msg).startsWith("[stellar]"))).toBe(true);
+
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_STELLAR_DEBUG;
+    } else {
+      process.env.NEXT_PUBLIC_STELLAR_DEBUG = previous;
+    }
+    vi.restoreAllMocks();
+  });
 
   it("throws CONTRACT_NOT_CONFIGURED if CHECKOUT_CONTRACT_ID is empty", async () => {
     vi.resetModules();
@@ -136,12 +258,9 @@ describe("payWithStellar", () => {
       ledger: 456,
       txHash: "abc123mocktxhash",
     } as never);
-    const decodeSpy = vi.spyOn(eventsMod, "decodePaymentEvent").mockReturnValue({
-      txHash: "abc123mocktxhash",
-      ledger: 456,
-      amount: "10000000",
-      buyer: dummyPublicKey,
-    });
+    const decodeSpy = vi
+      .spyOn(eventsMod, "decodePaymentEvent")
+      .mockReturnValue((await matchingReceipt("ORD-999")) as never);
 
     const statusUpdates: string[] = [];
     const result = await payWithStellar({
@@ -241,7 +360,7 @@ describe("payWithStellar", () => {
     } as never);
 
     await expect(
-      payWithStellar({
+      payWithStellar( {
         amountUsd: 2,
         orderId: "ORD-FAIL-SEND",
         publicKey: dummyPublicKey,
@@ -252,5 +371,199 @@ describe("payWithStellar", () => {
     });
 
     vi.restoreAllMocks();
+  });
+
+  it("throws TX_TRY_AGAIN_LATER and never polls an undefined hash when submission returns TRY_AGAIN_LATER", async () => {
+    const tx = buildDummyTx();
+    const xdrString = tx.toXDR();
+
+    vi.spyOn(freighterMod, "ensureNetwork").mockResolvedValue();
+    vi.spyOn(accountMod, "assertPaymentReady").mockResolvedValue({
+      account: dummyAccount,
+      funded: true,
+      nativeBalanceRaw: 50_000_000n,
+      tokenBalanceRaw: 100_000_000n,
+      decimals: 7,
+      hasTrustline: true,
+      trustlineAuthorized: true,
+      requiredRaw: 10_000_000n,
+      sufficientBalance: true,
+      sufficientReserve: true,
+      issues: [],
+    });
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolvedValue({
+      tx,
+      report: { ok: true, minResourceFee: 100n },
+    });
+    vi.spyOn(simulateMod, "budgetFee").mockResolvedValue("50100");
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolvedValue(xdrString);
+    const sendSpy = vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolvedValue({
+      status: "TRY_AGAIN_LATER",
+      hash: undefined,
+    } as never);
+    const waitSpy = vi.spyOn(eventsMod, "waitForTransaction");
+
+    await expect(
+      payWithStellar({
+        amountUsd: 3,
+        orderId: "ORD-TRY-AGAIN",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toMatchObject({
+      code: "TX_TRY_AGAIN_LATER",
+      message: expect.stringContaining("retry"),
+    });
+
+    expect(waitSpy).not.toHaveBeenCalled();
+
+    sendSpy.mockRestore();
+    waitSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
+
+  // --- Issue #712: confirm the payment from the chain, not from the request ---
+
+  const OTHER_KEY = "GCKFBEIYTKP6RJKF6LO5C6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6";
+  const OTHER_TOKEN = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+
+  /**
+   * Runs the full pay flow with a decoded receipt derived from `orderId`.
+   * `overrides === null` simulates a successful transaction that carried no
+   * payment event at all.
+   */
+  async function mockFlowWithReceipt(
+    orderId: string,
+    overrides: Record<string, unknown> | null
+  ) {
+    const tx = buildDummyTx();
+    const xdrString = tx.toXDR();
+    vi.spyOn(freighterMod, "ensureNetwork").mockResolvedValue();
+    vi.spyOn(accountMod, "assertPaymentReady").mockResolvedValue(readiness);
+    vi.spyOn(simulateMod, "prepareAndReport").mockResolvedValue({
+      tx,
+      report: { ok: true, minResourceFee: 1200n, instructions: 5000 },
+    });
+    vi.spyOn(simulateMod, "budgetFee").mockResolvedValue("51200");
+    vi.spyOn(freighterMod, "signWithFreighter").mockResolvedValue(xdrString);
+    vi.spyOn(rpc.Server.prototype, "sendTransaction").mockResolvedValue({
+      status: "PENDING",
+      hash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "waitForTransaction").mockResolvedValue({
+      status: rpc.Api.GetTransactionStatus.SUCCESS,
+      ledger: 456,
+      txHash: "abc123mocktxhash",
+    } as never);
+    vi.spyOn(eventsMod, "decodePaymentEvent").mockReturnValue(
+      (overrides === null ? null : await matchingReceipt(orderId, overrides)) as never
+    );
+  }
+
+  it("confirms the payment when the decoded receipt matches the request", async () => {
+    await mockFlowWithReceipt("ORD-MATCH", {});
+
+    const result = await payWithStellar({
+      amountUsd: 1,
+      orderId: "ORD-MATCH",
+      publicKey: dummyPublicKey,
+    });
+
+    // The reported figures come from the receipt, which is the chain's record.
+    expect(result.receipt.orderId).toBe(await orderIdHash("ORD-MATCH"));
+    expect(result.receipt.amount).toBe("10000000");
+    expect(result.amountRaw).toBe(10_000_000n);
+    expect(result.tokenAmount).toBe(1);
+    expect(result.amountUsd).toBe(1);
+  });
+
+  it("throws PAYMENT_NOT_CONFIRMED when no payment event was decoded", async () => {
+    await mockFlowWithReceipt("ORD-NO-EVENT", null);
+
+    await expect(
+      payWithStellar({
+        amountUsd: 1,
+        orderId: "ORD-NO-EVENT",
+        publicKey: dummyPublicKey,
+      })
+    ).rejects.toMatchObject({
+      code: "PAYMENT_NOT_CONFIRMED",
+      message: expect.stringContaining("no payment event"),
+    });
+  });
+
+  it.each([
+    ["amount", { amount: "99999999" }],
+    ["order id", { orderId: "ab".repeat(32) }],
+    ["buyer", { buyer: OTHER_KEY }],
+    ["token", { token: OTHER_TOKEN }],
+  ])(
+    "throws PAYMENT_MISMATCH naming the %s when the receipt disagrees with the request",
+    async (field, override) => {
+      await mockFlowWithReceipt("ORD-MISMATCH", override as Record<string, unknown>);
+
+      await expect(
+        payWithStellar({
+          amountUsd: 1,
+          orderId: "ORD-MISMATCH",
+          publicKey: dummyPublicKey,
+        })
+      ).rejects.toMatchObject({
+        code: "PAYMENT_MISMATCH",
+        message: expect.stringContaining(field as string),
+      });
+    }
+  );
+
+  it("reports the escrowed amount from the receipt, not the quoted amount", async () => {
+    const xlm = configMod.SUPPORTED_TOKENS[1];
+    // The quote is $12 at 0.12 USD/XLM, but this buyer pays 40 XLM and the
+    // receipt confirms 40 XLM (400_000_000 raw) on chain.
+    await mockFlowWithReceipt("ORD-ESCROWED", {
+      amount: "400000000",
+      token: xlm.contractId,
+    });
+
+    const result = await payWithStellar({
+      amountUsd: 12,
+      tokenAmount: 40,
+      xlmUsdPrice: 0.12,
+      token: xlm,
+      orderId: "ORD-ESCROWED",
+      publicKey: dummyPublicKey,
+    });
+
+    // Every reported figure is derived from the receipt, so `amountUsd` is the
+    // escrowed 40 XLM valued at the quoted rate - not the $12 that was asked for.
+    expect(result.receipt.amount).toBe("400000000");
+    expect(result.amountRaw).toBe(400_000_000n);
+    expect(result.tokenAmount).toBe(40);
+    expect(result.amountUsd).toBeCloseTo(4.8);
+  });
+
+  it("builds the payment with the selected token's decimals, not USDC's (#527)", async () => {
+    // A 6-decimal SEP-41 token. Its $12.34 payment must be 12_340_000 raw
+    // units; using USDC's 7 decimals would escrow ten times the amount and the
+    // receipt would no longer match the request.
+    const sixDecimalToken = {
+      contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      symbol: "SIX",
+      name: "Six Decimal Token",
+      decimals: 6,
+    };
+    await mockFlowWithReceipt("ORD-SIX-DECIMALS", {
+      amount: "12340000",
+      token: sixDecimalToken.contractId,
+    });
+
+    const result = await payWithStellar({
+      amountUsd: 12.34,
+      orderId: "ORD-SIX-DECIMALS",
+      publicKey: dummyPublicKey,
+      token: sixDecimalToken,
+    });
+
+    expect(result.amountRaw).toBe(12_340_000n);
+    expect(result.tokenAmount).toBeCloseTo(12.34);
+    expect(result.tokenSymbol).toBe("SIX");
   });
 });

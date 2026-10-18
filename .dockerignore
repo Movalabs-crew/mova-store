@@ -1,0 +1,14 @@
+# Keep the build context small and the dependency install reproducible.
+# node_modules and .next must never be copied in: the whole point of the image is
+# that `npm ci` produces them from the lockfile inside the build.
+node_modules
+.next
+.git
+coverage
+contracts/checkout/target
+.env
+.env.local
+.env*.local
+.vercel
+.DS_Store
+*.log

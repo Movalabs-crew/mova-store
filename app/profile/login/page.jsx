@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { login, loginWithGoogle, signup } from "../../../lib/auth";
 import Toast from "../../../components/Toast";
 import useToast from "../../../hooks/useToast";
+import { resolveInternalRedirect } from "../../../lib/safe-redirect";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
@@ -25,15 +26,10 @@ const AuthPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get redirect URL from query params, default to /shop
-  const getRedirectUrl = () => {
-    const redirect = searchParams.get("redirect");
-    // Only allow internal redirects (starting with /)
-    if (redirect && redirect.startsWith("/")) {
-      return redirect;
-    }
-    return "/shop";
-  };
+  // Resolve the post-login redirect, allowing only same-origin paths. A bare
+  // prefix check is not enough: "//evil.com" and "/\evil.com" both start with
+  // "/" but a browser resolves them to another origin.
+  const getRedirectUrl = () => resolveInternalRedirect(searchParams.get("redirect"));
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoggingIn(true);
