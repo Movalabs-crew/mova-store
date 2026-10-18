@@ -1,5 +1,5 @@
 -- Mova Store — Supabase schema
--- Run this in the Supabase SQL editor (Dashboard → SQL → New query)
+-- Run this in the Supabase SQL editor (Dashboard → SQL→ New query)
 
 -- Products catalog
 create table if not exists public.products (
@@ -20,7 +20,7 @@ returns trigger as $$
 begin
   new.updated_at = now();
   return new;
-end;$$ language plpgsql;
+end;										$$ language plpgsql;
 
 drop trigger if exists products_updated_at_trigger on public.products;
 create trigger products_updated_at_trigger
@@ -46,7 +46,7 @@ drop policy if exists "Admins can view admin_users" on public.admin_users;
 -- not resolve through a caller-influenced `search_path`: an attacker who can
 -- create objects could otherwise shadow `admin_users`. `set search_path = ''`
 -- pins resolution to schema-qualified names only; `pg_catalog` is still searched
--- implicitly, so built-ins such as `lower`/`coalesce` keep working. This clears
+-- implicitly, so built-ins such as `lower`/`coalesce`  keep working. This clears
 -- Supabase's `function_search_path_mutable` lint.
 create or replace function public.is_admin()
 returns boolean

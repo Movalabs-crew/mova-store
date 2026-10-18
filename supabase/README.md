@@ -17,6 +17,32 @@
 
 Products live in the `products` table; images in the public `products` storage bucket.
 
+## RLS policy tests
+
+The RLS policies are the primary authorization boundary for buyer data, so they are
+tested directly against a database with the migrations applied. The suite lives in
+[`tests/rls/`](./tests/rls) and runs with `npm run test:rls` (see
+[`tests/rls/README.md`](./tests/rls/README.md) for setup).
+
+It exercises the tables as three distinct roles:
+
+- **anonymous** — the public anon key with no session.
+- **buyer** — an authenticated user who is not in `admin_users`.
+- **admin** — an authenticated user in `admin_users` (or with the
+  `app_metadata.is_admin` claim).
+
+Covered at minimum:
+
+- **order insert** — a buyer may insert only their own `Pending` row; anonymous and
+  cross-user inserts are rejected, and a forged `status` is rejected.
+- **own-order read** — a buyer sees only their own orders.
+- **admin read** — an admin sees all orders.
+- **product mutation** — only an admin may insert, update or delete products;
+  buyers and anonymous callers are denied.
+
+A regression that widens any policy (for example a `with check (true)` insert or an
+unpinned `search_path`) fails the suite, so the policies cannot silently drift.
+
 
 ## Orders: who may update or delete rows
 
@@ -34,6 +60,9 @@ verified, so admin flows are the only sanctioned way to change it.
 
 To grant admin rights, use the `public.admin_users` allowlist or the `is_admin`
 JWT claim (`app_metadata.is_admin`) as described in [`../SECURITY.md`](../SECURITY.md).
+These update/delete rules are covered by the RLS policy tests in
+[`tests/rls/`](./tests/rls), which assert that buyers and anonymous callers are
+denied while admins succeed.
 ## Orders: who may insert rows
 
 Only an authenticated buyer may create an order row, and only for their own
