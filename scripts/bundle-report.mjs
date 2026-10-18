@@ -29,19 +29,22 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 
 const ROOT = process.cwd();
 const NEXT_DIR = path.join(ROOT, ".next");
 const STATIC_DIR = path.join(NEXT_DIR, "static");
 
-const args = process.argv.slice(2);
-const strict = args.includes("--strict");
-const jsonIndex = args.indexOf("--json");
-const jsonOut =
-  jsonIndex !== -1
-    ? path.resolve(ROOT, args[jsonIndex + 1])
-    : path.join(NEXT_DIR, "bundle-report.json");
+function parseArgs(argv) {
+  const strict = argv.includes("--strict");
+  const jsonIndex = argv.indexOf("--json");
+  const jsonOut =
+    jsonIndex !== -1
+      ? path.resolve(ROOT, argv[jsonIndex + 1])
+      : path.join(NEXT_DIR, "bundle-report.json");
+  return { strict, jsonOut };
+}
 
 const kB = (bytes) => Number((bytes / 1024).toFixed(1));
 
@@ -93,6 +96,20 @@ function markersFor(text, markers) {
   return found;
 }
 
+/**
+ * Compare a measured byte value against a kilobyte budget.
+ * Returns { status, violation } so callers can both print and collect failures.
+ */
+function compareBudget(label, valueBytes, limitKb) {
+  if (typeof limitKb !== "number") return { status: "—", violation: null };
+  const valueKb = kB(valueBytes);
+  const failed = valueKb > limitKb;
+  return {
+    status: failed ? "FAIL" : "ok",
+    violation: failed ? `${label} is ${valueKb} kB gzip (budget ${limitKb} kB)` : null,
+  };
+}
+
 function readManifest(name) {
   const file = path.join(NEXT_DIR, name);
   if (!existsSync(file)) return null;
@@ -104,6 +121,7 @@ function readManifest(name) {
 }
 
 function main() {
+  const { strict, jsonOut } = parseArgs(process.argv.slice(2));
   if (!existsSync(STATIC_DIR)) {
     console.error(
       `No client build found at ${path.relative(ROOT, STATIC_DIR)} — run \`npm run build\` first.`
@@ -169,11 +187,9 @@ function main() {
   const violations = [];
   // `value` is bytes; budgets are kilobytes, so normalise before comparing.
   const check = (label, value, limitKb) => {
-    if (typeof limitKb !== "number") return "—";
-    const valueKb = kB(value);
-    const failed = valueKb > limitKb;
-    if (failed) violations.push(`${label} is ${valueKb} kB gzip (budget ${limitKb} kB)`);
-    return failed ? "FAIL" : "ok";
+    const result = compareBudget(label, value, limitKb);
+    if (result.violation) violations.push(result.violation);
+    return result.status;
   };
 
   console.log("Bundle report — built client JS under .next/static\n");
@@ -252,4 +268,18 @@ function main() {
   if (violations.length && strict) process.exit(1);
 }
 
-main();
+export {
+  kB,
+  loadBudget,
+  walkJs,
+  relativeToNext,
+  normalizeRoute,
+  measure,
+  markersFor,
+  compareBudget,
+  readManifest,
+  parseArgs,
+  main,
+};
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
