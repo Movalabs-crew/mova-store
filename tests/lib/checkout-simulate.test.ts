@@ -1,19 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { Account, StrKey, xdr, scValToNative } from "@stellar/stellar-sdk";
 
-import {
-  usdToRawUnits,
-  orderIdHash,
-} from "../../lib/stellar/checkout";
-import {
-  buildInvocationTransaction,
-} from "../../lib/stellar/simulate";
-import {
-  addressToScVal,
-  bytes32ToScVal,
-  hashOrderId,
-  i128ToScVal,
-} from "../../lib/stellar/scval";
+import { usdToRawUnits, orderIdHash } from "../../lib/stellar/checkout";
+import { buildInvocationTransaction } from "../../lib/stellar/simulate";
+import { addressToScVal, bytes32ToScVal, hashOrderId, i128ToScVal } from "../../lib/stellar/scval";
 
 describe("Pay Invocation Argument Construction & Simulate Tests", () => {
   const buyerAddress = "GC6EQJ4UAFFFJDECLN37G4EWUJJTMKE3WE55NGIL4JXJXNXICUYKVBQ6";
@@ -56,12 +46,7 @@ describe("Pay Invocation Argument Construction & Simulate Tests", () => {
       i128ToScVal(amountRaw),
     ];
 
-    const tx = buildInvocationTransaction(
-      dummyAccount,
-      contractId,
-      "pay",
-      args
-    );
+    const tx = buildInvocationTransaction(dummyAccount, contractId, "pay", args);
 
     expect(tx.operations).toHaveLength(1);
     const op = tx.operations[0];
@@ -69,29 +54,33 @@ describe("Pay Invocation Argument Construction & Simulate Tests", () => {
 
     if (op.type === "invokeHostFunction") {
       const hostFn = op.func;
-      expect(hostFn.switch()).toBe(xdr.HostFunctionType.hostFunctionTypeInvokeContract());
+      // SDK 17 exposes the union discriminant as a string `type` and arm payloads
+      // as plain properties; the guard narrows `hostFn` to the invoke arm.
+      expect(hostFn.type).toBe("hostFunctionTypeInvokeContract");
+      if (hostFn.type !== "hostFunctionTypeInvokeContract") return;
 
-      const invokeArgs = hostFn.invokeContract();
-      const fnSymbol = invokeArgs.functionName().toString();
+      const invokeArgs = hostFn.invokeContract;
+      const fnSymbol = invokeArgs.functionName.toString();
       expect(fnSymbol).toBe("pay");
 
-      const passedArgs = invokeArgs.args();
+      const passedArgs = invokeArgs.args;
       expect(passedArgs).toHaveLength(4);
 
       // Arg 0: token address
-      expect(passedArgs[0].switch()).toBe(xdr.ScValType.scvAddress());
+      expect(passedArgs[0].type).toBe("scvAddress");
 
       // Arg 1: buyer address
-      expect(passedArgs[1].switch()).toBe(xdr.ScValType.scvAddress());
+      expect(passedArgs[1].type).toBe("scvAddress");
 
       // Arg 2: 32-byte order bytes
-      expect(passedArgs[2].switch()).toBe(xdr.ScValType.scvBytes());
-      const bytesPayload = passedArgs[2].bytes();
+      expect(passedArgs[2].type).toBe("scvBytes");
+      const bytesPayload =
+        passedArgs[2].type === "scvBytes" ? passedArgs[2].bytes.toBytes() : new Uint8Array();
       expect(bytesPayload.length).toBe(32);
-      expect(new Uint8Array(bytesPayload)).toEqual(orderBytes);
+      expect(bytesPayload).toEqual(orderBytes);
 
       // Arg 3: i128 amount
-      expect(passedArgs[3].switch()).toBe(xdr.ScValType.scvI128());
+      expect(passedArgs[3].type).toBe("scvI128");
       expect(scValToNative(passedArgs[3])).toBe(255_000_000n);
     }
   });

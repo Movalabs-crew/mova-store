@@ -1,18 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { lookup, deleteQuery, remove } = vi.hoisted(() => ({
+const { lookup, select, selectEq, deleteFrom, deleteQuery, storageFrom, remove } = vi.hoisted(() => ({
   lookup: vi.fn(),
+  select: vi.fn(),
+  selectEq: vi.fn(),
+  deleteFrom: vi.fn(),
   deleteQuery: vi.fn(),
+  storageFrom: vi.fn(),
   remove: vi.fn(),
 }));
 
 vi.mock("../../lib/supabase", () => ({
   supabase: {
-    from: () => ({
-      select: () => ({ eq: () => ({ maybeSingle: lookup }) }),
-      delete: () => ({ eq: deleteQuery }),
-    }),
-    storage: { from: () => ({ remove }) },
+    from: () => ({ select, delete: deleteFrom }),
+    storage: { from: storageFrom },
   },
 }));
 
@@ -24,6 +25,10 @@ describe("deleteProduct image cleanup ordering", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://proj.supabase.co");
+    select.mockReturnValue({ eq: selectEq });
+    selectEq.mockReturnValue({ maybeSingle: lookup });
+    deleteFrom.mockReturnValue({ eq: deleteQuery });
+    storageFrom.mockReturnValue({ remove });
     lookup.mockResolvedValue({ data: { img: imageUrl }, error: null });
     deleteQuery.mockResolvedValue({ data: null, error: null });
     remove.mockResolvedValue({ data: [], error: null });
@@ -31,6 +36,16 @@ describe("deleteProduct image cleanup ordering", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("reads the image, deletes the row and then removes the stored object", async () => {
+    await deleteProduct("p-del");
+
+    expect(select).toHaveBeenCalledWith("img");
+    expect(selectEq).toHaveBeenCalledWith("id", "p-del");
+    expect(deleteQuery).toHaveBeenCalledWith("id", "p-del");
+    expect(storageFrom).toHaveBeenCalledWith("products");
+    expect(remove).toHaveBeenCalledWith(["1700-a.jpg"]);
   });
 
   it("preserves the image when the database returns an error", async () => {
@@ -86,6 +101,54 @@ describe("deleteProduct image cleanup ordering", () => {
     await expect(deleteProduct("p-del")).resolves.toBeUndefined();
 
     expect(deleteQuery).toHaveBeenCalledWith("id", "p-del");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("tolerates a rejected storage removal after the row was deleted", async () => {
+    remove.mockRejectedValue(new Error("Object not found"));
+
+    await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+    expect(deleteQuery).toHaveBeenCalledWith("id", "p-del");
+    expect(remove).toHaveBeenCalledWith(["1700-a.jpg"]);
+  });
+
+  it("does not touch storage when the row carries no image", async () => {
+    lookup.mockResolvedValue({ data: { img: null }, error: null });
+
+    await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+    expect(deleteQuery).toHaveBeenCalledWith("id", "p-del");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("does not touch storage when the row is missing entirely", async () => {
+    lookup.mockResolvedValue({ data: null, error: null });
+
+    await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+    expect(deleteQuery).toHaveBeenCalledWith("id", "p-del");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("leaves an externally hosted image alone", async () => {
+    lookup.mockResolvedValue({ data: { img: "https://images.unsplash.com/photo-123.jpg" }, error: null });
+
+    await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+    expect(deleteQuery).toHaveBeenCalledTimes(1);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("leaves an image from another Supabase project alone", async () => {
+    lookup.mockResolvedValue({
+      data: { img: "https://other.supabase.co/storage/v1/object/public/products/1700-a.jpg" },
+      error: null,
+    });
+
+    await expect(deleteProduct("p-del")).resolves.toBeUndefined();
+
+    expect(deleteQuery).toHaveBeenCalledTimes(1);
     expect(remove).not.toHaveBeenCalled();
   });
 });
