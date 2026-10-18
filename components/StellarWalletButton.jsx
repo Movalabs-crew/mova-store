@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   connectWallet,
@@ -17,6 +17,13 @@ const StellarWalletButton = ({ onConnect = null }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Keep the latest callback in a ref so the mount effect does not close
+  // over a stale `onConnect`.
+  const onConnectRef = useRef(onConnect);
+  useEffect(() => {
+    onConnectRef.current = onConnect;
+  }, [onConnect]);
+
   useEffect(() => {
     let cancelled = false;
     freighterAvailable().then((available) => {
@@ -26,7 +33,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
           if (cancelled || !addr) return;
           setConnected(true);
           setAddress(addr);
-          if (onConnect) onConnect(addr);
+          if (onConnectRef.current) onConnectRef.current(addr);
         });
       }
     });
@@ -61,7 +68,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
   };
 
   return (
-    <div className="flex flex-col items-stretch gap-1 w-full">
+    <div className="flex flex-col flex-stretch gap-1 w-full">
       {!connected ? (
         <button
           type="button"
