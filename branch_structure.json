@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "fix/issue-1096-test-supabase-add-rls-tests-for-the-orders-and",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "fix/issue-1096-test-supabase-add-rls-tests-for-the-orders-and": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "fix/issue-1096-test-supabase-add-rls-tests-for-the-orders-and",
+    "origin"
+  ]
+}
