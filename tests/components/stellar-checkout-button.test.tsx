@@ -2,27 +2,37 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import StellarCheckoutButton from "../../components/StellarCheckoutButton";
 
-const { mockConnectWallet, mockCurrentAddress, mockPayWithStellar, WalletError } = vi.hoisted(
-  () => {
-    class WalletError extends Error {
-      constructor(message, code = "WALLET_ERROR") {
-        super(message);
-        this.name = "WalletError";
-        this.code = code;
-      }
+const {
+  mockConnectWallet,
+  mockCurrentAddress,
+  mockPayWithStellar,
+  mockWatchWalletChanges,
+  WalletError,
+} = vi.hoisted(() => {
+  class WalletError extends Error {
+    constructor(message, code = "WALLET_ERROR") {
+      super(message);
+      this.name = "WalletError";
+      this.code = code;
     }
-    return {
-      mockConnectWallet: vi.fn(),
-      mockCurrentAddress: vi.fn(),
-      mockPayWithStellar: vi.fn(),
-      WalletError,
-    };
   }
-);
+  return {
+    mockConnectWallet: vi.fn(),
+    mockCurrentAddress: vi.fn(),
+    mockPayWithStellar: vi.fn(),
+    mockWatchWalletChanges: vi.fn(() => () => {}),
+    WalletError,
+  };
+});
 
 vi.mock("../../lib/stellar/freighter", () => ({
   connectWallet: (...args) => mockConnectWallet(...args),
   currentAddress: (...args) => mockCurrentAddress(...args),
+  watchWalletChanges: (...args) => mockWatchWalletChanges(...args),
+  shortAddress: (address) =>
+    !address || address.length <= 15
+      ? (address ?? "")
+      : `${address.slice(0, 6)}…${address.slice(-6)}`,
   WalletError,
 }));
 
@@ -58,6 +68,7 @@ function renderButton(props = {}) {
 afterEach(() => {
   vi.resetAllMocks();
   mockCurrentAddress.mockResolvedValue(null);
+  mockWatchWalletChanges.mockReturnValue(() => {});
 });
 
 describe("StellarCheckoutButton", () => {
@@ -189,6 +200,7 @@ describe("StellarCheckoutButton", () => {
         amountUsd={12}
         orderId="SS-XLM-1"
         token={xlmToken}
+        xlmUsdPrice={0.12}
       />
     );
 
@@ -218,5 +230,144 @@ describe("StellarCheckoutButton", () => {
 
     expect(screen.getByText("Payment confirmed ✓")).toBeInTheDocument();
     expect(screen.getByText(/~100\.00 XLM/i)).toBeInTheDocument();
+  });
+
+  // --- Issue #712: the confirmation must describe the payment the chain
+  // recorded, never the amount the buyer was quoted ---
+
+  it("reports the receipt's confirmed amount, not the quoted amount (#712)", async () => {
+    mockCurrentAddress.mockResolvedValue(ADDR);
+    // The buyer was quoted $12.34, but the chain only escrowed $5.00.
+    mockPayWithStellar.mockResolvedValue({ ...successResult(5), tokenAmount: 5 });
+
+    const { container } = renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    const confirmed = screen.getByText("Payment confirmed ✓").parentElement;
+    expect(confirmed.textContent).toContain("$5.00 USDC");
+    expect(confirmed.textContent).toContain("order SS-TEST-1");
+    // Presenting the requested figure as the paid figure is the bug in #712.
+    expect(confirmed.textContent).not.toContain("$12.34");
+    expect(container.textContent).not.toContain("$12.34");
+  });
+
+  it("reports the receipt's confirmed XLM amount when it differs from the quote (#712)", async () => {
+    mockCurrentAddress.mockResolvedValue(ADDR);
+    const xlmToken = {
+      contractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      symbol: "XLM",
+      name: "Stellar Lumens",
+      decimals: 7,
+      isNative: true,
+    };
+    // The quote is $12 / 0.12 = 100 XLM, but the receipt recorded 40 XLM.
+    mockPayWithStellar.mockResolvedValue({
+      amountUsd: 4.8,
+      tokenAmount: 40,
+      tokenSymbol: "XLM",
+      hash: TX_HASH,
+      receipt: { ledger: 5001, orderId: "abcd".repeat(8) },
+      simulation: null,
+    });
+
+    render(
+      <StellarCheckoutButton
+        amountUsd={12}
+        orderId="SS-XLM-2"
+        token={xlmToken}
+        xlmUsdPrice={0.12}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    const confirmed = screen.getByText("Payment confirmed ✓").parentElement;
+    expect(confirmed.textContent).toContain("~40.00 XLM");
+    expect(confirmed.textContent).toContain("($4.80)");
+    expect(confirmed.textContent).not.toContain("100.00 XLM");
+  });
+
+  const ADDR2 = "GCKFBEIYTKP6RJKF6LO5C6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6Q6";
+
+  it("invalidates the cached address when Freighter reports an account change (#709)", async () => {
+    let onChange;
+    mockWatchWalletChanges.mockImplementation((cb) => {
+      onChange = cb;
+      return () => {};
+    });
+    mockCurrentAddress.mockResolvedValueOnce(ADDR).mockResolvedValue(ADDR2);
+    mockPayWithStellar.mockResolvedValue(successResult());
+
+    renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      onChange({ address: ADDR2, network: "TESTNET" });
+    });
+    expect(screen.getByRole("alert").textContent).toContain("account changed");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).toHaveBeenCalledWith(expect.objectContaining({ publicKey: ADDR2 }));
+  });
+
+  it("aborts with a reconnect message when Freighter disconnects before paying (#709)", async () => {
+    mockCurrentAddress.mockResolvedValueOnce(ADDR).mockResolvedValue(null);
+    mockPayWithStellar.mockResolvedValue(successResult());
+
+    renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("disconnected");
+    expect(screen.getByRole("button")).toBeEnabled();
+  });
+
+  it("re-reads the live address, resets the cache and pays with the new account (#709)", async () => {
+    mockCurrentAddress.mockResolvedValueOnce(ADDR).mockResolvedValue(ADDR2);
+    mockPayWithStellar.mockResolvedValue(successResult());
+
+    renderButton();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("account changed");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+      await Promise.resolve();
+    });
+
+    expect(mockPayWithStellar).toHaveBeenCalledWith(expect.objectContaining({ publicKey: ADDR2 }));
   });
 });

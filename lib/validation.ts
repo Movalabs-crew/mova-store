@@ -24,22 +24,6 @@ export interface FormErrors {
 // =============================================================================
 
 /**
- * Escapes HTML special characters to prevent XSS.
- */
-export function escapeHtml(input: string): string {
-  const htmlEscapes: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "/": "&#x2F;",
-  };
-
-  return input.replace(/[&<>"'/]/g, (char) => htmlEscapes[char] || char);
-}
-
-/**
  * Removes potentially dangerous characters from input.
  * Allows alphanumeric, spaces, and common punctuation.
  */
@@ -50,13 +34,6 @@ export function sanitizeText(input: string): string {
     .replace(/\0/g, "")
     .replace(/[\x00-\x1F\x7F]/g, "")
     .trim();
-}
-
-/**
- * Sanitizes input for safe use in HTML contexts.
- */
-export function sanitizeForHtml(input: string): string {
-  return escapeHtml(sanitizeText(input));
 }
 
 // =============================================================================

@@ -62,11 +62,12 @@ describe("CartProvider hydration race (Issue #71)", () => {
     expect(screen.getByTestId("hydrated").textContent).toBe("true");
 
     // localStorage must also contain both items
-    const rawItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const rawItems = (JSON.parse(localStorage.getItem("cartItems") || "{}").items || []);
     expect(rawItems).toHaveLength(2);
     expect(rawItems.map((i) => i.id)).toEqual(["p1", "p3"]);
     expect(localStorage.getItem("itemCount")).toBe("2");
-    expect(localStorage.getItem("totalPrice")).toBe("130");
+    // Issue #619: the seeded legacy total is dropped; only the items persist.
+    expect(localStorage.getItem("totalPrice")).toBeNull();
   });
 
   it("preserves multiple stored items when multiple pre-hydration additions occur", () => {
@@ -87,11 +88,12 @@ describe("CartProvider hydration race (Issue #71)", () => {
     expect(screen.getByTestId("total").textContent).toBe("220");
     expect(screen.getByTestId("length").textContent).toBe("4");
 
-    const rawItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const rawItems = (JSON.parse(localStorage.getItem("cartItems") || "{}").items || []);
     expect(rawItems).toHaveLength(4);
     expect(rawItems.map((i) => i.id)).toEqual(["p1", "p2", "p3", "p4"]);
     expect(localStorage.getItem("itemCount")).toBe("4");
-    expect(localStorage.getItem("totalPrice")).toBe("220");
+    // Issue #619: the seeded legacy total is dropped; only the items persist.
+    expect(localStorage.getItem("totalPrice")).toBeNull();
   });
 
   it("handles pre-hydration adds when localStorage starts completely empty", () => {
@@ -105,7 +107,7 @@ describe("CartProvider hydration race (Issue #71)", () => {
     expect(screen.getByTestId("total").textContent).toBe("30");
     expect(screen.getByTestId("length").textContent).toBe("1");
 
-    const rawItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const rawItems = (JSON.parse(localStorage.getItem("cartItems") || "{}").items || []);
     expect(rawItems).toHaveLength(1);
     expect(rawItems[0].id).toBe("p3");
   });
@@ -140,7 +142,7 @@ describe("CartProvider hydration race (Issue #71)", () => {
     expect(screen.getByTestId("total").textContent).toBe("50");
     expect(screen.getByTestId("length").textContent).toBe("1");
 
-    const rawItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const rawItems = (JSON.parse(localStorage.getItem("cartItems") || "{}").items || []);
     expect(rawItems).toHaveLength(1);
     expect(rawItems[0].id).toBe("p2");
   });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
-import Modal from "../../components/Modal";
+import Modal from "../../components/Modal.jsx";
 
 describe("Modal component", () => {
   it("renders nothing when show is false", () => {
@@ -39,6 +39,34 @@ describe("Modal component", () => {
     fireEvent.click(closeButton);
 
     expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes when the backdrop is clicked", () => {
+    const handleClose = vi.fn();
+    render(
+      <Modal show={true} onClose={handleClose}>
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close when clicking inside the panel", () => {
+    const handleClose = vi.fn();
+    render(
+      <Modal show={true} onClose={handleClose}>
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    const content = screen.getByText("Modal Content");
+    fireEvent.click(content);
+
+    expect(handleClose).not.toHaveBeenCalled();
   });
 
   it("removes subtree when re-rendered with show=false", () => {

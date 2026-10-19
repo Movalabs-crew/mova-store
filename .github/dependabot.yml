@@ -41,6 +41,24 @@ updates:
         patterns:
           - "*"
 
+  # GitHub Actions used by .github/workflows. Every action is pinned to a full
+  # commit SHA (see the header of ci.yml); this entry is what proposes the SHA
+  # bumps, so the pins do not rot.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+
   # Soroban contract dependencies, workspace root is contracts/checkout.
   - package-ecosystem: "cargo"
     directory: "/contracts/checkout"

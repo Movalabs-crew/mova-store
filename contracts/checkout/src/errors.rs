@@ -18,4 +18,16 @@ pub enum Error {
     OrderNotFound = 6,
     /// The order is not in a state that allows this transition.
     InvalidOrderStatus = 7,
+    /// `pay` was called for a pending order by a buyer other than the one
+    /// `create_order` recorded. The call is rejected instead of silently
+    /// replacing the original buyer's registered intent.
+    OrderBuyerMismatch = 8,
+    /// `pay` was called for a pending order with an amount other than the one
+    /// `create_order` recorded.
+    ///
+    /// Note: the *token* is deliberately not bound. A whitelisted token
+    /// presented to `pay` settles the order even when it differs from the one
+    /// `create_order` recorded, so the registry reflects the payment that
+    /// actually happened.
+    OrderAmountMismatch = 9,
 }

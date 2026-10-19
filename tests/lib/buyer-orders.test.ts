@@ -4,23 +4,34 @@ import {
   getCachedBuyerOrders,
   fetchBuyerOrders,
   verifyOrderOnChain,
+  BuyerOrderPersistenceError,
   BuyerOrder,
 } from "../../lib/buyer-orders";
 import * as stellarOrders from "../../lib/stellar/orders";
 
 /**
- * Rows the mocked Supabase `select -> order -> eq` chain resolves with.
- * Tests reset this to `[]` to exercise the localStorage fallback.
+ * The mocked Supabase `select -> order -> eq` chain resolves with `db.rows` and
+ * `db.error`, the way supabase-js does: a query-level failure lands in the
+ * resolved value, never as a rejection. Tests reset `rows` to `[]` to exercise
+ * the localStorage fallback and set `error` to exercise a failed query.
  */
-const db = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
+const db = vi.hoisted(() => ({
+  rows: [] as Record<string, unknown>[],
+  error: null as { message: string } | null,
+}));
+
+// Shared so a test can make the insert resolve with an { error } (issue #561).
+const insertMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ data: null, error: null }),
+);
 
 vi.mock("../../lib/supabase", () => ({
   supabase: {
     from: vi.fn(() => ({
-      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      insert: insertMock,
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
-      eq: vi.fn(() => Promise.resolve({ data: db.rows, error: null })),
+      eq: vi.fn(() => Promise.resolve({ data: db.rows, error: db.error })),
     })),
   },
 }));
@@ -54,10 +65,15 @@ describe("Buyer Orders Management", () => {
     items: [{ name: "Running Shoes", price: 89.99, quantity: 1 }],
   };
 
+  const OWNER_ADDRESS = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const OTHER_ADDRESS = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
     db.rows = [{ ...DB_ROW }];
+    insertMock.mockResolvedValue({ data: null, error: null });
+    db.error = null;
   });
 
   it("saves an order and caches it in localStorage", async () => {
@@ -68,6 +84,21 @@ describe("Buyer Orders Management", () => {
     expect(cached.length).toBe(1);
     expect(cached[0].orderId).toBe("SS-101");
     expect(cached[0].tokenSymbol).toBe("XLM");
+  });
+
+  it("throws and stays cache-only when the insert resolves with an error (issue #561)", async () => {
+    insertMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'duplicate key value violates unique constraint "orders_pkey"' },
+    });
+
+    await expect(saveBuyerOrder(sampleOrder)).rejects.toBeInstanceOf(
+      BuyerOrderPersistenceError
+    );
+
+    // The order is still cached locally (continuity), but it is cache-only.
+    const cached = getCachedBuyerOrders();
+    expect(cached.map((o) => o.orderId)).toContain("SS-101");
   });
 
   it("updates an existing order when same orderId is saved again", async () => {
@@ -81,20 +112,75 @@ describe("Buyer Orders Management", () => {
   });
 
   it("fetches orders from Supabase when available", async () => {
-    const orders = await fetchBuyerOrders("buyer@example.com");
-    expect(orders.length).toBe(1);
-    expect(orders[0].orderId).toBe("SS-DB-1");
-    expect(orders[0].total).toBe(120);
+    const result = await fetchBuyerOrders("buyer@example.com");
+    expect(result.orders.length).toBe(1);
+    expect(result.orders[0].orderId).toBe("SS-DB-1");
+    expect(result.orders[0].total).toBe(120);
+    expect(result.source).toBe("server");
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
   });
 
   it("falls back to the local cache for the signed-in user when Supabase is empty", async () => {
     db.rows = [];
     await saveBuyerOrder(sampleOrder);
 
-    const orders = await fetchBuyerOrders("buyer@example.com");
+    const result = await fetchBuyerOrders("buyer@example.com");
 
-    expect(orders.length).toBe(1);
-    expect(orders[0].orderId).toBe("SS-101");
+    expect(result.orders.length).toBe(1);
+    expect(result.orders[0].orderId).toBe("SS-101");
+    // The server answered and simply had nothing: the cache fills the gap, but
+    // this is not a stale result.
+    expect(result.source).toBe("cache");
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
+  });
+
+  it("reports a query that resolves with an error as stale cache content", async () => {
+    // supabase-js resolves query-level failures; only reading `res.error` tells
+    // this apart from an empty history.
+    db.rows = [];
+    db.error = { message: "permission denied for table orders" };
+    await saveBuyerOrder(sampleOrder);
+
+    const result = await fetchBuyerOrders("buyer@example.com");
+
+    expect(result.orders.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(result.source).toBe("cache");
+    expect(result.stale).toBe(true);
+    expect(result.error).toBe("permission denied for table orders");
+  });
+
+  it("flags a failed query even when the cache is empty", async () => {
+    db.rows = [];
+    db.error = { message: "column orders.total does not exist" };
+
+    const result = await fetchBuyerOrders("buyer@example.com");
+
+    expect(result.orders).toEqual([]);
+    expect(result.stale).toBe(true);
+    expect(result.error).toBe("column orders.total does not exist");
+  });
+
+  it("does not mark a confirmed empty history as stale", async () => {
+    db.rows = [];
+
+    const result = await fetchBuyerOrders("buyer@example.com");
+
+    expect(result.orders).toEqual([]);
+    expect(result.stale).toBe(false);
+    expect(result.error).toBeNull();
+  });
+
+  it("keeps a failed query scoped to the caller's own cached orders", async () => {
+    db.rows = [];
+    db.error = { message: "permission denied for table orders" };
+    await saveBuyerOrder(sampleOrder);
+
+    const intruder = await fetchBuyerOrders("someone-else@example.com");
+
+    expect(intruder.orders).toEqual([]);
+    expect(intruder.stale).toBe(true);
   });
 
   it("matches a cached order by userId as well as by email", async () => {
@@ -104,8 +190,8 @@ describe("Buyer Orders Management", () => {
     const byEmail = await fetchBuyerOrders("buyer@example.com");
     const byId = await fetchBuyerOrders("user-123");
 
-    expect(byEmail.map((o) => o.orderId)).toEqual(["SS-101"]);
-    expect(byId.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(byEmail.orders.map((o) => o.orderId)).toEqual(["SS-101"]);
+    expect(byId.orders.map((o) => o.orderId)).toEqual(["SS-101"]);
   });
 
   it("never returns another account's cached orders (cross-user leak)", async () => {
@@ -114,7 +200,7 @@ describe("Buyer Orders Management", () => {
 
     const intruder = await fetchBuyerOrders("someone-else@example.com");
 
-    expect(intruder).toEqual([]);
+    expect(intruder.orders).toEqual([]);
   });
 
   it("does not surface an order that is missing one identifier", async () => {
@@ -132,8 +218,8 @@ describe("Buyer Orders Management", () => {
     const unrelated = await fetchBuyerOrders("user-999");
     const owner = await fetchBuyerOrders("buyer@example.com");
 
-    expect(unrelated).toEqual([]);
-    expect(owner.map((o) => o.orderId)).toEqual(["SS-EMAIL-ONLY"]);
+    expect(unrelated.orders).toEqual([]);
+    expect(owner.orders.map((o) => o.orderId)).toEqual(["SS-EMAIL-ONLY"]);
   });
 
   it("does not return attributed orders to an anonymous caller", async () => {
@@ -142,7 +228,7 @@ describe("Buyer Orders Management", () => {
 
     const anonymous = await fetchBuyerOrders(undefined);
 
-    expect(anonymous).toEqual([]);
+    expect(anonymous.orders).toEqual([]);
   });
 
   it("shows guest orders only to an anonymous caller", async () => {
@@ -159,15 +245,15 @@ describe("Buyer Orders Management", () => {
     const signedIn = await fetchBuyerOrders("buyer@example.com");
     const anonymous = await fetchBuyerOrders(undefined);
 
-    expect(signedIn).toEqual([]);
-    expect(anonymous.map((o) => o.orderId)).toEqual(["SS-GUEST"]);
+    expect(signedIn.orders).toEqual([]);
+    expect(anonymous.orders.map((o) => o.orderId)).toEqual(["SS-GUEST"]);
   });
 
   it("verifies order on-chain via readOrder", async () => {
     vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({
       orderId: "SS-101",
       orderIdHash: "010203",
-      buyer: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      buyer: OWNER_ADDRESS,
       amount: BigInt(899900000),
       amountDisplay: "89.99",
       token: "C...",
@@ -177,7 +263,7 @@ describe("Buyer Orders Management", () => {
     });
 
     const verification = await verifyOrderOnChain("SS-101");
-    expect(verification.verified).toBe(true);
+    expect(verification.verified).toBe((true));
     expect(verification.onChainStatus).toBe("Paid");
   });
 
@@ -186,4 +272,53 @@ describe("Buyer Orders Management", () => {
     const verification = await verifyOrderOnChain("UNKNOWN-1");
     expect(verification.verified).toBe(false);
   });
-});
+
+  describe("verifyOrderOnChain ownership", () => {
+    it("reports a matching buyer as verified and returns their address", async () => {
+      vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({
+        orderId: "SS-101",
+        orderIdHash: "010203",
+        buyer: OWNER_ADDRESS,
+        amount: BigInt(899900000),
+        amountDisplay: "89.99",
+        token: "C...",
+        tokenSymbol: "USDC",
+        timestamp: 1725523200,
+        status: "Paid",
+      });
+
+      const verification = await verifyOrderOnChain("SS-101", OWNER_ADDRESS);
+
+      expect(verification.verified).toBe(true);
+      expect(verification.buyer).toBe(OWNER_ADDRESS);
+    });
+
+    it("reports a mismatched buyer as not verified and returns the on-chain buyer", async () => {
+      vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce({
+        orderId: "SS-101",
+        orderIdHash: "010203",
+        buyer: OWNER_ADDRESS,
+        amount: BigInt(899900000),
+        amountDisplay: "89.99",
+        token: "C...",
+        tokenSymbol: "USDC",
+        timestamp: 1725523200,
+        status: "Paid",
+      });
+
+      const verification = await verifyOrderOnChain("SS-101", OTHER_ADDRESS);
+
+      expect(verification.verified).toBe(false);
+      expect(verification.buyer).toBe(OWNER_ADDRESS);
+    });
+
+    it("reports an absent order as not verified", async () => {
+      vi.spyOn(stellarOrders, "readOrder").mockResolvedValueOnce(null);
+
+      const verification = await verifyOrderOnChain("SS-MISSING", OWNER_ADDRESS);
+
+      expect(verification.verified).toBe(false);
+      expect(verification.buyer).toBeUndefined();
+    });
+  });
+})

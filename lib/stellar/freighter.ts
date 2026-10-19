@@ -4,6 +4,7 @@ import {
   isConnected,
   requestAccess,
   signTransaction,
+  WatchWalletChanges,
 } from "@stellar/freighter-api";
 
 import { NETWORK, NETWORK_PASSPHRASE } from "./config";
@@ -52,19 +53,36 @@ export async function currentAddress(): Promise<string | null> {
   return res.address;
 }
 
+/**
+ * Subscribe to Freighter account/network changes so callers can invalidate a
+ * cached address as soon as the user switches accounts or disconnects.
+ * Returns an unsubscribe function that stops the underlying watcher.
+ */
+export function watchWalletChanges(
+  onChange: (info: { address: string; network: string }) => void,
+  timeout = 3000
+): () => void {
+  const watcher = new WatchWalletChanges(timeout);
+  watcher.watch((params) => {
+    onChange({ address: params.address ?? "", network: params.network ?? "" });
+  });
+  return () => watcher.stop();
+}
+
 export async function ensureNetwork(): Promise<string> {
   const res = await getNetwork();
   if (res.error) {
     throw new WalletError(res.error.toString(), "FREIGHTER_NETWORK_ERROR");
   }
   const detected = res.network;
-  // Freighter reports networks as "TESTNET" / "PUBLIC" / "STANDALONE".
-  if (
-    (NETWORK === "testnet" && detected.toUpperCase() !== "TESTNET") ||
-    (NETWORK === "mainnet" && detected.toUpperCase() !== "PUBLIC")
-  ) {
+  // The network name is only a label; the value that actually determines
+  // whether a signature is valid is the passphrase. Compare that, so any
+  // network whose passphrase does not match ours (including unexpected ones
+  // like "STANDALONE") is rejected before the user is asked to sign.
+  const detectedPassphrase = res.networkPassphrase;
+  if (!detectedPassphrase || detectedPassphrase !== NETWORK_PASSPHRASE) {
     throw new WalletError(
-      `Freighter is on "${detected}" but this store expects "${NETWORK}". ` +
+      `Freighter is on "${detected || "an unknown network"}" but this store expects "${NETWORK}". ` +
         "Switch your Freighter network and try again.",
       "WRONG_NETWORK"
     );
