@@ -40,7 +40,7 @@
     "prepare": "node scripts/setup-git-hooks.mjs"
   },
   "dependencies": {
-    "@emailjs/browser": "^4.4.1",
+    "@emailjs/browser": "^5.0.3",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^17.2.1",
     "@supabase/supabase-js": "^2.117.2",
