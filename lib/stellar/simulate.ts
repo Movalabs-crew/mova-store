@@ -10,10 +10,7 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 
-import {
-  FEE_BUFFER_STROOPS,
-  NETWORK_PASSPHRASE,
-} from "./config";
+import { FEE_BUFFER_STROOPS, NETWORK_PASSPHRASE } from "./config";
 import { addressToScVal } from "./scval";
 
 // ---------------------------------------------------------------------------
@@ -69,9 +66,7 @@ export function buildInvocationTransaction(
     fee,
     networkPassphrase: NETWORK_PASSPHRASE,
   })
-    .addOperation(
-      Operation.invokeContractFunction({ contract: contractId, function: fn, args })
-    )
+    .addOperation(Operation.invokeContractFunction({ contract: contractId, function: fn, args }))
     .setTimeout(0)
     .build();
 }
@@ -93,6 +88,22 @@ export async function simulateContractRead(
   const tx = buildInvocationTransaction(account, contractId, fn, args);
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim)) return null;
+  return sim.result?.retval ?? null;
+}
+
+export async function simulateContractReadOrThrow(
+  server: rpc.Server,
+  contractId: string,
+  fn: string,
+  args: xdr.ScVal[],
+  source?: string
+): Promise<xdr.ScVal | null> {
+  const account = new Account(source ?? Keypair.random().publicKey(), "0");
+  const tx = buildInvocationTransaction(account, contractId, fn, args);
+  const sim = await server.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new Error(String(sim.error));
+  }
   return sim.result?.retval ?? null;
 }
 
@@ -132,9 +143,7 @@ export async function preflight(server: rpc.Server, tx: Transaction): Promise<Si
 
   if (rpc.Api.isSimulationError(sim)) {
     const diagnostics =
-      sim.events
-        ?.filter((d) => d.inSuccessfulContractCall())
-        .map((d) => d.event().toString()) ?? [];
+      sim.events?.filter((d) => d.inSuccessfulContractCall).map((d) => d.event.toString()) ?? [];
     return {
       ok: false,
       latestLedger: sim.latestLedger,
@@ -147,15 +156,16 @@ export async function preflight(server: rpc.Server, tx: Transaction): Promise<Si
   }
 
   const data = sim.transactionData.build();
-  const resources = data.resources();
+  // SDK 17 exposes the Soroban resource XDR fields as properties, not accessors.
+  const resources = data.resources;
   const minResourceFee = BigInt(sim.minResourceFee);
 
   return {
     ok: true,
     latestLedger: sim.latestLedger,
-    instructions: resources.instructions(),
-    diskReadBytes: resources.diskReadBytes(),
-    writeBytes: resources.writeBytes(),
+    instructions: resources.instructions,
+    diskReadBytes: resources.diskReadBytes,
+    writeBytes: resources.writeBytes,
     minResourceFee,
     authCount: sim.result?.auth?.length ?? 0,
     retval: sim.result?.retval ?? undefined,
@@ -178,6 +188,39 @@ export async function prepareAndReport(
 }
 
 /**
+ * Build, simulate, and prepare an invocation in one step using live fee data.
+ * The transaction is first built with the recommended inclusion fee so the
+ * simulation sees a realistic budget, then `prepareAndReport` attaches the
+ * footprint, auth entries, and the final resource fee.
+ */
+export async function buildPreparedInvocation(
+  server: rpc.Server,
+  account: Account,
+  contractId: string,
+  fn: string,
+  args: xdr.ScVal[]
+): Promise<{ tx: Transaction; report: SimulationReport }> {
+  const inclusion = await recommendedInclusionFee(server);
+  const tx = buildInvocationTransaction(account, contractId, fn, args, inclusion.toString());
+  return prepareAndReport(server, tx);
+}
+
+/**
+ * Recompute the total fee for an already-prepared transaction using live fee
+ * stats and the simulation report, returning a new transaction with the
+ * updated fee. Useful when the prepared fee must track network conditions.
+ */
+export async function applyBudgetedFee(
+  server: rpc.Server,
+  tx: Transaction,
+  report: SimulationReport
+): Promise<Transaction> {
+  const fee = await budgetFee(server, report);
+  const cloned = TransactionBuilder.cloneFrom(tx, { fee });
+  return cloned.build();
+}
+
+/**
  * Recommended classic inclusion fee (stroops) based on recent network stats.
  * `max` from the Soroban inclusion fee distribution is a safe upper bound;
  * falls back to BASE_FEE when stats are unavailable.
@@ -185,7 +228,7 @@ export async function prepareAndReport(
 export async function recommendedInclusionFee(server: rpc.Server): Promise<bigint> {
   try {
     const stats = await server.getFeeStats();
-    const max = stats.sorobanInclusionFee?.max;
+    const max = stats?.sorobanInclusionFee?.max;
     if (typeof max === "string" && /^\d+$/.test(max)) {
       return BigInt(max);
     }
@@ -199,13 +242,11 @@ export async function recommendedInclusionFee(server: rpc.Server): Promise<bigin
  * Total fee the final transaction should carry: max(recommended inclusion
  * fee, simulated min resource fee) plus a safety buffer.
  */
-export async function budgetFee(
-  server: rpc.Server,
-  report: SimulationReport
-): Promise<string> {
+export async function budgetFee(server: rpc.Server, report: SimulationReport): Promise<string> {
   const inclusion = await recommendedInclusionFee(server);
-  const minResource = report.ok ? (report.minResourceFee ?? BigInt(0)) : BigInt(0);
-  const total = (inclusion > minResource ? inclusion : minResource) + FEE_BUFFER_STROOPS;
+  const minResource = report.minResourceFee ?? BigInt(0);
+  const base = inclusion > minResource ? inclusion : minResource;
+  const total = base + BigInt(FEE_BUFFER_STROOPS);
   return total.toString();
 }
 
