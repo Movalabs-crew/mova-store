@@ -1,10 +1,22 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // Only real source directories are scanned. `./pages/**` used to be listed for
+  // a Pages Router directory that does not exist in this App Router project, so
+  // the glob resolved to nothing and advertised coverage the build did not have.
+  //
+  // `./lib/**` matters: `lib/accessibility.ts` applies the `sr-only` utility to
+  // its live region. `styles/global.css` currently hand-writes a `.sr-only`
+  // rule as well, so the class survives today by accident; scanning `lib/`
+  // removes that dependency on the duplicate definition. `./hooks/**` and
+  // `./context/**` are listed for the same reason - a utility introduced there
+  // must not be purged.
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./context/**/*.{js,ts,jsx,tsx,mdx}",
+    "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {

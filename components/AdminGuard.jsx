@@ -18,7 +18,10 @@ import Link from "next/link";
  *
  * Requirements:
  * - User must be authenticated (logged in)
- * - User's email must be in NEXT_PUBLIC_ADMIN_EMAILS environment variable
+ * - User must carry the server-verified `app_metadata.is_admin` claim, which is
+ *   granted from the `admin_users` table and is the same fact RLS authorizes on.
+ *   There is no client-side email allowlist: `NEXT_PUBLIC_*` values ship to the
+ *   browser, so an env-based list would leak the admin roster.
  *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Protected content to render for admins
@@ -92,8 +95,8 @@ const AdminGuard = ({ children, redirectTo = "/profile/login" }) => {
           </Link>
         </div>
         <p className="mt-8 text-xs text-gray-400 max-w-md text-center">
-          If you believe you should have admin access, contact the site administrator
-          to add your email to the admin list.
+          Admin access is granted server-side. If you believe you should have it,
+          contact the site administrator.
         </p>
       </div>
     );

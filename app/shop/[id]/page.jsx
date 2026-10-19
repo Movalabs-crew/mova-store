@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { FaShoppingCart } from "react-icons/fa";
 import { useCart } from "../../../context/CartContext";
-import Modal from "../../../components/Modal";
+import CartModal from "../../../components/CartModal";
 import Toast from "../../../components/Toast";
 import Cart from "../../../components/Cart";
 import useToast from "../../../hooks/useToast";
@@ -17,7 +17,29 @@ const ProductPage = ({ params }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const { id } = params;
+  const [id, setId] = useState(null);
+
+  // Next 15 types the `params` prop as `Promise<SegmentParams>` — see the
+  // generated route types at .next/types/app/shop/[id]/page.ts. Next 14 and the
+  // component tests pass a plain object. `Promise.resolve` accepts both, so a
+  // single code path covers either version.
+  //
+  // Reading `params.id` directly is the trap here: under Next 15 `params` is a
+  // promise, so the destructure silently yields `undefined`, every product page
+  // renders "Product not found", and nothing fails — not the build, not `tsc`
+  // (this file is plain JS, so it is not type-checked), and not the test suite,
+  // which passes a plain object and never asserts the fetch.
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.resolve(params).then((resolved) => {
+      if (!cancelled) setId(resolved?.id ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -83,53 +105,14 @@ const ProductPage = ({ params }) => {
       </div>
 
       <Toast message={toast.message} show={toast.show} onClose={hideToast} />
-      <Modal show={showModal} onClose={closeModal}>
-        <h2 className="text-2xl mb-4">Cart Items</h2>
-        {cartItems.length === 0 ? (
-          <p>Your cart is empty.</p>
-        ) : (
-          <div>
-            {cartItems.map((item, index) => (
-              <div
-                key={item.cartItemId || item.lineId || `${item.id}-${index}`}
-                className="flex justify-between items-center mb-2"
-              >
-                <div className="w-16 h-16 flex-shrink-0">
-                  <Image
-                    src={item.img}
-                    width={64}
-                    height={64}
-                    alt={`${item.name} image`}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                <span className="ml-4">{item.name}</span>
-                <span className="ml-4">${item.price}</span>
-                <button
-                  className="ml-4 bg-purple-500 text-white px-2 py-1 rounded"
-                  onClick={() => removeFromCart(item)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex justify-between items-center mt-4 mx-5 sm:mx-10">
-          <div>
-            {cartItems.length > 0 && <strong>Total:</strong>}
-            {totalPrice ? <span className="ml-2 font-bold ">${totalPrice.toFixed(2)}</span> : ""}
-          </div>
-          {cartItems.length > 0 && (
-            <button
-              onClick={handleCheckout}
-              className="bg-purple-500 text-white px-4 py-1 rounded mt-4"
-            >
-              Checkout
-            </button>
-          )}
-        </div>
-      </Modal>
+      <CartModal
+        show={showModal}
+        onClose={closeModal}
+        cartItems={cartItems}
+        totalPrice={totalPrice}
+        onRemove={removeFromCart}
+        onCheckout={handleCheckout}
+      />
     </>
   );
 };

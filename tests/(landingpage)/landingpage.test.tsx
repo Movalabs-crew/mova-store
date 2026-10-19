@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import React from "react";
 import FAQ from "../../app/(landingpage)/FAQ";
 import Newsletter from "../../app/(landingpage)/newsletter";
 import ContactUs from "../../app/(landingpage)/ContactUs";
 import Slider from "../../app/(landingpage)/Slider";
+import HowItWorks from "../../app/(landingpage)/HowItWorks";
 import * as sendMailModule from "../../lib/sendmail";
 
 describe("Landing Page Components", () => {
@@ -152,6 +153,50 @@ describe("Landing Page Components", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Unable to send message, please try again later")).toBeDefined();
+      });
+    });
+  });
+
+  describe("HowItWorks Component (#610)", () => {
+    it("renders the four steps as an ordered list of four list items", () => {
+      render(<HowItWorks />);
+
+      const lists = screen.getAllByRole("list");
+      expect(lists).toHaveLength(1);
+
+      const orderedList = lists[0];
+      expect(orderedList.tagName).toBe("OL");
+
+      const items = within(orderedList).getAllByRole("listitem");
+      expect(items).toHaveLength(4);
+    });
+
+    it("keeps the grid classes on the list so the visual layout is unchanged", () => {
+      render(<HowItWorks />);
+
+      const orderedList = screen.getByRole("list");
+      expect(orderedList.className).toContain("grid");
+      expect(orderedList.className).toContain("grid-cols-1");
+      expect(orderedList.className).toContain("md:grid-cols-2");
+      expect(orderedList.className).toContain("lg:grid-cols-4");
+      expect(orderedList.className).toContain("gap-8");
+    });
+
+    it("renders every step's number and title inside its list item", () => {
+      render(<HowItWorks />);
+
+      const items = screen.getAllByRole("listitem");
+      const expected = ["01", "02", "03", "04"];
+      const titles = [
+        "Connect Your Wallet",
+        "Shop & Add to Cart",
+        "Pay with USDC",
+        "Track & Receive",
+      ];
+
+      items.forEach((item, index) => {
+        expect(item).toHaveTextContent(expected[index]);
+        expect(item).toHaveTextContent(titles[index]);
       });
     });
   });

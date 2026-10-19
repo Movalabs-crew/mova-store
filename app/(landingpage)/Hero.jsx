@@ -1,6 +1,4 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/AuthContext";
 import Toast from "../../components/Toast";
 import useToast from "../../hooks/useToast";
@@ -8,17 +6,17 @@ import Link from "next/link";
 
 export default function Hero() {
   const { user } = useAuth();
-  const router = useRouter();
   const { toast, showToast, hideToast } = useToast(5000);
 
-  const handleProtectedLinkClick = (e, path) => {
+  // Both branches resolve to a real route, so the CTA is a working link even
+  // before hydration (issue #585). The click handler must not cancel that
+  // navigation: the href already points where the click should go, and the
+  // handler only adds the signed-out nudge on top of it.
+  const shopHref = user ? "/shop" : "/profile/login";
+
+  const handleShopNowClick = () => {
     if (!user) {
-      e.preventDefault();
       showToast("Kindly login first");
-      router.push("/profile/login");
-    } else {
-      e.preventDefault();
-      router.push(path);
     }
   };
 
@@ -42,8 +40,8 @@ export default function Hero() {
           <div className="mova-fade-up-delay-2 mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
               className="rounded-md bg-purple-600 px-7 py-3 font-semibold text-white shadow-mova transition hover:bg-purple-500"
-              href={user ? "/shop" : "#"}
-              onClick={(e) => handleProtectedLinkClick(e, "/shop")}
+              href={shopHref}
+              onClick={handleShopNowClick}
             >
               Shop Now
             </Link>

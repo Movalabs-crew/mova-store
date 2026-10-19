@@ -1,0 +1,14 @@
+# CODEOWNERS for MovaLabs review routing.
+# Route review by risk: contracts, CI and database layers are the highest-risk paths.
+
+# Default owners for the repository.
+* @team-maintainers
+
+# Contracts: highest-risk path, needs a domain reviewer.
+/contracts/ @team-contracts
+
+# CI: changes to the build and release pipelines.
+.github/ @team-ci
+
+# Database: supabase migrations and configuration.
+/supabase/ @team-database
