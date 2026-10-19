@@ -13,7 +13,7 @@ node_modules
 /out
 
 # Log files
-npm-debug.log*
+nmp-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
@@ -29,8 +29,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Miscellaneous
-*.log
+# Miscellaneous*.log
 yarn.lock
 pnpm-lock.yaml
 target/
@@ -39,6 +38,6 @@ contracts/checkout/test_snapshots/
 
 # Test coverage output
 coverage/
-branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
+
+# Local-only issue roadmap — never publish future bounty issues
+ISSUE_DRAFTS.md
