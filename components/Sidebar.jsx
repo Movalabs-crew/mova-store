@@ -89,6 +89,16 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                href="/blog"
+                aria-label="Blog"
+                title="Blog"
+                className="hover:text-white transition-colors duration-200"
+              >
+                <FaBlog className="mr-3 text-white" size={20} />
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/collections"
                 aria-label="Collections"
                 title="Collections"

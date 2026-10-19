@@ -66,6 +66,7 @@ timestamp, status }` and transitions `Pending → Paid → Shipped/Refunded`.
 - [Deep Stellar Integration](#deep-stellar-integration)
 - [Architecture](#architecture)
 - [Repository Layout](#repository-layout)
+- [Documentation](#documentation)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
@@ -168,6 +169,30 @@ display receipts and finish orders.
 > Full design decisions, the escrow model, and how the pieces fit together:
 > **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
+### Order id encoding
+
+The contract takes `order_id` as `BytesN<32>`, but callers hold one of two
+spellings. `resolveOrderIdHash` (`lib/stellar/scval.ts`) picks between them
+with a purely syntactic test, `isOrderIdHashHex`:
+
+| Caller holds                           | Example                           | Treatment                  |
+| -------------------------------------- | --------------------------------- | -------------------------- |
+| Raw (human) id, minted at checkout     | `SS-1759012345678-123456`         | SHA-256 hashed to 32 bytes |
+| Already-hashed id, from indexer events | `a1b2…f0` (64 hex, optional `0x`) | Decoded straight to bytes  |
+
+**Policy ([#542](https://github.com/Movalabs-crew/mova-store/issues/542)):** the
+two forms are indistinguishable, so the rule is explicit — **any 64 hex
+characters mean "already hashed", and raw order ids must never be 64 hex
+characters.** The storefront only mints `SS-<timestamp>-<random>` ids, which
+always contain `-` and can therefore never match; a raw id that broke the rule
+would be sent to the contract unhashed, miss the stored order with
+`OrderNotFound`, and be undetectable after the fact. Admin views depend on the
+other side of the rule: their ids come from event topics and are exactly 64
+hex, so they must pass through unchanged.
+
+The contract is pinned by
+[`tests/lib/resolve-order-id-hash.byte-passthrough.test.ts`](tests/lib/resolve-order-id-hash.byte-passthrough.test.ts).
+
 ## Repository Layout
 
 A clean split between **frontend**, **contracts**, and **config**:
@@ -212,6 +237,12 @@ mova-store/
 └── LICENSE
 ```
 
+## Documentation
+
+The full documentation index lives in **[docs/README.md](docs/README.md)**. It
+lists every guide under `docs/` — architecture, bundle budget, mainnet
+deployment and troubleshooting — with a one-line description of each.
+
 ## Tech Stack
 
 | Layer       | Technology                                                    |
@@ -228,7 +259,7 @@ Install the following before getting started:
 | Tool            | Version / Notes                             | Install                                                                                |
 | --------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
 | **Node.js**     | 18.18+ (Node 20 recommended, see `.nvmrc`)  | https://nodejs.org or `nvm use`                                                        |
-| **Rust**        | stable, with the `wasm32v1-none` target     | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs                             | sh` |
+| **Rust**        | stable, with the `wasm32v1-none` target     | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | **Stellar CLI** | latest (`stellar --version`)                | `brew install stellar-cli` or via [cargo/docs](https://github.com/stellar/stellar-cli) |
 | **Freighter**   | browser wallet extension (Chrome / Firefox) | https://freighter.app                                                                  |
 

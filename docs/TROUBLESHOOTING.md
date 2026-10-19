@@ -51,6 +51,25 @@ Common issues and solutions for Mova Store development and production.
 3. Verify variable names start with `NEXT_PUBLIC_` for client-side access
 4. Check for typos in variable names
 
+### Server refuses to start: "Startup aborted: the environment configuration is invalid"
+
+**Symptoms:** `npm run dev` (or `next start`) exits during boot with a list of
+missing variables such as `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` or
+`NEXT_PUBLIC_SUPABASE_URL`.
+
+**Cause:** `instrumentation.ts` calls `validateEnv()` from `lib/env.ts` once per
+server process, before any request is served, so configuration problems are
+reported at startup instead of on the first checkout or email attempt.
+
+**Solutions:**
+
+1. Copy `.env.local.example` to `.env.local` and fill in every `[REQUIRED]`
+   entry named in the error output.
+2. Start the server again — no further debugging is needed once the listed
+   variables are set.
+3. A bare `next build` is exempt (runtime secrets are not required at build
+   time); only the running server processes validate.
+
 ### Supabase connection errors
 
 **Symptoms:** Auth failures, empty shop, or "Invalid API key" in console
@@ -109,7 +128,7 @@ Common issues and solutions for Mova Store development and production.
 2. If Friendbot fails, manually fund at https://friendbot.stellar.org
 3. Check account status:
    ```bash
-   stellar account info --network testnet <YOUR_PUBLIC_KEY>
+   stellar account info --network testnet --source-account <YOUR_PUBLIC_KEY>
    ```
 
 ---
@@ -329,13 +348,6 @@ If you can't resolve an issue:
 
 ## Debug Mode
 
-Enable verbose logging:
-
-```javascript
-// In browser console
-localStorage.setItem("debug", "mova-store:*");
-```
-
 Check Stellar transaction details:
 
 ```bash
@@ -345,5 +357,5 @@ stellar tx details <TX_HASH> --network testnet
 Monitor contract events:
 
 ```bash
-stellar events --id <CONTRACT_ID> --network testnet --start-ledger <LEDGER>
+stellar events --id <CONTRACT_ID> --network testnet --start-ledger <LEGGER>
 ```
