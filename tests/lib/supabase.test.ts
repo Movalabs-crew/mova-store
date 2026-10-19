@@ -40,79 +40,59 @@ describe("lib/supabase", () => {
     expect(mod.default).toBe(mod.supabase);
   });
 
-  it("warns and uses placeholders when environment variables are missing", async () => {
-    const mockCreateClient = vi.fn().mockReturnValue({ auth: {} });
+  // `lib/supabase.js` no longer falls back to placeholder credentials: a missing
+  // variable throws instead, so a misconfigured deployment fails at startup
+  // rather than booting against a fake project. Capture the message rather than
+  // the import, because the throw happens at module-evaluation time.
+  const importError = async () => {
+    try {
+      await import("../../lib/supabase.js");
+      return "";
+    } catch (error) {
+      return (error as Error).message;
+    }
+  };
+
+  it("fails fast naming both variables when the environment is missing", async () => {
     vi.doMock("@supabase/supabase-js", () => ({
-      createClient: mockCreateClient,
+      createClient: vi.fn().mockReturnValue({ auth: {} }),
     }));
 
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
 
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const message = await importError();
 
-    const mod = await import("../../lib/supabase.js");
-
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local"
-    );
-
-    expect(mockCreateClient).toHaveBeenCalledTimes(1);
-    expect(mockCreateClient).toHaveBeenCalledWith(
-      "https://placeholder.supabase.co",
-      "placeholder-anon-key",
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-        },
-      }
-    );
-    expect(mod.supabase).toBeDefined();
+    expect(message).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(message).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   });
 
-  it("warns when only NEXT_PUBLIC_SUPABASE_URL is provided", async () => {
-    const mockCreateClient = vi.fn().mockReturnValue({ auth: {} });
+  it("throws when only NEXT_PUBLIC_SUPABASE_URL is provided, and falls back to no placeholder", async () => {
     vi.doMock("@supabase/supabase-js", () => ({
-      createClient: mockCreateClient,
+      createClient: vi.fn().mockReturnValue({ auth: {} }),
     }));
 
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://only-url.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
 
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const message = await importError();
 
-    await import("../../lib/supabase.js");
-
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-    expect(mockCreateClient).toHaveBeenCalledWith(
-      "https://only-url.supabase.co",
-      "placeholder-anon-key",
-      expect.any(Object)
-    );
+    expect(message).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    expect(message).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
   });
 
-  it("warns when only NEXT_PUBLIC_SUPABASE_ANON_KEY is provided", async () => {
-    const mockCreateClient = vi.fn().mockReturnValue({ auth: {} });
+  it("throws when only NEXT_PUBLIC_SUPABASE_ANON_KEY is provided, and falls back to no placeholder", async () => {
     vi.doMock("@supabase/supabase-js", () => ({
-      createClient: mockCreateClient,
+      createClient: vi.fn().mockReturnValue({ auth: {} }),
     }));
 
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "only-key-12345");
 
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const message = await importError();
 
-    await import("../../lib/supabase.js");
-
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-    expect(mockCreateClient).toHaveBeenCalledWith(
-      "https://placeholder.supabase.co",
-      "only-key-12345",
-      expect.any(Object)
-    );
+    expect(message).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(message).not.toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   });
 });
 
@@ -157,6 +137,15 @@ describe("supabase/schema.sql RLS policies", () => {
 
 describe("mapAuthUser admin claim mapping", () => {
   it("extracts isAdminClaim from app_metadata", async () => {
+    // `lib/auth.js` pulls in the Supabase client, which now fails fast without
+    // configuration, so the module needs a valid environment to load at all.
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example-project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key-12345");
+    vi.doMock("@supabase/supabase-js", () => ({
+      createClient: vi.fn().mockReturnValue({ auth: {} }),
+    }));
+
     const { mapAuthUser } = await import("../../lib/auth.js");
 
     const nonAdmin = mapAuthUser({

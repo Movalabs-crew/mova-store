@@ -1,0 +1,134 @@
+import React from "react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import Products from "../../app/shop/page";
+import { CartProvider } from "../../context/CartContext";
+import { listProducts } from "../../lib/products";
+
+vi.mock("../../lib/products", () => ({ listProducts: vi.fn() }));
+
+// Toast rendering and timers have their own component tests.
+vi.mock("../../components/Toast", () => ({
+  default: ({ message, show }: { message: string; show: boolean }) =>
+    show ? <p role="status">{message}</p> : null,
+}));
+
+const product = {
+  id: "runner-42",
+  name: "Mova Runner",
+  price: 75,
+  img: "/images/shoe1.png",
+};
+
+function pendingProducts() {
+  let resolve!: (products: (typeof product)[]) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<(typeof product)[]>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  vi.mocked(listProducts).mockReturnValueOnce(promise);
+  return { resolve, reject };
+}
+
+function renderShop() {
+  return render(
+    <CartProvider>
+      <Products />
+    </CartProvider>
+  );
+}
+
+function skeletons() {
+  return screen.queryAllByRole("presentation", { hidden: true });
+}
+
+describe("Shop product loading states", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("shows skeletons while the request is pending, then shows an empty catalogue", async () => {
+    const request = pendingProducts();
+    renderShop();
+
+    expect(listProducts).toHaveBeenCalledTimes(1);
+    expect(skeletons().length).toBeGreaterThan(0);
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+
+    await act(async () => request.resolve([]));
+
+    expect(screen.getByText("No products yet.")).toBeInTheDocument();
+    expect(skeletons()).toHaveLength(0);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("replaces skeletons with product cards that still add products to the cart", async () => {
+    const request = pendingProducts();
+    renderShop();
+
+    expect(skeletons().length).toBeGreaterThan(0);
+    expect(screen.queryByText(product.name)).not.toBeInTheDocument();
+
+    await act(async () => request.resolve([product]));
+
+    const productLink = screen.getByRole("link", { name: /Mova Runner/ });
+    expect(productLink).toHaveAttribute("href", `/shop/${product.id}`);
+    expect(within(productLink).getByRole("img", { name: product.name })).toHaveAttribute(
+      "src",
+      product.img
+    );
+    expect(within(productLink).getByText("$75")).toBeInTheDocument();
+    expect(skeletons()).toHaveLength(0);
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
+
+    fireEvent.click(within(productLink.parentElement!).getByRole("button"));
+
+    // The badge carries an accessible name, so the cart reads as "Shopping cart
+    // with 1 item" rather than exposing the bare digit.
+    expect(screen.getByRole("button", { name: /shopping cart with 1 item/i })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Item added to cart");
+    expect(
+      (JSON.parse(localStorage.getItem("cartItems")!).items || []).map(({ cartItemId, ...rest }) => rest)
+    ).toEqual([product]);
+  });
+
+  it("replaces skeletons with the request error without claiming the catalogue is empty", async () => {
+    const request = pendingProducts();
+    renderShop();
+
+    expect(skeletons().length).toBeGreaterThan(0);
+    expect(screen.queryByText("Catalogue unavailable")).not.toBeInTheDocument();
+
+    await act(async () => request.reject(new Error("Catalogue unavailable")));
+
+    expect(screen.getByText("Catalogue unavailable")).toBeInTheDocument();
+    expect(skeletons()).toHaveLength(0);
+    expect(screen.queryByText("No products yet.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+});
+
+describe("Shop page heading hierarchy (Issue #597)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("renders exactly one h1 and demotes product names to h2", async () => {
+    const request = pendingProducts();
+    renderShop();
+
+    await act(async () => request.resolve([product]));
+
+    const h1s = screen.getAllByRole("heading", { level: 1 });
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0]).toHaveTextContent("Welcome to Mova Store");
+
+    expect(screen.getByRole("heading", { level: 2, name: product.name })).toBeInTheDocument();
+    // The price is no longer a heading at all.
+    expect(screen.queryByRole("heading", { name: "$75" })).not.toBeInTheDocument();
+  });
+});

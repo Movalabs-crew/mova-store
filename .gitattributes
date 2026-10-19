@@ -1,1 +1,51 @@
-* text eol=lf
+# Normalisation rules for the Mova Store repository.
+#
+# `text=auto` lets Git classify a path before any end-of-line conversion runs, so
+# an asset that Git recognises as binary is stored byte-for-byte. The explicit
+# `binary` rules below then pin every asset type this repository ships, which
+# keeps them out of text handling even if a future file defeats the heuristic.
+# `eol=lf` is safe to apply repository-wide because it now only takes effect for
+# paths Git has already classified as text.
+#
+# This file used to contain `* text eol=lf`, which forced every path - assets in
+# `public/` included - through EOL normalisation, leaving the whole asset set
+# reported as modified. After this change lands, run `git add --renormalize .`
+# once to refresh the index so a fresh checkout is clean.
+
+* text=auto eol=lf
+
+# Images - never diffed, merged or EOL-converted.
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.bmp binary
+*.tiff binary
+
+# Video and audio.
+*.mp4 binary
+*.m4v binary
+*.mov binary
+*.webm binary
+*.mp3 binary
+*.wav binary
+
+# Fonts.
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
+# Archives and compiled artefacts.
+*.zip binary
+*.gz binary
+*.tar binary
+*.pdf binary
+*.wasm binary
+*.so binary
+*.dylib binary
+*.dll binary

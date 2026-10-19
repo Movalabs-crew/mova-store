@@ -9,6 +9,8 @@
 // TYPE DEFINITIONS
 // =============================================================================
 
+import { MAINNET_RPC_URL, TESTNET_RPC_URL } from "./stellar/endpoints";
+
 export interface StellarConfig {
   network: "testnet" | "mainnet";
   rpcUrl: string;
@@ -47,13 +49,14 @@ export interface EnvConfig {
 
 const STELLAR_DEFAULTS = {
   testnet: {
-    rpcUrl: "https://soroban-testnet.stellar.org",
+    // One source of truth for the endpoints (#691): see lib/stellar/endpoints.ts.
+    rpcUrl: TESTNET_RPC_URL,
     networkPassphrase: "Test SDF Network ; September 2015",
     usdcContractId: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
     nativeAssetContractId: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
   },
   mainnet: {
-    rpcUrl: "https://soroban-rpc.stellar.org",
+    rpcUrl: MAINNET_RPC_URL,
     networkPassphrase: "Public Global Stellar Network ; September 2015",
     usdcContractId: "", // Must be configured for mainnet
     nativeAssetContractId: "", // Must be configured for mainnet
@@ -99,9 +102,20 @@ function getEnv(name: string, defaultValue: string = ""): string {
 /**
  * Loads and validates Stellar configuration.
  */
+const ALLOWED_STELLAR_NETWORKS = ["testnet", "mainnet"] as const;
+export type StellarNetworkName = (typeof ALLOWED_STELLAR_NETWORKS)[number];
+
 export function loadStellarConfig(errors: ValidationError[] = []): StellarConfig {
-  const network = (getEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet") || "testnet") as
-    "testnet" | "mainnet";
+  const rawNetwork = getEnv("NEXT_PUBLIC_STELLAR_NETWORK", "testnet") || "testnet";
+  if (!(ALLOWED_STELLAR_NETWORKS as readonly string[]).includes(rawNetwork)) {
+    errors.push({
+      field: "NEXT_PUBLIC_STELLAR_NETWORK",
+      message: `Unrecognised network "${rawNetwork}". Accepted values: ${ALLOWED_STELLAR_NETWORKS.join(", ")}.`,
+    });
+  }
+  const network = (
+    (ALLOWED_STELLAR_NETWORKS as readonly string[]).includes(rawNetwork) ? rawNetwork : "testnet"
+  ) as StellarNetworkName;
   const defaults = STELLAR_DEFAULTS[network];
 
   const checkoutContractId = requireEnv(
@@ -128,23 +142,10 @@ export function loadStellarConfig(errors: ValidationError[] = []): StellarConfig
  */
 export function loadEmailJSConfig(errors: ValidationError[] = []): EmailJSConfig {
   return {
-    serviceId: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_SERVICE_ID",
-      errors,
-      "email notifications"
-    ),
-    templateId: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID",
-      errors,
-      "email notifications"
-    ),
-    publicKey: requireEnv(
-      "NEXT_PUBLIC_EMAILJS_PUBLIC_KEY",
-      errors,
-      "email notifications"
-    ),
-    defaultRecipientEmail:
-      getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
+    serviceId: requireEnv("NEXT_PUBLIC_EMAILJS_SERVICE_ID", errors, "email notifications"),
+    templateId: requireEnv("NEXT_PUBLIC_EMAILJS_TEMPLATE_ID", errors, "email notifications"),
+    publicKey: requireEnv("NEXT_PUBLIC_EMAILJS_PUBLIC_KEY", errors, "email notifications"),
+    defaultRecipientEmail: getEnv("NEXT_PUBLIC_DEFAULT_RECIPIENT_EMAIL") || undefined,
   };
 }
 

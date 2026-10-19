@@ -12,7 +12,6 @@ import {
   rpc,
   xdr,
   Keypair,
-  StrKey,
   Address,
 } from "@stellar/stellar-sdk";
 
@@ -22,7 +21,6 @@ import {
   NETWORK_PASSPHRASE,
   TX_TIMEOUT_SECONDS,
   TX_POLL_INTERVAL_MS,
-  FEE_BUFFER_STROOPS,
   tokenForContract,
 } from "./config";
 import { connectWallet, signWithFreighter } from "./freighter";
@@ -60,16 +58,40 @@ export interface OrderActionResult {
 }
 
 // ---------------------------------------------------------------------------
+// Order IDs
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a human-readable, unguessable order id.
+ *
+ * The id is hashed to the 32-byte `order_id` that the contract treats as
+ * unique: a second `create_order` for an id already registered is rejected with
+ * `OrderAlreadyPaid`, so a predictable id lets an observer pre-register a
+ * buyer's likely id and permanently block that checkout (#708). `Math.random()`
+ * is not a CSPRNG; the entropy here comes from `crypto.getRandomValues`, which
+ * keeps the `SS-<timestamp>-<6 digits>` shape that callers and support tooling
+ * read.
+ */
+export function generateOrderId(): string {
+  const entropy = new Uint32Array(1);
+  crypto.getRandomValues(entropy);
+  // Same 0..999_999 range the previous `Math.floor(Math.random() * 1e6)`
+  // produced, without the predictable PRNG behind it.
+  const suffix = entropy[0] % 1_000_000;
+  return `SS-${Date.now()}-${suffix}`;
+}
+
+// ---------------------------------------------------------------------------
 // Status Conversion
 // ---------------------------------------------------------------------------
 
 function decodeStatus(statusVal: xdr.ScVal): OrderStatus {
-  if (statusVal.switch() === xdr.ScValType.scvVec()) {
-    const vec = statusVal.vec();
+  if (statusVal.type === "scvVec") {
+    const vec = statusVal.vec;
     if (vec && vec.length > 0) {
       const first = vec[0];
-      if (first.switch() === xdr.ScValType.scvSymbol()) {
-        const sym = first.sym().toString();
+      if (first.type === "scvSymbol") {
+        const sym = first.sym.toString();
         if (["Pending", "Paid", "Shipped", "Refunded"].includes(sym)) {
           return sym as OrderStatus;
         }
@@ -111,7 +133,7 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
         networkPassphrase: NETWORK_PASSPHRASE,
       }
     )
-      .addOperation(contract.call("order", xdr.ScVal.scvBytes(Buffer.from(orderIdHash, "hex"))))
+      .addOperation(contract.call("order", xdr.ScVal.scvBytes(hexToBytes(orderIdHash))))
       .setTimeout(30)
       .build();
 
@@ -127,20 +149,20 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
     }
 
     const retval = simResult.result.retval;
-    if (retval.switch() === xdr.ScValType.scvVoid()) {
+    if (retval.type === "scvVoid") {
       return null; // Order doesn't exist
     }
 
     // Parse the Option<Order> - it's a vec with the order struct inside
-    if (retval.switch() === xdr.ScValType.scvVec()) {
-      const vec = retval.vec();
+    if (retval.type === "scvVec") {
+      const vec = retval.vec;
       if (!vec || vec.length === 0) return null;
 
       // The order is the first (and only) element
       const orderVal = vec[0];
-      if (orderVal.switch() !== xdr.ScValType.scvMap()) return null;
+      if (orderVal.type !== "scvMap") return null;
 
-      const orderMap = orderVal.map();
+      const orderMap = orderVal.map;
       if (!orderMap) return null;
       const order: Partial<OrderDetails> = {
         orderId,
@@ -148,31 +170,31 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
       };
 
       for (const entry of orderMap) {
-        const key =
-          entry.key().switch() === xdr.ScValType.scvSymbol() ? entry.key().sym().toString() : "";
-        const val = entry.val();
+        const key = entry.key.type === "scvSymbol" ? entry.key.sym.toString() : "";
+        const val = entry.val;
 
         switch (key) {
           case "buyer":
-            if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.buyer = StrKey.encodeEd25519PublicKey(val.address().accountId().ed25519());
+            if (val.type === "scvAddress") {
+              // `Address.fromScVal` handles both G... and C... strkeys, so the
+              // manual accountId/ed25519 and contractId unwrapping is gone.
+              order.buyer = Address.fromScVal(val).toString();
             }
             break;
           case "amount":
-            if (val.switch() === xdr.ScValType.scvI128()) {
-              const parts = val.i128();
-              order.amount =
-                (BigInt(parts.hi().toString()) << BigInt(64)) | BigInt(parts.lo().toString());
+            if (val.type === "scvI128") {
+              const parts = val.i128;
+              order.amount = (parts.hi << BigInt(64)) | parts.lo;
             }
             break;
           case "token":
-            if (val.switch() === xdr.ScValType.scvAddress()) {
-              order.token = StrKey.encodeContract(val.address().contractId() as any);
+            if (val.type === "scvAddress") {
+              order.token = Address.fromScVal(val).toString();
             }
             break;
           case "timestamp":
-            if (val.switch() === xdr.ScValType.scvU64()) {
-              order.timestamp = Number(val.u64().toString());
+            if (val.type === "scvU64") {
+              order.timestamp = Number(val.u64);
             }
             break;
           case "status":
@@ -201,14 +223,35 @@ export async function readOrder(orderId: string): Promise<OrderDetails | null> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Resolve the deployed checkout contract id, failing fast when it is absent.
+ *
+ * Read from the environment at call time rather than from the import-time
+ * snapshot in `./config`, so a misconfigured deployment says so plainly instead
+ * of surfacing later as an opaque simulation error. Thrown rather than returned
+ * so it cannot be mistaken for a transient RPC failure, and raised outside the
+ * operation's try/catch for the same reason.
+ */
+function requireCheckoutContractId(): string {
+  const contractId = (process.env.NEXT_PUBLIC_CHECKOUT_CONTRACT_ID ?? "").trim();
+  if (!contractId) {
+    throw new Error(
+      "NEXT_PUBLIC_CHECKOUT_CONTRACT_ID is not configured. Set it to the deployed checkout contract id (C...) before dispatching or refunding orders.",
+    );
+  }
+  return contractId;
+}
+
+/**
  * Dispatches an order, releasing the escrowed funds to the merchant.
  * Requires the connected wallet to be the merchant.
  */
 export async function dispatchOrder(orderId: string): Promise<OrderActionResult> {
+  // Fail fast on a missing contract id, before any wallet or RPC call.
+  const contractId = requireCheckoutContractId();
   try {
     const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
-    const contract = new Contract(CHECKOUT_CONTRACT_ID);
+    const contract = new Contract(contractId);
 
     const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
@@ -218,7 +261,7 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
+      .addOperation(contract.call("dispatch", xdr.ScVal.scvBytes(orderIdHashBytes.slice())))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -278,10 +321,12 @@ export async function dispatchOrder(orderId: string): Promise<OrderActionResult>
  * Requires the connected wallet to be the merchant.
  */
 export async function refundOrder(orderId: string): Promise<OrderActionResult> {
+  // Fail fast on a missing contract id, before any wallet or RPC call.
+  const contractId = requireCheckoutContractId();
   try {
     const publicKey = await connectWallet();
     const server = new rpc.Server(RPC_URL);
-    const contract = new Contract(CHECKOUT_CONTRACT_ID);
+    const contract = new Contract(contractId);
 
     const orderIdHashBytes = await resolveOrderIdHash(orderId);
 
@@ -291,7 +336,7 @@ export async function refundOrder(orderId: string): Promise<OrderActionResult> {
       fee: "100000",
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(Buffer.from(orderIdHashBytes))))
+      .addOperation(contract.call("refund", xdr.ScVal.scvBytes(orderIdHashBytes.slice())))
       .setTimeout(TX_TIMEOUT_SECONDS)
       .build();
 
@@ -428,14 +473,57 @@ export function eventToOrder(
       status = existingStatus ?? "Unknown";
   }
 
-  // Extract fields
-  const orderId = fields.order_id || fields.topic1 || "";
-  const buyer = fields.buyer || fields.topic2 || "";
+  // Extract fields. The contract declares a different topic layout per event
+  // (`contracts/checkout/src/events.rs`) and the indexer exposes `topics[1..]`
+  // as `topic1..topicN`. Reading `topic1` as the order id for every event made
+  // a `pay`/`create_order` event resolve to the token contract address, which
+  // the dashboard then hashed and sent to `dispatchOrder`/`refundOrder`, where
+  // it failed with `OrderNotFound`.
+  const topic = (position: number): string => fields[`topic${position}`] ?? "";
+
+  let orderId = "";
+  let buyer = "";
+  let token = "";
+  switch (symbol) {
+    // topics: (pay, token, buyer, merchant, order_id)
+    case "pay":
+      token = topic(1);
+      buyer = topic(2);
+      orderId = topic(4);
+      break;
+    // topics: (create_order, token, buyer, order_id)
+    case "create_order":
+      token = topic(1);
+      buyer = topic(2);
+      orderId = topic(3);
+      break;
+    // topics: (dispatch, order_id, merchant) - the event carries no buyer, so
+    // `buyer` stays empty rather than reporting the merchant as the buyer.
+    case "dispatch":
+      orderId = topic(1);
+      break;
+    // topics: (refund, order_id, buyer)
+    case "refund":
+      orderId = topic(1);
+      buyer = topic(2);
+      break;
+    default:
+      // Unknown event: fall back to the positional field, then to the old
+      // `topic1` behaviour so an unrecognised symbol is not silently dropped.
+      orderId = topic(1);
+      break;
+  }
+
+  // A field emitted by the event's data map wins over the positional read, so
+  // a layout that carries these values in `data` keeps working unchanged.
+  const resolvedOrderId = fields.order_id || orderId;
+  const resolvedBuyer = fields.buyer || buyer;
+  const resolvedToken = fields.token || token;
+
   const amountStr = fields.amount || "0";
-  const token = fields.token || "";
 
   // Try to get token config
-  const tokenConfig = tokenForContract(token);
+  const tokenConfig = tokenForContract(resolvedToken);
   const decimals = tokenConfig?.decimals ?? 7;
   const tokenSymbol = tokenConfig?.symbol ?? "TOKEN";
 
@@ -460,11 +548,11 @@ export function eventToOrder(
   }
 
   return {
-    orderId,
-    buyer,
+    orderId: resolvedOrderId,
+    buyer: resolvedBuyer,
     amount: amountDisplay,
     amountRaw,
-    token,
+    token: resolvedToken,
     tokenSymbol,
     status,
     timestamp,

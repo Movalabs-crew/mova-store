@@ -179,4 +179,43 @@ describe("Error Classification & Handling Tests (lib/errors.ts)", () => {
       expect(authWithTimeout.code).toBe("AUTH_INVALID_CREDENTIALS");
     });
   });
+
+  describe("createError defaults and object/string parsing", () => {
+    it("fills in default severity/recoverability and leaves action unset", () => {
+      expect(createError("CUSTOM_ERR", "Something went wrong", "Please try again.")).toEqual({
+        code: "CUSTOM_ERR",
+        message: "Something went wrong",
+        userMessage: "Please try again.",
+        severity: "error",
+        recoverable: true,
+        action: undefined,
+      });
+    });
+
+    it("classifies FREIGHTER_REQUEST_DENIED from an Error carrying a code property", () => {
+      const parsed = parseError(
+        Object.assign(new Error("Denied"), { code: "FREIGHTER_REQUEST_DENIED" })
+      );
+      expect(parsed.code).toBe("WALLET_REQUEST_DENIED");
+      expect(parsed.recoverable).toBe(true);
+    });
+
+    it("parses a plain object with a message property", () => {
+      expect(parseError({ message: "Network connection lost" }).message).toBe(
+        "Network connection lost"
+      );
+    });
+
+    it("returns the original text as the user message for an unclassified string", () => {
+      expect(getUserMessage("Simple error")).toBe("Simple error");
+    });
+
+    it("falls back to the generic user message for null", () => {
+      expect(getUserMessage(null)).toBe(GENERAL_ERRORS.Unknown.userMessage);
+    });
+
+    it("treats a missing Freighter extension as recoverable once installed", () => {
+      expect(isRecoverable(new WalletError("FREIGHTER_NOT_FOUND", "Wallet missing"))).toBe(true);
+    });
+  });
 });

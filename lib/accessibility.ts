@@ -250,15 +250,35 @@ export function getAnimationDuration(normalDuration: number): number {
 // Color Contrast
 // =============================================================================
 
-function parseHexColor(hex: string): [number, number, number] | null {
-  let cleaned = hex.replace(/^#/, "").trim();
-  if (cleaned.length === 3) {
+const HEX_COLOR_RE = /^#?([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const RGB_COLOR_RE =
+  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(?:0|1|\d*\.\d+|\d+%)\s*)?\)$/i;
+
+function parseHexColor(input: string): [number, number, number] | null {
+  const trimmed = input.trim();
+
+  const rgbMatch = RGB_COLOR_RE.exec(trimmed);
+  if (rgbMatch) {
+    const channels = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((c) =>
+      parseInt(c, 10)
+    );
+    if (channels.some((c) => c < 0 || c > 255)) return null;
+    return [channels[0], channels[1], channels[2]];
+  }
+
+  if (!HEX_COLOR_RE.test(trimmed)) return null;
+
+  let cleaned = trimmed.replace(/^#/, "");
+  if (cleaned.length === 3 || cleaned.length === 4) {
     cleaned = cleaned
+      .slice(0, 3)
       .split("")
       .map((c) => c + c)
       .join("");
+  } else if (cleaned.length === 8) {
+    cleaned = cleaned.slice(0, 6);
   }
-  if (cleaned.length !== 6) return null;
+
   const num = parseInt(cleaned, 16);
   if (isNaN(num)) return null;
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
@@ -273,10 +293,14 @@ function getChannelLuminance(val: number): number {
 
 /**
  * Calculates the relative luminance of an sRGB color.
+ *
+ * Returns `NaN` for input that is not a parsable 3- or 6-digit hex colour.
+ * Callers must not treat that as black: an unreadable colour has no luminance,
+ * and `meetsContrastRequirement` already fails closed on a non-finite ratio.
  */
 export function getRelativeLuminance(hex: string): number {
   const rgb = parseHexColor(hex);
-  if (!rgb) return 0;
+  if (!rgb) return NaN;
   const [r, g, b] = rgb.map(getChannelLuminance);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -302,6 +326,11 @@ export function meetsContrastRequirement(
   largeText = false
 ): boolean {
   const ratio = getContrastRatio(foreground, background);
+  // Fail closed: a colour this helper cannot parse has no meaningful ratio, and
+  // a compliance check must never certify what it could not compute. Previously
+  // an invalid colour inherited black's luminance of 0, so
+  // meetsContrastRequirement("not-a-color", "#ffffff") reported a 21:1 pass.
+  if (!Number.isFinite(ratio)) return false;
   const threshold = largeText ? 3.0 : 4.5;
   return ratio >= threshold;
 }

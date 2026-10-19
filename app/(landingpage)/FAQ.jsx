@@ -46,10 +46,10 @@ export default function FAQ() {
 
   return (
     <section className="bg-white py-20 px-4 md:px-10">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-sm uppercase tracking-widest text-purple-700 font-semibold mb-3">
-            FAQ
+            FAP
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Frequently asked questions
@@ -60,36 +60,48 @@ export default function FAQ() {
         </div>
 
         <div className="space-y-3">
-          {faqs.map((faq, index) => (
-            <div
-              key={index}
-              className="border border-gray-200 rounded-lg overflow-hidden"
-            >
-              <button
-                onClick={() => toggleFAQ(index)}
-                className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-gray-50 transition-colors"
-                aria-expanded={openIndex === index}
-              >
-                <span className="font-medium text-gray-900 pr-4">
-                  {faq.question}
-                </span>
-                <FaChevronDown
-                  className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
-                    openIndex === index ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+          {faqs.map((faq, index) => {
+            const isOpen = openIndex === index;
+            const panelId = `faq-panel-${index}`;
+            const triggerId = `faq-trigger-${index}`;
+            return (
               <div
-                className={`overflow-hidden transition-all duration-200 ${
-                  openIndex === index ? "max-h-96" : "max-h-0"
-                }`}
+                key={index}
+                className="border border-gray-200 rounded-lg overflow-hidden"
               >
-                <p className="px-5 pb-5 text-gray-600 leading-relaxed">
-                  {faq.answer}
-                </p>
+                <button
+                  id={triggerId}
+                  onClick={() => toggleFAQ(index)}
+                  className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-gray-50 transition-colors"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                >
+                  <span className="font-medium text-gray-900 pr-4">
+                    {faq.question}
+                  </span>
+                  <FaChevronDown
+                    aria-hidden="true"
+                    className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                <div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={triggerId}
+                  hidden={!isOpen}
+                  className={`overflow-hidden transition-all duration-200 ${
+                    isOpen ? "max-h-96" : "max-h-0"
+                  }`}
+                >
+                  <p className="px-5 pb-5 text-gray-600 leading-relaxed">
+                    {faq.answer}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-12 text-center p-6 bg-gray-50 rounded-xl">
