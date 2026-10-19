@@ -82,13 +82,10 @@ const nextConfig = {
   },
 
   experimental: {
-    // Required for Next.js 14 to load the root `instrumentation.ts` hook.
-    instrumentationHook: true,
-    optimizePackageImports: [
-      "react-icons",
-      "@stellar/stellar-sdk",
-      "@supabase/supabase-js",
-    ],
+    // `instrumentationHook` is stable in Next 15 and no longer an option --
+    // having it here only produces an "Unrecognized key(s)" config warning.
+    // The root `instrumentation.ts` is loaded by default.
+    optimizePackageImports: ["react-icons", "@stellar/stellar-sdk", "@supabase/supabase-js"],
   },
 };
 

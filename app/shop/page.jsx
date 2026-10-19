@@ -45,9 +45,16 @@ export default function Products() {
           {loading ? (
             <ProductGridSkeleton />
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <>
+            <h2 id="shop-results-heading" className="sr-only">
+              {products.length === 1 ? "1 product found" : `${products.length} products found`}
+            </h2>
+            <ul
+              aria-labelledby="shop-results-heading"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+            >
               {products.map((prod) => (
-                <div key={prod.id} className="p-4 border rounded-lg shadow">
+                <li key={prod.id} className="p-4 border rounded-lg shadow">
                   <Link href={`/shop/${prod.id}`}>
                     <Image
                       src={prod.img} // Ensure this URL is correct
@@ -68,9 +75,10 @@ export default function Products() {
                   >
                     <FaShoppingCart />
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
+            </>
           ) : (
             // Only when the fetch resolved empty. On rejection the error above
             // is the whole story, and showing "no products yet" beside it would

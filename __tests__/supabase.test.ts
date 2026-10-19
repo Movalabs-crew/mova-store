@@ -1,3 +1,6 @@
+// @vitest-environment node
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { resolveSupabaseConfig } from "../lib/supabase";
 
@@ -86,5 +89,36 @@ describe("lib/supabase startup", () => {
     expect(mod.supabase).toBeTruthy();
     expect(mod.default).toBe(mod.supabase);
     expect(typeof mod.supabase.auth.getSession).toBe("function");
+  });
+});
+
+
+/**
+ * `public.is_admin()` is SECURITY DEFINER, so its body must not depend on the
+ * caller's `search_path`: without a pinned path, an unqualified reference could
+ * be shadowed by an object the caller created. These assertions are a static
+ * proxy for Supabase's `function_search_path_mutable` lint, which cannot run in
+ * CI.
+ */
+describe("public.is_admin() hardening", () => {
+  const sql = readFileSync(
+    fileURLToPath(new URL("../supabase/schema.sql", import.meta.url)),
+    "utf8"
+  );
+  const definition =
+    sql.match(/create or replace function public\.is_admin\(\)[\s\S]*?\$\$;/i)?.[0] ?? "";
+
+  it("defines the function as SECURITY DEFINER", () => {
+    expect(definition).not.toBe("");
+    expect(definition.toLowerCase()).toContain("security definer");
+  });
+
+  it("pins search_path instead of inheriting the caller's path", () => {
+    expect(definition).toMatch(/set\s+search_path\s*=\s*''/i);
+  });
+
+  it("fully qualifies the admin_users reference it reads", () => {
+    expect(definition).toContain("public.admin_users");
+    expect(definition).not.toMatch(/\bfrom\s+admin_users\b/i);
   });
 });

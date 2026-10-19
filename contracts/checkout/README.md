@@ -43,6 +43,15 @@ until the merchant dispatches the order — or refunded on-chain back to the buy
 - `amount` is in **raw token units** (USDC/XLM use 7 decimals, so `10.00 = 100_000_000`).
 - Transfers buyer → **contract** via the SEP-41 `transfer` host call (escrow).
 - The `token` must be on the merchant's whitelist (`add_token`).
+- **A `Pending` order is a binding reservation for its buyer and amount.** If
+  `create_order` already registered the id, `pay` must match the recorded
+  `buyer` and `amount`; a mismatch fails with `OrderBuyerMismatch` (8) or
+  `OrderAmountMismatch` (9), so a later caller cannot silently replace the
+  original buyer's intent or reserve a different amount. The `token` is
+  deliberately **not** bound: a whitelisted token presented to `pay` settles
+  the order even when it differs from the one `create_order` recorded, so the
+  registry reflects the payment that actually happened. When no `create_order`
+  exists, the `pay` arguments are authoritative.
 - Rejects amounts `<= 0`, unknown tokens, and duplicate payments (`OrderAlreadyPaid`).
 - Emits `PaymentReceived`:
 
@@ -79,6 +88,8 @@ happened, and the token named by `create_order` is never charged.
 | 5    | `TokenNotAllowed`    | token not on the merchant's whitelist    |
 | 6    | `OrderNotFound`      | no order for the given `order_id`        |
 | 7    | `InvalidOrderStatus` | order is not `Paid` for dispatch/refund  |
+| 8    | `OrderBuyerMismatch` | `pay` buyer differs from `create_order`  |
+| 9    | `OrderAmountMismatch`| `pay` amount differs from `create_order` |
 
 ## Build
 

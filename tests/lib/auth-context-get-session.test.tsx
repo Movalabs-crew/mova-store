@@ -50,7 +50,7 @@ describe("AuthContext getSession rejection handling", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("handles successful getSession properly", async () => {
+  it("handles successful getSession properly and does not mint admin from an email address", async () => {
     (supabase.auth.getSession as any).mockResolvedValue({
       data: {
         session: {
@@ -71,8 +71,47 @@ describe("AuthContext getSession rejection handling", () => {
 
     expect(result.current.user).not.toBeNull();
     expect(result.current.user?.email).toBe("admin@test.com");
-    expect(result.current.isAdmin).toBe(true);
     expect(result.current.isAuthenticated).toBe(true);
+    // The email is only a display attribute: without the server-verified
+    // app_metadata.is_admin claim there is no admin access.
+    expect(result.current.user?.isAdminClaim).toBe(false);
+    expect(result.current.isAdmin).toBe(false);
+  });
+
+  it("ignores NEXT_PUBLIC_ADMIN_EMAILS so the allowlist cannot leak into the bundle", async () => {
+    const previous = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+    process.env.NEXT_PUBLIC_ADMIN_EMAILS = "sneaky-admin@test.com";
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_EMAILS", "sneaky-admin@test.com");
+
+    try {
+      (supabase.auth.getSession as any).mockResolvedValue({
+        data: {
+          session: {
+            user: {
+              id: "u-env",
+              email: "sneaky-admin@test.com",
+              user_metadata: { full_name: "Env Admin" },
+            },
+          },
+        },
+      });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.user?.email).toBe("sneaky-admin@test.com");
+      expect(result.current.isAdmin).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      if (previous === undefined) {
+        delete process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+      } else {
+        process.env.NEXT_PUBLIC_ADMIN_EMAILS = previous;
+      }
+    }
   });
 
   it("recognizes admin when app_metadata.is_admin is true even if email is not in whitelist", async () => {
@@ -123,5 +162,28 @@ describe("AuthContext getSession rejection handling", () => {
     expect(result.current.user).not.toBeNull();
     expect(result.current.isAdmin).toBe(false);
     expect(result.current.isAuthenticated).toBe(true);
+  });
+
+  it("treats a falsy admin claim value as a non-admin", async () => {
+    (supabase.auth.getSession as any).mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "u-false",
+            email: "maybe-admin@test.com",
+            user_metadata: {},
+            app_metadata: { is_admin: false },
+          },
+        },
+      },
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.isAdmin).toBe(false);
   });
 });
