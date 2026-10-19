@@ -126,29 +126,64 @@ Before submitting a PR, ensure:
 
 ## Known Security Considerations
 
-### Client-Side OTP Generation
+### Checkout OTP
 
-The current OTP implementation generates codes client-side for demonstration purposes. In production:
+Checkout OTPs are generated, stored and verified **server-side** by
+`app/api/otp/route.ts` using `lib/otp.ts`. The browser only asks for a code to
+be sent and asks for a submitted code to be checked:
 
-- Move OTP generation to a server-side API route
-- Implement rate limiting on OTP requests
-- Add OTP expiration (recommended: 5 minutes)
+- Codes are 6 digits drawn from a CSPRNG (`crypto.randomInt`), never `Math.random()`.
+- Only a SHA-256 hash of the code is kept; the plaintext string is returned once so
+  the server can email it, and never reaches the client bundle.
+- Codes expire after 5 minutes and are single-use.
+- A wrong guess consumes one of 5 attempts, after which the code is discarded.
+- Issue requests are throttled to 3 per minute per email address.
 
-### Card Payment Fields
+EmailJS is called from the server route using the `EMAILJS_*` (server-only) names,
+falling back to the legacy `NEXT_PUBLIC_EMAILJS_*` names. Prefer the server-only
+names so the credentials stay out of the client bundle.
 
-The card payment form fields are UI-only placeholders. In production:
+The OTP store is in-process; a deployment with more than one serverless instance
+should back `OtpStore` with a shared store (e.g. Redis/Upstash).
 
-- Integrate with a PCI-compliant payment processor (Stripe, etc.)
-- Never handle raw card data on your servers
-- Use tokenization for card storage
+### Card Payment Fields (threat model)
+
+The card number, expiry and CVV fields on `/checkout` are a **UI-only demo
+affordance**. No card data may be transmitted, persisted or processed by this
+application:
+
+- Card values live only in React state for the lifetime of the tab. They are never
+  sent to an API, logged, written to `localStorage`, placed in a URL, or handed to
+  a third party.
+- Because no card value leaves the browser, Mova Store stays outside PCI DSS scope
+  for cardholder data.
+- The UI labels the fields as demo-only so a shopper cannot mistake them for a real
+  payment form; the sanctioned path is the Stellar (Soroban) checkout.
+
+Do not "finish" this form in place. If real card payments are ever required,
+integrate a PCI-compliant processor (Stripe, etc.) and let it collect card data in
+its own iframe/tokenization flow — never handle raw card data on our servers.
 
 ### Supabase Row Level Security
 
-Apply `supabase/schema.sql` so that:
+Apply `supabase/schema.sql`. The shipped policies are already the hardened,
+admin-only model — there is no outstanding "tighten later" step:
 
-- Anyone can read products
-- Only authenticated users can write products / upload images
-- Tighten policies further for production (admin-only writes)
+- **Products** — `public.products` and the `products` storage bucket are publicly
+  readable; `insert`, `update` and `delete` on both require `public.is_admin()`
+  (`"Admins can insert/update/delete products"`,
+  `"Admins can upload/update/delete product images"`).
+- **Orders** — buyers may read only their own rows
+  (`auth.uid() = user_id or auth.email() = user_email`); status changes and
+  deletions are admin-only.
+- **Allowlist** — `public.admin_users`, which backs `public.is_admin()`, is
+  readable by admins only.
+
+`public.is_admin()` (defined next to the `admin_users` table in
+`supabase/schema.sql`) is the single source of truth for admin access: it returns
+true when the caller's JWT carries `app_metadata.is_admin = true`, or when the
+caller's email is in `public.admin_users`. Grant admin rights through one of those
+two mechanisms; never widen a policy to work around a missing admin entry.
 
 Never expose the Supabase **service role** key in the browser.
 

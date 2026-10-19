@@ -1,36 +1,17 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FaHome, FaInfoCircle, FaList, FaShoppingCart } from "react-icons/fa";
+import { FaHome, FaInfoCircle, FaShoppingCart, FaBlog } from "react-icons/fa";
 import { FcSportsMode } from "react-icons/fc";
 import { useAuth } from "../lib/AuthContext";
 
 export default function Sidebar() {
   const { isAdmin } = useAuth();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   return (
     <>
       <aside className="w-64 bg-white text-gray-700 flex-shrink-0  hidden sm:block pt-10">
         <nav aria-label="Sidebar navigation" className="divide-y divide-gray-200">
           <ul className="px-5 py-6 space-y-2">
-            <li onClick={openModal}>
-              <input
-                type="text"
-                aria-label="Search Shoes"
-                className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
-                placeholder="Search Shoes"
-              />
-            </li>
             <li>
               <Link
                 href="/"
@@ -42,11 +23,20 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
-                href="/blog"
+                href="/shop"
                 className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
               >
                 <FaShoppingCart className="mr-3" />
                 Shop
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/blog"
+                className="flex items-center p-4 hover:bg-gray-100 hover:text-purple-500 transition-colors duration-200"
+              >
+                <FaBlog className="mr-3" />
+                Blog
               </Link>
             </li>
             <li>
@@ -99,6 +89,16 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                href="/blog"
+                aria-label="Blog"
+                title="Blog"
+                className="hover:text-white transition-colors duration-200"
+              >
+                <FaBlog className="mr-3 text-white" size={20} />
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/collections"
                 aria-label="Collections"
                 title="Collections"
@@ -122,14 +122,6 @@ export default function Sidebar() {
           </ul>
         </nav>
       </aside>
-      <Modal show={showModal} onClose={closeModal}>
-        <input
-          type="text"
-          aria-label="Search Shoes modal"
-          className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-gray-500"
-          placeholder="Search Shoes"
-        />
-      </Modal>
     </>
   );
 }
