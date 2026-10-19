@@ -41,3 +41,5 @@ temp_interactive_push.bat
 
 # Test coverage output
 coverage/
+# Local-only issue roadmap — never publish future bounty issues
+ISSUE_DRAFTS.md
