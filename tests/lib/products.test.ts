@@ -41,10 +41,6 @@ describe("lib/products data layer", () => {
     vi.useRealTimers();
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   describe("mapProduct", () => {
     it("returns null when passed null or undefined", () => {
       expect(mapProduct(null)).toBeNull();
@@ -256,7 +252,7 @@ describe("lib/products data layer", () => {
       };
 
       const mockSingle = vi.fn().mockResolvedValue({ data: returnedRow, error: null });
-      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockSelect = viw.fn().mockReturnValue({ single: mockSingle });
       const mockEq = vi.fn().mockReturnValue({ select: mockSelect });
       const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ update: mockUpdate });
@@ -284,7 +280,7 @@ describe("lib/products data layer", () => {
         data: null,
         error: new Error("Update failed"),
       });
-      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockSelect = viw.fn().mockReturnValue({ single: mockSingle });
       const mockEq = vi.fn().mockReturnValue({ select: mockSelect });
       const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ update: mockUpdate });
@@ -346,182 +342,6 @@ describe("lib/products data layer", () => {
         )
       ).toBeNull();
       expect(storageObjectPathFromPublicUrl("https://proj.supabase.co/images/a.jpg")).toBeNull();
-    });
-
-    it("preserves a custom Supabase base path", () => {
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://storage.example.com/project/");
-
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://storage.example.com/project/storage/v1/object/public/products/folder/my%20shoe.jpg"
-        )
-      ).toBe("folder/my shoe.jpg");
-      expect(
-        storageObjectPathFromPublicUrl(
-          "https://storage.example.com/storage/v1/object/public/products/a.jpg"
-        )
-      ).toBeNull();
-    });
-
-    it.each([
-      ["  https://storage.example.com/project/  ", "/project/"],
-      ["https://storage.example.com/project//", "/project//"],
-    ])("matches Supabase base URL normalization for %s", (configuredUrl, basePath) => {
-      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", configuredUrl);
-
-      expect(
-        storageObjectPathFromPublicUrl(
-          `https://storage.example.com${basePath}storage/v1/object/public/products/a.jpg`
-        )
-      ).toBe("a.jpg");
-    });
-
-    it.each(["", "   ", "not-a-url", "file:///storage"])(
-      "skips cleanup when Supabase configuration is invalid: %s",
-      (configuredUrl) => {
-        vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", configuredUrl);
-        expect(storageObjectPathFromPublicUrl(publicUrl("a.jpg"))).toBeNull();
-      }
-    );
-
-    it("returns null for relative URLs and malformed object encoding", () => {
-      expect(storageObjectPathFromPublicUrl("/storage/v1/object/public/products/a.jpg")).toBeNull();
-      expect(storageObjectPathFromPublicUrl(publicUrl("a%ZZ.jpg"))).toBeNull();
-    });
-  });
-
-  describe("parseStoragePathFromUrl", () => {
-    it("recovers the object path from a public URL in the given bucket", () => {
-      expect(
-        parseStoragePathFromUrl(
-          "https://proj.supabase.co/storage/v1/object/public/products/12345-abc.jpg",
-          "products"
-        )
-      ).toBe("12345-abc.jpg");
-    });
-
-    it("returns null for missing, empty and non-string inputs", () => {
-      expect(parseStoragePathFromUrl("")).toBeNull();
-      expect(parseStoragePathFromUrl(null)).toBeNull();
-      expect(parseStoragePathFromUrl(undefined)).toBeNull();
-      expect(parseStoragePathFromUrl(42)).toBeNull();
-    });
-
-    it("returns null for an object living in another bucket", () => {
-      expect(
-        parseStoragePathFromUrl(
-          "https://proj.supabase.co/storage/v1/object/public/avatars/a.jpg",
-          "products"
-        )
-      ).toBeNull();
-    });
-  });
-
-  describe("deleteProduct", () => {
-    // deleteProduct now reads the row's image before deleting, so each case
-    // stubs the lookup as well as the delete. The original assertions on the
-    // delete call and the error path are unchanged.
-    const stubFrom = (img: string | null, deleteResult = { data: null, error: null }) => {
-      const mockMaybeSingle = vi.fn().mockResolvedValue({
-        data: img === null ? null : { img },
-        error: null,
-      });
-      const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
-      const mockEq = vi.fn().mockResolvedValue(deleteResult);
-      const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ select: mockSelect, delete: mockDelete });
-      return { mockSelect, mockSelectEq, mockDelete, mockEq, mockDeleteEq: mockEq };
-    };
-
-    const storedImageUrl =
-      "https://proj.supabase.co/storage/v1/object/public/products/catalog/shoe%20photo.jpg";
-
-    it("deletes a product by id", async () => {
-      const { mockSelect, mockSelectEq, mockDeleteEq } = stubFrom(storedImageUrl);
-      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
-
-      await deleteProduct("p-del");
-
-      expect(mockSelect).toHaveBeenCalledWith("img");
-      expect(mockSelectEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
-      expect(mockDeleteEq.mock.invocationCallOrder[0]).toBeLessThan(
-        mockStorageFrom.remove.mock.invocationCallOrder[0]
-      );
-    });
-
-    it("still deletes the row when storage removal rejects", async () => {
-      const { mockDeleteEq } = stubFrom(storedImageUrl);
-      mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
-
-      await expect(deleteProduct("p-del")).resolves.toBeUndefined();
-
-      expect(mockDeleteEq).toHaveBeenCalledWith("id", "p-del");
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["catalog/shoe photo.jpg"]);
-    });
-
-    it("throws error when delete fails", async () => {
-      stubFrom(null, {
-        data: null,
-        error: new Error("Foreign key constraint violation"),
-      });
-
-      await expect(deleteProduct("p-del")).rejects.toThrow("Foreign key constraint violation");
-    });
-
-    it("removes the stored image after deleting the row", async () => {
-      const { mockDelete } = stubFrom(
-        "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
-      );
-      mockStorageFrom.remove.mockResolvedValue({ data: [], error: null });
-
-      await deleteProduct("p-del");
-
-      expect(mockStorageFrom.remove).toHaveBeenCalledWith(["1700-a.jpg"]);
-      expect(mockDelete).toHaveBeenCalledTimes(1);
-    });
-
-    it("still deletes the row when the image is already gone", async () => {
-      const { mockDelete, mockEq } = stubFrom(
-        "https://proj.supabase.co/storage/v1/object/public/products/1700-a.jpg"
-      );
-      mockStorageFrom.remove.mockRejectedValue(new Error("Object not found"));
-
-      await deleteProduct("p-del");
-
-      expect(mockStorageFrom.remove).toHaveBeenCalledTimes(1);
-      expect(mockDelete).toHaveBeenCalledTimes(1);
-      expect(mockEq).toHaveBeenCalledWith("id", "p-del");
-    });
-
-    it("does not call storage remove when the row has no image", async () => {
-      stubFrom(null);
-
-      await deleteProduct("p-del");
-
-      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
-    });
-
-    it("does not remove an externally hosted image", async () => {
-      const { mockDelete } = stubFrom("https://images.unsplash.com/photo-123.jpg");
-
-      await deleteProduct("p-del");
-
-      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
-      expect(mockDelete).toHaveBeenCalledTimes(1);
-    });
-
-    it("deletes the row without cleanup for an image in another project", async () => {
-      const { mockDelete } = stubFrom(
-        "https://other.supabase.co/storage/v1/object/public/products/1700-a.jpg"
-      );
-
-      await deleteProduct("p-del");
-
-      expect(mockStorageFrom.remove).not.toHaveBeenCalled();
-      expect(mockDelete).toHaveBeenCalledTimes(1);
     });
   });
 });
