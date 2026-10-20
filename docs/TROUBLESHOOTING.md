@@ -65,10 +65,10 @@ reported at startup instead of on the first checkout or email attempt.
 
 1. Copy `.env.local.example` to `.env.local` and fill in every `[REQUIRED]`
    entry named in the error output.
-2. Start the server again — no further debugging is needed once the listed
+2. Start the server again â no further debugging is needed once the listed
    variables are set.
 3. A bare `next build` is exempt (runtime secrets are not required at build
-   time); only the running server processes validate.
+time); only the running server processes validate.
 
 ### Supabase connection errors
 
@@ -79,8 +79,8 @@ reported at startup instead of on the first checkout or email attempt.
 1. Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
 2. Confirm the Supabase project is active
 3. Run `supabase/schema.sql` in the SQL editor
-4. Enable Email and/or Google providers under Authentication → Providers
-5. Add `http://localhost:3000/**` to Auth → URL Configuration → Redirect URLs
+4. Enable Email and/or Google providers under Authentication â Providers
+5. Add `http://localhost:3000/**` to Auth â URL Configuration â Redirect URLs
 
 ---
 
@@ -103,7 +103,7 @@ reported at startup instead of on the first checkout or email attempt.
 
 **Solutions:**
 
-1. Open Freighter → Settings → Network
+1. Open Freighter â Settings â Network
 2. Select the correct network (Testnet or Mainnet)
 3. Refresh the page
 
@@ -184,6 +184,31 @@ reported at startup instead of on the first checkout or email attempt.
 3. Event indexer may be behind - wait a few seconds
 4. Check browser console for event polling errors
 
+### Checkout returns `503 orders_store_unconfigured`
+
+**Symptoms:** Every checkout fails with a `503` response and body
+```{error:"orders_store_unconfigured"}```from `/api/orders`. No row is written to the `orders`
+table.
+
+**Cause:** `app/api/orders/route.ts` creates the server-side Supabase client
+from `SUPABASE_SERVICE_ROLE_KEY` (`lib/supabase-admin.ts`). When that variable
+is missing, the order write path is disabled and the route returns the
+`503` guard response instead of persisting the order.
+
+**Solutions:**
+
+1. Add `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (or to your host's
+   environment). This is a server-only secret â never expose it to the
+   browser and never prefix it with `NEXT_PUBLIC_`.
+2. Fetch the key from Supabase â Project Settings â API â Project API keys
+	â `service_role` (secret).
+3. Restart the dev server (or redeploy) after adding the variable.
+4. Re-try a checkout and confirm a row appears in the `orders` table.
+
+> **Security note:** `SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security.
+it must only ever be set in server-side environment variables (Vercel server
+env, `.env.local`) and never committed to source control.
+
 ---
 
 ## Admin Panel
@@ -194,11 +219,17 @@ reported at startup instead of on the first checkout or email attempt.
 
 **Solutions:**
 
-Admin access is granted through the `admin_users` table or the user's
-@app_metadata.is_admin` flag — not an env variable. See
-["Permission denied" or RLS error when creating/updating products or uploading images](#permission-denied-or-rls-error-when-creatingupdating-products-or-uploading-images)
-below for the correct remedy, and `SECURITY.md` for the authoritative
-description of the admin authorization model.
+1. Verify your email is in `NEXT_PUBLIC_ADMIN_EMAILS` or the server-only
+   `ADMIN_EMAILS` variable:
+   ```
+   NEXT_PUBLIC_ADMIN_EMAILS=your@email.com,other@admin.com
+   ADMIN_EMAILS=your@email.com,other@admin.com
+   ```
+   `NEXT_PUBLIC_ADMIN_EMAILS  is read by the client for UI gating; the
+   server-only `ADMIN_EMAILS` is read by server routes (for example
+   `app/api/otp/route.ts`) and should match it.
+2. Emails are case-insensitive but check for typos
+3. Restart the app after changing admin emails
 
 ### Products not loading
 
