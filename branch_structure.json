@@ -1,0 +1,33 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "ci/workflow-dispatch",
+    "fix/dead-amount-binding",
+    "fix/issue-1056-test-components-cover-stellarwalletbutton-s",
+    "fix/issue-1056-test-components-cover-stellarwalletbutton-s-r2",
+    "fix/main-test-suite-mechanical",
+    "fix/rustfmt-checkout-test-assert",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "ci/workflow-dispatch": "main",
+    "fix/dead-amount-binding": "main",
+    "fix/issue-1056-test-components-cover-stellarwalletbutton-s": "main",
+    "fix/issue-1056-test-components-cover-stellarwalletbutton-s-r2": "fix/issue-1056-test-components-cover-stellarwalletbutton-s",
+    "fix/main-test-suite-mechanical": "main",
+    "fix/rustfmt-checkout-test-assert": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "ci/workflow-dispatch",
+    "fix/dead-amount-binding",
+    "fix/issue-1056-test-components-cover-stellarwalletbutton-s",
+    "fix/main-test-suite-mechanical",
+    "fix/rustfmt-checkout-test-assert",
+    "origin",
+    "fix/issue-1056-test-components-cover-stellarwalletbutton-s-r2"
+  ]
+}

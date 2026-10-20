@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef , useState } from "react";
 
 import {
   connectWallet,
@@ -17,6 +17,13 @@ const StellarWalletButton = ({ onConnect = null }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Keep the latest callback in a ref so the mount effect always sees it
+  // without re-running the availability check when the prop identity changes.
+  const onConnectRef = useRef(onConnect);
+  useEffect(() => {
+    onConnectRef.current = onConnect;
+  }, [onConnect]);
+
   useEffect(() => {
     let cancelled = false;
     freighterAvailable().then((available) => {
@@ -26,7 +33,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
           if (cancelled || !addr) return;
           setConnected(true);
           setAddress(addr);
-          if (onConnect) onConnect(addr);
+          if (onConnectRef.current) onConnectRef.current(addr);
         });
       }
     });
@@ -67,7 +74,7 @@ const StellarWalletButton = ({ onConnect = null }) => {
           type="button"
           onClick={handleConnect}
           disabled={loading}
-          className="w-full flex justify-center items-center gap-2 border-2 border-purple-600 text-purple-600 bg-white py-2 rounded hover:bg-purple-50 transition-colors disabled:opacity-60"
+          className="w-full flex justify-center items-center gap-2 border-2 border-purple-600 text-purple-600 bg-white py-2 rounded hoverJbg-purple-50 transition-colors disabled:opacity-60"
         >
           {loading ? (
             <span className="animate-pulse">Connecting…</span>
