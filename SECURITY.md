@@ -67,7 +67,7 @@ The Soroban escrow contract follows security best practices:
 ### Authentication & Access Control
 
 - Supabase Authentication handles user sessions.
-- Client-side admin UI access is controlled via `NEXT_PUBLIC_ADMIN_EMAILS` or the `is_admin` JWT claim in `app_metadata`.
+- Client-side admin UI access is controlled solely by the `is_admin` JWT claim in `app_metadata`. There is no client-side email allow-list: `NEXT_PUBLIC_*` values are compiled into the browser bundle, so an allow-list published that way both leaks the admin addresses and lets anyone edit their local bundle to pass the check. The UI gate is convenience only; the real boundary is the server.
 - Server-side database and storage writes are enforced via PostgreSQL Row Level Security (RLS) policies in `supabase/schema.sql`.
 - No passwords or private secrets are stored in the application repository.
 
@@ -101,11 +101,9 @@ To authorize an admin user for product mutations and storage uploads in Supabase
     });
     ```
 
-3.  **Method 3: Whitelist Environment Variable (`NEXT_PUBLIC_ADMIN_EMAILS`)**
-    Include the admin email in `.env.local`:
-    ```
-    NEXT_PUBLIC_ADMIN_EMAILS=admin@example.com,lead@example.com
-    ```
+    For server routes that must decide on an address rather than a claim, use the
+    **server-only** `ADMIN_EMAILS` variable. It is read exclusively in server code,
+    is never prefixed with `NEXT_PUBLIC_`, and must never be exposed to the browser.
 
 ### Dependencies
 
