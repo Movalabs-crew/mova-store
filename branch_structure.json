@@ -1,0 +1,30 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "fix/issue-1055-test-hooks-cover-hooks-useproducts-js",
+    "fix/issue-1055-test-hooks-cover-hooks-useproducts-js-r2",
+    "fix/issue-537-test-stellar-cover-indexer-recovery-after-a",
+    "fix/issue-537-test-stellar-cover-indexer-recovery-after-a-r2",
+    "fix/readme-malformed-rust-table-685",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "fix/issue-1055-test-hooks-cover-hooks-useproducts-js": "main",
+    "fix/issue-1055-test-hooks-cover-hooks-useproducts-js-r2": "fix/issue-1055-test-hooks-cover-hooks-useproducts-js",
+    "fix/issue-537-test-stellar-cover-indexer-recovery-after-a": "main",
+    "fix/issue-537-test-stellar-cover-indexer-recovery-after-a-r2": "fix/issue-537-test-stellar-cover-indexer-recovery-after-a",
+    "fix/readme-malformed-rust-table-685": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "fix/issue-1055-test-hooks-cover-hooks-useproducts-js",
+    "fix/issue-537-test-stellar-cover-indexer-recovery-after-a",
+    "fix/readme-malformed-rust-table-685",
+    "origin",
+    "fix/issue-1055-test-hooks-cover-hooks-useproducts-js-r2",
+    "fix/issue-537-test-stellar-cover-indexer-recovery-after-a-r2"
+  ]
+}
