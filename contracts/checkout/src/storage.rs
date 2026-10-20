@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, ByesN32, Env, IntoVal, TryFromVal, Val};
+use soroban_sdk::{contracttype, Address, BytesN, Env, IntoVal, TryFromVal, Val};
 
 use crate::errors::Error;
 use crate::order::Order;

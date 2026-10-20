@@ -16,6 +16,13 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
   const [error, setError] = useState("");
   const [matched, setMatched] = useState(null);
   const indexerRef = useRef(null);
+  const onEventRef = useRef(onEvent);
+
+  // Keep the latest `onEvent` prop reachable from the running indexer without
+  // restarting it, so a changed callback is the one that fires.
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   useEffect(() => {
     if (!enabled || !orderId) return undefined;
@@ -47,7 +54,7 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
           if (orderHex !== expected) return;
           setError("");
           setMatched(event);
-          if (onEvent) onEvent(event);
+          if (onEventRef.current) onEventRef.current(event);
           indexer.stop();
         },
       });
@@ -60,7 +67,6 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
       if (indexer) indexer.stop();
       indexerRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, orderId]);
 
   return (
@@ -101,11 +107,7 @@ const StellarOrderWatch = ({ orderId, enabled = true, onEvent = null }) => {
         </div>
       )}
 
-      {error && (
-        <div className="mt-2 text-amber-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="mt-2 text-amber-700">{error}</div>}
     </div>
   );
 };

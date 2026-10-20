@@ -5,6 +5,7 @@ import {
   recommendedInclusionFee,
   budgetFee,
   buildInvocationTransaction,
+  simulateContractRead,
   SimulationReport,
 } from "../../../lib/stellar/simulate";
 import { FEE_BUFFER_STROOPS, NETWORK_PASSPHRASE } from "../../../lib/stellar/config";
@@ -154,6 +155,60 @@ describe("Simulate Fee Math & Transaction Builder Tests (lib/stellar/simulate.ts
 
       expect(tx.fee).toBe(explicitFee);
       expect(tx.networkPassphrase).toBe(NETWORK_PASSPHRASE);
+    });
+  });
+
+  describe("simulateContractRead", () => {
+    it("returns null for an empty result rather than throwing", async () => {
+      const stubServer = {
+        simulateTransaction: vi.fn().mockResolvedValue({
+          results: [],
+        }),
+      };
+
+      const result = await simulateContractRead(
+        stubServer as never,
+        contractId,
+        "test_func",
+        dummyArgs,
+        buyerAddress
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null when the simulation result is absent", async () => {
+      const stubServer = {
+        simulateTransaction: vi.fn().mockResolvedValue({
+          results: [{ retval: undefined }],
+        }),
+      };
+
+      const result = await simulateContractRead(
+        stubServer as never,
+        contractId,
+        "test_func",
+        dummyArgs,
+        buyerAddress
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("propagates a thrown simulation error", async () => {
+      const stubServer = {
+        simulateTransaction: vi.fn().mockRejectedValue(new Error("simulation failed")),
+      };
+
+      await expect(
+        simulateContractRead(
+          stubServer as never,
+          contractId,
+          "test_func",
+          dummyArgs,
+          buyerAddress
+        )
+      ).rejects.toThrow("simulation failed");
     });
   });
 });
