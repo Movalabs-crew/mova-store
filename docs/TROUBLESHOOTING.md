@@ -1,1 +1,391 @@
-IyBUcm91Ymxlc2hvb3RpbmcgR3VpZGUKCkNvbW1vbiBpc3N1ZXMgYW5kIHNvbHV0aW9ucyBmb3IgTW92YSBTdG9yZSBkZXZlbG9wbWVudCBhbmQgcHJvZHVjdGlvbi4KCiMjIFRhYmxlIG9mIENvbnRlbnRzCgotIFtEZXZlbG9wbWVudCBTZXR1cF0oI2RldmVsb3BtZW50LXNldHVwKQotIFtXYWxsZXQgQ29ubmVjdGlvbl0oI3dhbGxldC1jb25uZWN0aW9uKQotIFtQYXltZW50IElzc3Vlc10oI3BheW1lbnQtaXNzdWVzKQotIFtBZG1pbiBQYW5lbF0oI2FkbWluLXBhbmVsKQotIFtDb250cmFjdCBEZXBsb3ltZW50XSgjY29udHJhY3QtZGVwbG95bWVudCkKLSBbQnVpbGQgJiBEZXBsb3ldKCNidWlsZC0tZGVwbG95KQoKLS0tCgojIyBEZXZlbG9wbWVudCBTZXR1cAoKIyMjIGBucG0gaW5zdGFsbGAgZmFpbHMKCioqU3ltcHRvbXM6KiogRXJyb3IgZHVyaW5nIGRlcGVuZGVuY3kgaW5zdGFsbGF0aW9uCgoqKlNvbHV0aW9uczoqKgoKMS4gQ2xlYXIgbnBtIGNhY2hlOgoKICAgYGBgYmFzaAogICBucG0gY2FjaGUgY2xlYW4gLS1mb3JjZQogICBybSAtcmYgbm9kZV9tb2R1bGVzIHBhY2thZ2UtbG9jay5qc29uCiAgIG5wbSBpbnN0YWxsCiAgIGBgYAoKMi4gQ2hlY2sgTm9kZS5qcyB2ZXJzaW9uIChyZXF1aXJlcyAxOCspOgoKICAgYGBgYmFzaAogICBub2RlIC0tdmVyc2lvbgogICBgYGAKCjMuIE9uIE1hYywgaW5zdGFsbCBYY29kZSB0b29sczoKICAgYGBgYmFzaAogICB4Y29kZS1zZWxlY3QgLS1pbnN0YWxsCiAgIGBgYAoKIyMjIEVudmlyb25tZW50IHZhcmlhYmxlcyBub3QgbG9hZGluZwoKKipTeW1wdG9tczoqKiBBcHAgc2hvd3MgIk1pc3NpbmcgY29uZmlndXJhdGlvbiIgZXJyb3JzCgoqKlNvbHV0aW9uczoqKgoKMS4gRW5zdXJlIGAuZW52LmxvY2FsYCBleGlzdHMgKGNvcHkgZnJvbSBgLmVudi5sb2NhbC5leGFtcGxlYCkKMi4gUmVzdGFydCB0aGUgZGV2IHNlcnZlciBhZnRlciBjaGFuZ2luZyBlbnYgdmFycwozLiBWZXJpZnkgdmFyaWFibGUgbmFtZXMgc3RhcnQgd2l0aCBgTkVYVF9QVUJMSUNfYCBmb3IgY2xpZW50LXNpZGUgYWNjZXNzCjQuIENoZWNrIGZvciB0eXBvcyBpbiB2YXJpYWJsZSBuYW1lcwoKIyMjIFNlcnZlciByZWZ1c2VzIHRvIHN0YXJ0OiAiU3RhcnR1cCBhYm9ydGVkOiB0aGUgZW52aXJvbm1lbnQgY29uZmlndXJhdGlvbiBpcyBpbnZhbGlkIgoKKipTeW1wdG9tczoqKiBgbnBtIHJ1biBkZXZgIChvciBgbmV4dCBzdGFydGApIGV4aXRzIGR1cmluZyBib290IHdpdGggYSBsaXN0IG9mCm1pc3NpbmcgdmFyaWFibGVzIHN1Y2ggYXMgYE5FWFRfUFVCTElDX0NIRUNLT1VUX0NPTlRSQUNUX0lEYCBvcgpgTkVYVF9QVUJMSUNfU1VQQUJBU0VfVVJMYC4KCioqQ2F1c2U6KiogYGluc3RydW1lbnRhdGlvbi50c2AgY2FsbHMgYHZhbGlkYXRlRW52KClgIGZyb20gYGxpYi9lbnYudHNgIG9uY2UgcGVyCnNlcnZlciBwcm9jZXNzLCBiZWZvcmUgYW55IHJlcXVlc3QgaXMgc2VydmVkLCBzbyBjb25maWd1cmF0aW9uIHByb2JsZW1zIGFyZQpyZXBvcnRlZCBhdCBzdGFydHVwIGluc3RlYWQgb2Ygb24gdGhlIGZpcnN0IGNoZWNrb3V0IG9yIGVtYWlsIGF0dGVtcHQuCgoqKlNvbHV0aW9uczoqKgoKMS4gQ29weSBgLmVudi5sb2NhbC5leGFtcGxlYCB0byBgLmVudi5sb2NhbGAgYW5kIGZpbGwgaW4gZXZlcnkgYFtSRVFVSVJFRF1gCiAgIGVudHJ5IG5hbWVkIGluIHRoZSBlcnJvciBvdXRwdXQuCjIuIFN0YXJ0IHRoZSBzZXJ2ZXIgYWdhaW4g4oCUIG5vIGZ1cnRoZXIgZGVidWdnaW5nIGlzIG5lZWRlZCBvbmNlIHRoZSBsaXN0ZWQKICAgdmFyaWFibGVzIGFyZSBzZXQuCjMuIEEgYmFyZSBgbmV4dCBidWlsZGAgaXMgZXhlbXB0IChydW50aW1lIHNlY3JldHMgYXJlIG5vdCByZXF1aXJlZCBhdCBidWlsZAp0aW1lKTsgb25seSB0aGUgcnVubmluZyBzZXJ2ZXIgcHJvY2Vzc2VzIHZhbGlkYXRlLgoKIyMjIFN1cGFiYXNlIGNvbm5lY3Rpb24gZXJyb3JzCgoqKlN5bXB0b21zOioqIEF1dGggZmFpbHVyZXMsIGVtcHR5IHNob3AsIG9yICJJbnZhbGlkIEFQSSBrZXkiIGluIGNvbnNvbGUKCioqU29sdXRpb25zOioqCgoxLiBWZXJpZnkgYE5FWFRfUFVCTElDX1NVUEFCQVNFX1VSTGAgYW5kIGBORVhUX1BVQkxJQ19TVVBBQkFTRV9BTk9OX0tFWWAgaW4gYC5lbnYubG9jYWxgCjIuIENvbmZpcm0gdGhlIFN1cGFiYXNlIHByb2plY3QgaXMgYWN0aXZlCjMuIFJ1biBgc3VwYWJhc2Uvc2NoZW1hLnNxbGAgaW4gdGhlIFNRTCBlZGl0b3IKNC4gRW5hYmxlIEVtYWlsIGFuZC9vciBHb29nbGUgcHJvdmlkZXJzIHVuZGVyIEF1dGhlbnRpY2F0aW9uIOKGkiBQcm92aWRlcnMKNS4gQWRkIGBodHRwOi8vbG9jYWxob3N0OjMwMDAvKipgIHRvIEF1dGgg4oaSIFVSTCBDb25maWd1cmF0aW9uIOKGkiBSZWRpcmVjdCBVUkxzCgotLS0KCiMjIFdhbGxldCBDb25uZWN0aW9uCgojIyMgRnJlaWdodGVyIG5vdCBkZXRlY3RlZAoKKipTeW1wdG9tczoqKiAiUGxlYXNlIGluc3RhbGwgRnJlaWdodGVyIiBtZXNzYWdlCgoqKlNvbHV0aW9uczoqKgoKMS4gSW5zdGFsbCBGcmVpZ2h0ZXIgZnJvbSBbZnJlaWdodGVyLmFwcF0oaHR0cHM6Ly9mcmVpZ2h0ZXIuYXBwKQoyLiBFbmFibGUgdGhlIGV4dGVuc2lvbiBpbiBicm93c2VyIHNldHRpbmdzCjMuIFJlZnJlc2ggdGhlIHBhZ2UKNC4gVHJ5IGEgZGlmZmVyZW50IGJyb3dzZXIgKENocm9tZS9GaXJlZm94KQoKIyMjIFdyb25nIG5ldHdvcmsgZXJyb3IKCioqU3ltcHRvbXM6KiogIlBsZWFzZSBzd2l0Y2ggdG8gdGVzdG5ldC9tYWlubmV0IgoKKipTb2x1dGlvbnM6KioKCjEuIE9wZW4gRnJlaWdodGVyIOKGkiBTZXR0aW5ncyDihpIgTmV0d29yawoyLiBTZWxlY3QgdGhlIGNvcnJlY3QgbmV0d29yayAoVGVzdG5ldCBvciBNYWlubmV0KQozLiBSZWZyZXNoIHRoZSBwYWdlCgojIyMgVHJhbnNhY3Rpb24gc2lnbmluZyBmYWlscwoKKipTeW1wdG9tczoqKiBGcmVpZ2h0ZXIgcG9wdXAgZG9lc24ndCBhcHBlYXIgb3IgY2xvc2VzIGltbWVkaWF0ZWx5CgoqKlNvbHV0aW9uczoqKgoKMS4gRW5zdXJlIHBvcHVwIGJsb2NrZXJzIGFyZSBkaXNhYmxlZAoyLiBDaGVjayBGcmVpZ2h0ZXIgaXMgdW5sb2NrZWQKMy4gVmVyaWZ5IHRoZSBhY2NvdW50IGhhcyBYTE0gZm9yIGZlZXMKNC4gQ2hlY2sgdGhlIHRyYW5zYWN0aW9uIGlzbid0IG1hbGZvcm1lZCAobG9vayBhdCBjb25zb2xlKQoKIyMjICJBY2NvdW50IG5vdCBmdW5kZWQiIGVycm9yCgoqKlN5bXB0b21zOioqIEVycm9yIHdoZW4gdHJ5aW5nIHRvIHBheSBvbiB0ZXN0bmV0CgoqKlNvbHV0aW9uczoqKgoKMS4gVGVzdG5ldDogVGhlIGFwcCBhdXRvLWZ1bmRzIHZpYSBGcmllbmRib3QsIHdhaXQgYSBtb21lbnQKMi4gSWYgRnJpZW5kYm90IGZhaWxzLCBtYW51YWxseSBmdW5kIGF0IGh0dHBzOi8vZnJpZW5kYm90LnN0ZWxsYXIub3JnCjMuIENoZWNrIGFjY291bnQgc3RhdHVzOgogICBgYGBiYXNoCiAgIHN0ZWxsYXIgYWNjb3VudCBpbmZvIC0tbmV0d29yayB0ZXN0bmV0IC0tc291cmNlLWFjY291bnQgPFlPVVJfUFVCTElDX0tFWT4KICAgYGBgCgotLS0KCiMjIFBheW1lbnQgSXNzdWVzCgojIyMgIlRva2VuIG5vdCBhbGxvd2VkIiBlcnJvcgoKKipTeW1wdG9tczoqKiBQYXltZW50IGZhaWxzIHdpdGggVG9rZW5Ob3RBbGxvd2VkCgoqKlNvbHV0aW9uczoqKgoKMS4gVmVyaWZ5IHRoZSB0b2tlbiBpcyB3aGl0ZWxpc3RlZCBpbiB0aGUgY29udHJhY3Q6CiAgIGBgYGJhc2gKICAgc3RlbGxhciBjb250cmFjdCBpbnZva2UgLS1pZCA8Q09OVFJBQ1RfSUQ+IC0tbmV0d29yayB0ZXN0bmV0IC0tIFwKICAgICBpc190b2tlbl9hbGxvd2VkIC0tdG9rZW4gPFRPS0VOX0NPTlRSQUNUX0lEPgogICBgYGAKMi4gQWRkIHRoZSB0b2tlbiBpZiBtaXNzaW5nOgogICBgYGBiYXNoCiAgIHN0ZWxsYXIgY29udHJhY3QgaW52b2tlIC0taWQgPENPTlRSQUNUX0lEPiAtLXNvdXJjZS1hY2NvdW50IDxNRVJDSEFOVD4gLS1uZXR3b3JrIHRlc3RuZXQgLS0gXAogICAgIGFkZF90b2tlbiAtLXRva2VuIDxUT0tFTl9DT05UUkFDVF9JRD4KICAgYGBgCgojIyMgIkluc3VmZmljaWVudCBiYWxhbmNlIiBlcnJvcgoKKipTeW1wdG9tczoqKiBQYXltZW50IHNpbXVsYXRpb24gZmFpbHMgd2l0aCBiYWxhbmNlIGVycm9yCgoqKlNvbHV0aW9uczoqKgoKMS4gRW5zdXJlIHVzZXIgaGFzIGVub3VnaCB0b2tlbnMgZm9yIHRoZSBwYXltZW50CjIuIFVzZXIgbmVlZHMgWExNIGZvciB0cmFuc2FjdGlvbiBmZWVzICh+MSBYTE0gcmVjb21tZW5kZWQpCjMuIEZvciBVU0RDLCB1c2VyIG5lZWRzIGEgdHJ1c3RsaW5lIChhcHAgY3JlYXRlcyBhdXRvbWF0aWNhbGx5KQoKIyMjIFRyYW5zYWN0aW9uIHRpbWVzIG91dAoKKipTeW1wdG9tczoqKiAiVHJhbnNhY3Rpb24gdGltZWQgb3V0IiBhZnRlciA2MCBzZWNvbmRzCgoqKlNvbHV0aW9uczoqKgoKMS4gQ2hlY2sgU3RlbGxhciBuZXR3b3JrIHN0YXR1czogaHR0cHM6Ly9zdGF0dXMuc3RlbGxhci5vcmcKMi4gVHJ5IGEgZGlmZmVyZW50IFJQQyBlbmRwb2ludAozLiBJbmNyZWFzZSB0aW1lb3V0IGluIGBsaWIvc3RlbGxhci9jb25maWcudHNgCjQuIENoZWNrIGlmIHRyYW5zYWN0aW9uIGlzIGFjdHVhbGx5IHBlbmRpbmcgb24gZXhwbG9yZXIKCiMjIyBQYXltZW50IHN1Y2NlZWRlZCBidXQgVUkgZG9lc24ndCB1cGRhdGUKCioqU3ltcHRvbXM6KiogRnVuZHMgbW92ZWQgYnV0IGNoZWNrb3V0IHN0dWNrCgoqKlNvbHV0aW9uczoqKgoKMS4gQ2hlY2sgdHJhbnNhY3Rpb24gb24gU3RlbGxhciBFeHBlcnQKMi4gUmVmcmVzaCB0aGUgcGFnZQozLiBFdmVudCBpbmRleGVyIG1heSBiZSBiZWhpbmQgLSB3YWl0IGEgZmV3IHNlY29uZHMKNC4gQ2hlY2sgYnJvd3NlciBjb25zb2xlIGZvciBldmVudCBwb2xsaW5nIGVycm9ycwoKIyMjIENoZWNrb3V0IHJldHVybnMgYDUwMyBvcmRlcnNfc3RvcmVfdW5jb25maWd1cmVkYAoKKipTeW1wdG9tczoqKiBFdmVyeSBjaGVja291dCBmYWlscyB3aXRoIGEgYDUwM2AgcmVzcG9uc2UgYW5kIGJvZHkKYGBge2Vycm9yOiJvcmRlcnNfc3RvcmVfdW5jb25maWd1cmVkIn1gYGBmcm9tIGAvYXBpL29yZGVyc2AuIE5vIHJvdyBpcyB3cml0dGVuIHRvIHRoZSBgb3JkZXJzYAp0YWJsZS4KCioqQ2F1c2U6KiogYGFwcC9hcGkvb3JkZXJzL3JvdXRlLnRzYCBjcmVhdGVzIHRoZSBzZXJ2ZXItc2lkZSBTdXBhYmFzZSBjbGllbnQKZnJvbSBgU1VQQUJBU0VfU0VSVklDRV9ST0xFX0tFWWAgKGBsaWIvc3VwYWJhc2UtYWRtaW4udHNgKS4gV2hlbiB0aGF0IHZhcmlhYmxlCmlzIG1pc3NpbmcsIHRoZSBvcmRlciB3cml0ZSBwYXRoIGlzIGRpc2FibGVkIGFuZCB0aGUgcm91dGUgcmV0dXJucyB0aGUKYDUwM2AgZ3VhcmQgcmVzcG9uc2UgaW5zdGVhZCBvZiBwZXJzaXN0aW5nIHRoZSBvcmRlci4KCioqU29sdXRpb25zOioqCgoxLiBBZGQgYFNVUEFCQVNFX1NFUlZJQ0VfUk9MRV9LRVlgIHRvIGAuZW52LmxvY2FsYCAob3IgdG8geW91ciBob3N0J3MKICAgZW52aXJvbm1lbnQpLiBUaGlzIGlzIGEgc2VydmVyLW9ubHkgc2VjcmV0IOKAlCBuZXZlciBleHBvc2UgaXQgdG8gdGhlCiAgIGJyb3dzZXIgYW5kIG5ldmVyIHByZWZpeCBpdCB3aXRoIGBORVhUX1BVQkxJQ19gLgoyLiBGZXRjaCB0aGUga2V5IGZyb20gU3VwYWJhc2Ug4oaSIFByb2plY3QgU2V0dGluZ3Mg4oaSIEFQSSDihpIgUHJvamVjdCBBUEkga2V5cwoJ4oaSIGBzZXJ2aWNlX3JvbGVgIChzZWNyZXQpLgozLiBSZXN0YXJ0IHRoZSBkZXYgc2VydmVyIChvciByZWRlcGxveSkgYWZ0ZXIgYWRkaW5nIHRoZSB2YXJpYWJsZS4KNC4gUmUtdHJ5IGEgY2hlY2tvdXQgYW5kIGNvbmZpcm0gYSByb3cgYXBwZWFycyBpbiB0aGUgYG9yZGVyc2AgdGFibGUuCgo+ICoqU2VjdXJpdHkgbm90ZToqKiBgU1VQQUJBU0VfU0VSVklDRV9ST0xFX0tFWWAgYnlwYXNzZXMgUm93IExldmVsIFNlY3VyaXR5LgppdCBtdXN0IG9ubHkgZXZlciBiZSBzZXQgaW4gc2VydmVyLXNpZGUgZW52aXJvbm1lbnQgdmFyaWFibGVzIChWZXJjZWwgc2VydmVyCmVudiwgYC5lbnYubG9jYWxgKSBhbmQgbmV2ZXIgY29tbWl0dGVkIHRvIHNvdXJjZSBjb250cm9sLgoKLS0tCgojIyBBZG1pbiBQYW5lbAoKIyMjICJBY2Nlc3MgRGVuaWVkIiB3aGVuIGFjY2Vzc2luZyAvYWRtaW4KCioqU3ltcHRvbXM6KiogTG9nZ2VkIGluIGJ1dCBjYW4ndCBhY2Nlc3MgYWRtaW4KCioqU29sdXRpb25zOioqCgoxLiBWZXJpZnkgeW91ciBlbWFpbCBpcyBpbiBgTkVYVF9QVUJMSUNfQURNSU5fRU1BSUxTYCBvciB0aGUgc2VydmVyLW9ubHkKICAgYEFETUlOX0VNQUlMU2AgdmFyaWFibGU6CiAgIGBgYAogICBORVhUX1BVQkxJQ19BRE1JTl9FTUFJTFM9eW91ckBlbWFpbC5jb20sb3RoZXJAYWRtaW4uY29tCiAgIEFETUlOX0VNQUlMUz15b3VyQGVtYWlsLmNvbSxvdGhlckBhZG1pbi5jb20KICAgYGBgCiAgIGBORVhUX1BVQkxJQ19BRE1JTl9FTUFJTFOgIGlzIHJlYWQgYnkgdGhlIGNsaWVudCBmb3IgVUkgZ2F0aW5nOyB0aGUKICAgc2VydmVyLW9ubHkgYEFETUlOX0VNQUlMU2AgaXMgcmVhZCBieSBzZXJ2ZXIgcm91dGVzIChmb3IgZXhhbXBsZQogICBgYXBwL2FwaS9vdHAvcm91dGUudHNgKSBhbmQgc2hvdWxkIG1hdGNoIGl0LgoyLiBFbWFpbHMgYXJlIGNhc2UtaW5zZW5zaXRpdmUgYnV0IGNoZWNrIGZvciB0eXBvcwozLiBSZXN0YXJ0IHRoZSBhcHAgYWZ0ZXIgY2hhbmdpbmcgYWRtaW4gZW1haWxzCgojIyMgUHJvZHVjdHMgbm90IGxvYWRpbmcKCioqU3ltcHRvbXM6KiogQWRtaW4gcGFuZWwgc2hvd3MgbG9hZGluZyBvciBlbXB0eQoKKipTb2x1dGlvbnM6KioKCjEuIENoZWNrIFJMUyBwb2xpY2llcyBhbGxvdyByZWFkIGFjY2VzcyBvbiBgcHJvZHVjdHNgCjIuIFZlcmlmeSB0aGUgYHByb2R1Y3RzYCB0YWJsZSBleGlzdHMgKHJ1biBgc3VwYWJhc2Uvc2NoZW1hLnNxbGApCjMuIENoZWNrIGJyb3dzZXIgY29uc29sZSBmb3IgU3VwYWJhc2UgZXJyb3JzCjQuIEVuc3VyZSB0aGUgYHByb2R1Y3RzYCBzdG9yYWdlIGJ1Y2tldCBpcyBwdWJsaWMKCiMjIyAiUGVybWlzc2lvbiBkZW5pZWQiIG9yIFJMUyBlcnJvciB3aGVuIGNyZWF0aW5nL3VwZGF0aW5nIHByb2R1Y3RzIG9yIHVwbG9hZGluZyBpbWFnZXMKCioqU3ltcHRvbXM6KiogQWRtaW4gcGFuZWwgYWN0aW9ucyBmYWlsIHdpdGggcm93LWxldmVsIHNlY3VyaXR5IGVycm9yCgoqKlNvbHV0aW9uczoqKgoKMS4gRW5zdXJlIGBzdXBhYmFzZS9zY2hlbWEuc3FsYCBoYXMgYmVlbiBleGVjdXRlZCBpbiB0aGUgU3VwYWJhc2UgU1FMIGVkaXRvci4KMi4gVmVyaWZ5IHRoZSB1c2VyJ3MgYWRtaW4gYXV0aG9yaXphdGlvbiBpbiBTdXBhYmFzZToKICAgLSBBZGQgdGhlIGFkbWluaXN0cmF0b3IncyBlbWFpbCB0byBgcHVibGljLmFkbWluX3VzZXJzYDoKICAgICBgYGBzcWwKICAgICBpbnNlcnQgaW50byBwdWJsaWMuYWRtaW5fdXNlcnMgKGVtYWlsKSB2YWx1ZXMgKCdhZG1pbkBleGFtcGxlLmNvbScpIG9uIGNvbmZsaWN0IChlbWFpbCkgZG8gbm90aGluZzsKICAgICBgYGAKICAgLSBPciBzZXQgYGlzX2FkbWluOiB0cnVlYCBpbiB0aGUgdXNlcidzIGBhcHBfbWV0YWRhdGFgIGluIFN1cGFiYXNlIEF1dGguCjMuIFZlcmlmeSB0aGF0IHRoZSB1c2VyIGlzIGxvZ2dlZCBpbiBiZWZvcmUgYXR0ZW1wdGluZyB3cml0ZSBvcGVyYXRpb25zLgoKIyMjIENhbid0IGRpc3BhdGNoL3JlZnVuZCBvcmRlcnMKCioqU3ltcHRvbXM6KiogQWN0aW9uIGJ1dHRvbnMgZmFpbCB3aXRoIGVycm9yCgoqKlNvbHV0aW9uczoqKgoKMS4gQ29ubmVjdCBGcmVpZ2h0ZXIgd2l0aCB0aGUgKiptZXJjaGFudCB3YWxsZXQqKiAodGhlIG9uZSB1c2VkIHRvIGluaXRpYWxpemUgY29udHJhY3QpCjIuIENoZWNrIG9yZGVyIHN0YXR1cyBpcyAiUGFpZCIgKGNhbiBvbmx5IGRpc3BhdGNoL3JlZnVuZCBwYWlkIG9yZGVycykKMy4gVmVyaWZ5IHlvdSdyZSBvbiB0aGUgY29ycmVjdCBuZXR3b3JrICh0ZXN0bmV0L21haW5uZXQpCgotLS0KCiMjIENvbnRyYWN0IERlcGxveW1lbnQKCiMjIyBCdWlsZCBmYWlscwoKKipTeW1wdG9tczoqKiBgc3RlbGxhciBjb250cmFjdCBidWlsZGAgb3IgYGNhcmdvIGJ1aWxkYCBlcnJvcnMKCioqU29sdXRpb25zOioqCgoxLiBJbnN0YWxsIHdhc20gdGFyZ2V0OgogICBgYGBiYXNoCiAgIHJ1c3R1cCB0YXJnZXQgYWRkIHdhc20zMnYxLW5vbmUKICAgYGBgCjIuIFVwZGF0ZSBSdXN0OgogICBgYGBiYXNoCiAgIHJ1c3R1cCB1cGRhdGUKICAgYGBgCjMuIENsZWFuIGFuZCByZWJ1aWxkOgogICBgYGBiYXNoCiAgIGNkIGNvbnRyYWN0cy9jaGVja291dAogICBjYXJnbyBjbGVhbgogICBjYXJnbyBidWlsZCAtLXRhcmdldCB3YXNtMzJ2MS1ub25lIC0tcmVsZWFzZQogICBgYGAKCiMjIyBEZXBsb3kgZmFpbHMgd2l0aCAiYWNjb3VudCBub3QgZm91bmQiCgoqKlN5bXB0b21zOioqIERlcGxveW1lbnQgZmFpbHMgd2l0aCBhY2NvdW50IGVycm9yCgoqKlNvbHV0aW9uczoqKgoKMS4gRW5zdXJlIGRlcGxveWVyIGFjY291bnQgaXMgZnVuZGVkOgogICBgYGBiYXNoCiAgIHN0ZWxsYXIga2V5cyBnZW5lcmF0ZSBhbGljZSAtLW5ldHdvcmsgdGVzdG5ldCAtLWZ1bmQKICAgYGBgCjIuIENoZWNrIGFjY291bnQgZXhpc3RzOgogICBgYGBiYXNoCiAgIHN0ZWxsYXIgYWNjb3VudCBpbmZvIC0tbmV0d29yayB0ZXN0bmV0IC0tc291cmNlLWFjY291bnQgYWxpY2UKICAgYGBgCgojIyMgSW5pdGlhbGl6ZSBmYWlscwoKKipTeW1wdG9tczoqKiAiQWxyZWFkeUluaXRpYWxpemVkIiBvciBhdXRob3JpemF0aW9uIGVycm9yCgoqKlNvbHV0aW9uczoqKgoKMS4gQ29udHJhY3QgY2FuIG9ubHkgYmUgaW5pdGlhbGl6ZWQgb25jZQoyLiBUaGUgbWVyY2hhbnQgYWRkcmVzcyBtdXN0IHNpZ24gdGhlIGluaXRpYWxpemF0aW9uCjMuIEZvciBhIGZyZXNoIHN0YXJ0LCBkZXBsb3kgYSBuZXcgY29udHJhY3QgaW5zdGFuY2UKCi0tLQoKIyMgQnVpbGQgJiBEZXBsb3kKCiMjIyBOZXh0LmpzIGJ1aWxkIGZhaWxzCgoqKlN5bXB0b21zOioqIGBucG0gcnVuIGJ1aWxkYCBlcnJvcnMKCioqU29sdXRpb25zOioqCgoxLiBDaGVjayBUeXBlU2NyaXB0IGVycm9yczoKICAgYGBgYmFzaAogICBucG0gcnVuIHR5cGUtY2hlY2sKICAgYGBgCjIuIEZpeCB FU0xpbnQgaXNzdWVzOgogICBgYGBiYXNoCiAgIG5wbSBydW4gbGludDpmaXgKICAgYGBgCjMuIEVuc3VyZSBhbGwgZW52IHZhcnMgYXJlIHNldCAoZXZlbiBwbGFjZWhvbGRlciB2YWx1ZXMpCgojIyMgVmVyY2VsIGRlcGxveW1lbnQgZmFpbHMKCioqU3ltcHRvbXM6KiogQnVpbGQgb3IgZGVwbG95IGVycm9ycyBvbiBWZXJjZWwKCioqU29sdXRpb25zOioqCgoxLiBDaGVjayBhbGwgZW52aXJvbm1lbnQgdmFyaWFibGVzIGFyZSBzZXQgaW4gVmVyY2VsIGRhc2hib2FyZAoyLiBWZXJpZnkgTm9kZS5qcyB2ZXJzaW9uIGluIGBwYWNrYWdlLmpzb25gIGVuZ2luZXMKMy4gQ2hlY2sgYnVpbGQgbG9ncyBmb3Igc3BlY2lmaWMgZXJyb3JzCjQuIFRyeSBsb2NhbCBidWlsZCBmaXJzdDogYG5wbSBydW4gYnVpbGRgCgojIyMgSW1hZ2VzIG5vdCBsb2FkaW5nIGluIHByb2R1Y3Rpb24KCioqU3ltcHRvbXM6KiogUHJvZHVjdCBpbWFnZXMgNDA0IG9yIGJyb2tlbgoKKipTb2x1dGlvbnM6KioKCjEuIENoZWNrIFN1cGFiYXNlIFN0b3JhZ2UgcHVibGljIGJ1Y2tldCBzZXR0aW5ncyBmb3IgYHByb2R1Y3RzYAoyLiBWZXJpZnkgYE5FWFRfUFVCTElDX1NVUEFCQVNFX1VSTGAgbWF0Y2hlcyB5b3VyIHByb2plY3QKMy4gQ29uZmlybSBpbWFnZSBVUkxzIHVzZSBgL3N0b3JhZ2UvdjEvb2JqZWN0L3B1YmxpYy9wcm9kdWN0cy8uLi5gCjQuIENoZWNrIHN0b3JhZ2UgUkxTIHBvbGljaWVzIGZvciB0aGUgYHByb2R1Y3RzYCBidWNrZXQKCi0tLQoKIyMgR2V0dGluZyBIZWxwCgpJZiB5b3UgY2FuJ3QgcmVzb2x2ZSBhbiBpc3N1ZToKCjEuICoqU2VhcmNoIGV4aXN0aW5nIGlzc3VlczoqKiBbR2l0SHViIElzc3Vlc10oaHR0cHM6Ly9naXRodWIuY29tL01vdmFsYWJzLWNyZXcvbW92YS1zdG9yZS9pc3N1ZXMpCjIuICoqQ2hlY2sgU3RlbGxhciBkb2NzOioqIFtkZXZlbG9wZXJzLnN0ZWxsYXIub3JnXShodHRwczovL2RldmVsb3BlcnMuc3RlbGxhci5vcmcpCjMuICoqQXNrIGluIERpc2NvcmQ6KiogW1N0ZWxsYXIgRGlzY29yZF0oaHR0cHM6Ly9kaXNjb3JkLmdnL3N0ZWxsYXIpCjQuICoqT3BlbiBhIG5ldyBpc3N1ZSoqIHdpdGg6CiAgIC0gRXJyb3IgbWVzc2FnZQogICAtIFN0ZXBzIHRvIHJlcHJvZHVjZQogICAtIEVudmlyb25tZW50IChPUywgTm9kZSB2ZXJzaW9uLCBicm93c2VyKQogICAtIFJlbGV2YW50IGxvZ3MKCi0tLQoKIyMgRGVidWcgTW9kZQoKQ2hlY2sgU3RlbGxhciB0cmFuc2FjdGlvbiBkZXRhaWxzOgoKYGBgYmFzaApzdGVsbGFyIHR4IGRldGFpbHMgPFRYX0hBU0g+IC0tbmV0d29yayB0ZXN0bmV0CmBgYAoKTW9uaXRvciBjb250cmFjdCBldmVudHM6CgpgYGBiYXNoCnN0ZWxsYXIgZXZlbnRzIC0taWQgPENPTlRSQUNUX0lEPiAtLW5ldHdvcmsgdGVzdG5ldCAtLXN0YXJ0LWxlZGdlciA8TEVHR0VSPgpgYGAK
+# Troubleshooting Guide
+
+Common issues and solutions for Mova Store development and production.
+
+## Table of Contents
+
+- [Development Setup](#development-setup)
+- [Wallet Connection](#wallet-connection)
+- [Payment Issues](#payment-issues)
+- [Admin Panel](#admin-panel)
+- [Contract Deployment](#contract-deployment)
+- [Build & Deploy](#build--deploy)
+
+---
+
+## Development Setup
+
+### `npm install` fails
+
+**Symptoms:** Error during dependency installation
+
+**Solutions:**
+
+1. Clear npm cache:
+
+   ```bash
+   npm cache clean --force
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+2. Check Node.js version (requires 18+):
+
+   ```bash
+   node --version
+   ```
+
+3. On Mac, install Xcode tools:
+   ```bash
+   xcode-select --install
+   ```
+
+### Environment variables not loading
+
+**Symptoms:** App shows "Missing configuration" errors
+
+**Solutions:**
+
+1. Ensure `.env.local` exists (copy from `.env.local.example`)
+2. Restart the dev server after changing env vars
+3. Verify variable names start with `NEXT_PUBLIC_` for client-side access
+4. Check for typos in variable names
+
+### Server refuses to start: "Startup aborted: the environment configuration is invalid"
+
+**Symptoms:** `npm run dev` (or `next start`) exits during boot with a list of
+missing variables such as `NEXT_PUBLIC_CHECKOUT_CONTRACT_ID` or
+`NEXT_PUBLIC_SUPABASE_URL`.
+
+**Cause:** `instrumentation.ts` calls `validateEnv()` from `lib/env.ts` once per
+server process, before any request is served, so configuration problems are
+reported at startup instead of on the first checkout or email attempt.
+
+**Solutions:**
+
+1. Copy `.env.local.example` to `.env.local` and fill in every `[REQUIRED]`
+   entry named in the error output.
+2. Start the server again â no further debugging is needed once the listed
+   variables are set.
+3. A bare `next build` is exempt (runtime secrets are not required at build
+time); only the running server processes validate.
+
+### Supabase connection errors
+
+**Symptoms:** Auth failures, empty shop, or "Invalid API key" in console
+
+**Solutions:**
+
+1. Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
+2. Confirm the Supabase project is active
+3. Run `supabase/schema.sql` in the SQL editor
+4. Enable Email and/or Google providers under Authentication â Providers
+5. Add `http://localhost:3000/**` to Auth â URL Configuration â Redirect URLs
+
+---
+
+## Wallet Connection
+
+### Freighter not detected
+
+**Symptoms:** "Please install Freighter" message
+
+**Solutions:**
+
+1. Install Freighter from [freighter.app](https://freighter.app)
+2. Enable the extension in browser settings
+3. Refresh the page
+4. Try a different browser (Chrome/Firefox)
+
+### Wrong network error
+
+**Symptoms:** "Please switch to testnet/mainnet"
+
+**Solutions:**
+
+1. Open Freighter â Settings â Network
+2. Select the correct network (Testnet or Mainnet)
+3. Refresh the page
+
+### Transaction signing fails
+
+**Symptoms:** Freighter popup doesn't appear or closes immediately
+
+**Solutions:**
+
+1. Ensure popup blockers are disabled
+2. Check Freighter is unlocked
+3. Verify the account has XLM for fees
+4. Check the transaction isn't malformed (look at console)
+
+### "Account not funded" error
+
+**Symptoms:** Error when trying to pay on testnet
+
+**Solutions:**
+
+1. Testnet: The app auto-funds via Friendbot, wait a moment
+2. If Friendbot fails, manually fund at https://friendbot.stellar.org
+3. Check account status:
+   ```bash
+   stellar account info --network testnet --source-account <YOUR_PUBLIC_KEY>
+   ```
+
+---
+
+## Payment Issues
+
+### "Token not allowed" error
+
+**Symptoms:** Payment fails with TokenNotAllowed
+
+**Solutions:**
+
+1. Verify the token is whitelisted in the contract:
+   ```bash
+   stellar contract invoke --id <CONTRACT_ID> --network testnet -- \
+     is_token_allowed --token <TOKEN_CONTRACT_ID>
+   ```
+2. Add the token if missing:
+   ```bash
+   stellar contract invoke --id <CONTRACT_ID> --source-account <MERCHANT> --network testnet -- \
+     add_token --token <TOKEN_CONTRACT_ID>
+   ```
+
+### "Insufficient balance" error
+
+**Symptoms:** Payment simulation fails with balance error
+
+**Solutions:**
+
+1. Ensure user has enough tokens for the payment
+2. User needs XLM for transaction fees (~1 XLM recommended)
+3. For USDC, user needs a trustline (app creates automatically)
+
+### Transaction times out
+
+**Symptoms:** "Transaction timed out" after 60 seconds
+
+**Solutions:**
+
+1. Check Stellar network status: https://status.stellar.org
+2. Try a different RPC endpoint
+3. Increase timeout in `lib/stellar/config.ts`
+4. Check if transaction is actually pending on explorer
+
+### Payment succeeded but UI doesn't update
+
+**Symptoms:** Funds moved but checkout stuck
+
+**Solutions:**
+
+1. Check transaction on Stellar Expert
+2. Refresh the page
+3. Event indexer may be behind - wait a few seconds
+4. Check browser console for event polling errors
+
+### Checkout returns `503 orders_store_unconfigured`
+
+**Symptoms:** Every checkout fails with a `503` response and body
+```{error:"orders_store_unconfigured"}```from `/api/orders`. No row is written to the `orders`
+table.
+
+**Cause:** `app/api/orders/route.ts` creates the server-side Supabase client
+from `SUPABASE_SERVICE_ROLE_KEY` (`lib/supabase-admin.ts`). When that variable
+is missing, the order write path is disabled and the route returns the
+`503` guard response instead of persisting the order.
+
+**Solutions:**
+
+1. Add `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (or to your host's
+   environment). This is a server-only secret â never expose it to the
+   browser and never prefix it with `NEXT_PUBLIC_`.
+2. Fetch the key from Supabase â Project Settings â API â Project API keys
+	â `service_role` (secret).
+3. Restart the dev server (or redeploy) after adding the variable.
+4. Re-try a checkout and confirm a row appears in the `orders` table.
+
+> **Security note:** `SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security.
+it must only ever be set in server-side environment variables (Vercel server
+env, `.env.local`) and never committed to source control.
+
+---
+
+## Admin Panel
+
+### "Access Denied" when accessing /admin
+
+**Symptoms:** Logged in but can't access admin
+
+**Solutions:**
+
+1. Verify your email is in `NEXT_PUBLIC_ADMIN_EMAILS` or the server-only
+   `ADMIN_EMAILS` variable:
+   ```
+   NEXT_PUBLIC_ADMIN_EMAILS=your@email.com,other@admin.com
+   ADMIN_EMAILS=your@email.com,other@admin.com
+   ```
+   `NEXT_PUBLIC_ADMIN_EMAILS  is read by the client for UI gating; the
+   server-only `ADMIN_EMAILS` is read by server routes (for example
+   `app/api/otp/route.ts`) and should match it.
+2. Emails are case-insensitive but check for typos
+3. Restart the app after changing admin emails
+
+### Products not loading
+
+**Symptoms:** Admin panel shows loading or empty
+
+**Solutions:**
+
+1. Check RLS policies allow read access on `products`
+2. Verify the `products` table exists (run `supabase/schema.sql`)
+3. Check browser console for Supabase errors
+4. Ensure the `products` storage bucket is public
+
+### "Permission denied" or RLS error when creating/updating products or uploading images
+
+**Symptoms:** Admin panel actions fail with row-level security error
+
+**Solutions:**
+
+1. Ensure `supabase/schema.sql` has been executed in the Supabase SQL editor.
+2. Verify the user's admin authorization in Supabase:
+   - Add the administrator's email to `public.admin_users`:
+     ```sql
+     insert into public.admin_users (email) values ('admin@example.com') on conflict (email) do nothing;
+     ```
+   - Or set `is_admin: true` in the user's `app_metadata` in Supabase Auth.
+3. Verify that the user is logged in before attempting write operations.
+
+### Can't dispatch/refund orders
+
+**Symptoms:** Action buttons fail with error
+
+**Solutions:**
+
+1. Connect Freighter with the **merchant wallet** (the one used to initialize contract)
+2. Check order status is "Paid" (can only dispatch/refund paid orders)
+3. Verify you're on the correct network (testnet/mainnet)
+
+---
+
+## Contract Deployment
+
+### Build fails
+
+**Symptoms:** `stellar contract build` or `cargo build` errors
+
+**Solutions:**
+
+1. Install wasm target:
+   ```bash
+   rustup target add wasm32v1-none
+   ```
+2. Update Rust:
+   ```bash
+   rustup update
+   ```
+3. Clean and rebuild:
+   ```bash
+   cd contracts/checkout
+   cargo clean
+   cargo build --target wasm32v1-none --release
+   ```
+
+### Deploy fails with "account not found"
+
+**Symptoms:** Deployment fails with account error
+
+**Solutions:**
+
+1. Ensure deployer account is funded:
+   ```bash
+   stellar keys generate alice --network testnet --fund
+   ```
+2. Check account exists:
+   ```bash
+   stellar account info --network testnet --source-account alice
+   ```
+
+### Initialize fails
+
+**Symptoms:** "AlreadyInitialized" or authorization error
+
+**Solutions:**
+
+1. Contract can only be initialized once
+2. The merchant address must sign the initialization
+3. For a fresh start, deploy a new contract instance
+
+---
+
+## Build & Deploy
+
+### Next.js build fails
+
+**Symptoms:** `npm run build` errors
+
+**Solutions:**
+
+1. Check TypeScript errors:
+   ```bash
+   npm run type-check
+   ```
+2. Fix ESLint issues:
+   ```bash
+   npm run lint:fix
+   ```
+3. Ensure all env vars are set (even placeholder values)
+
+### Vercel deployment fails
+
+**Symptoms:** Build or deploy errors on Vercel
+
+**Solutions:**
+
+1. Check all environment variables are set in Vercel dashboard
+2. Verify Node.js version in `package.json` engines
+3. Check build logs for specific errors
+4. Try local build first: `npm run build`
+
+### Images not loading in production
+
+**Symptoms:** Product images 404 or broken
+
+**Solutions:**
+
+1. Check Supabase Storage public bucket settings for `products`
+2. Verify `NEXT_PUBLIC_SUPABASE_URL` matches your project
+3. Confirm image URLs use `/storage/v1/object/public/products/...`
+4. Check storage RLS policies for the `products` bucket
+
+---
+
+## Getting Help
+
+If you can't resolve an issue:
+
+1. **Search existing issues:** [GitHub Issues](https://github.com/Movalabs-crew/mova-store/issues)
+2. **Check Stellar docs:** [developers.stellar.org](https://developers.stellar.org)
+3. **Ask in Discord:** [Stellar Discord](https://discord.gg/stellar)
+4. **Open a new issue** with:
+   - Error message
+   - Steps to reproduce
+   - Environment (OS, Node version, browser)
+   - Relevant logs
+
+---
+
+## Debug Mode
+
+Check Stellar transaction details:
+
+```bash
+stellar tx details <TX_HASH> --network testnet
+```
+
+Monitor contract events:
+
+```bash
+stellar events --id <CONTRACT_ID> --network testnet --start-ledger <LEGGER>
+```
