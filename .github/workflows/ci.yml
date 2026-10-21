@@ -223,6 +223,65 @@ jobs:
         working-directory: contracts/checkout
         run: cargo test
 
+  # Supabase RLS policy tests.
+  #
+  # The RLS policies are the primary authorization boundary for buyer data, and
+  # nothing tested them: the `with check (true)` insert policy (#473), the
+  # unpinned `search_path` (#476) and the order-documentation mismatch (issue
+  # 245) all shipped without detection. This job applies the migrations to a
+  # throwaway Postgres, loads the pgTAP suite and fails if any policy is wider
+  # than the role matrix in supabase/tests/ expects.
+  rls:
+    name: Supabase RLS Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # pgTAP and the Supabase auth/storage shims the migrations reference are
+      # not in the stock image, so they are installed before the migrations run.
+      - name: Install pgTAP and Supabase shims
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-15-pgtap
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/00_supabase_shim.sql
+
+      - name: Apply migrations
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "applying $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      # Each test file runs as anonymous, buyer and admin so a policy that is
+      # correct for one role but widened for another fails the suite.
+      - name: Run RLS tests
+        run: pg_prove -v --ext .sql supabase/tests/
+
   # Secret scanning. This one gates: a leaked credential must stop a merge.
   security:
     name: Secret Scan
@@ -327,7 +386,7 @@ jobs:
   # Summary job that requires all checks to pass
   ci-success:
     name: CI Success
-    needs: [frontend, contracts, security, rust-security, test-naming, workflow-lint, action-pins]
+    needs: [frontend, contracts, rls, security, rust-security, test-naming, workflow-lint, action-pins]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -341,6 +400,10 @@ jobs:
           fi
           if [[ "${{ needs.contracts.result }}" != "success" ]]; then
             echo "Contracts job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.rls.result }}" != "success" ]]; then
+            echo "Supabase RLS tests failed"
             exit 1
           fi
           if [[ "${{ needs.security.result }}" != "success" ]]; then
