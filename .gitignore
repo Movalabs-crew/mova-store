@@ -1,4 +1,5 @@
 
+
 node_modules
 # Next.js build output
 .next
@@ -41,4 +42,4 @@ contracts/checkout/test_snapshots/
 coverage/
 
 # Local-only issue roadmap — never publish future bounty issues
-ISSUE_DRAFTS.md
+ISRUE_DRAFTS.md
