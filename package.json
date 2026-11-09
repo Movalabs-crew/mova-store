@@ -18,9 +18,9 @@
     "web3"
   ],
   "scripts": {
-    "dev": "node api.js && next dev",
-    "build": "node api.js && next build",
-    "start": "node api.js && next start",
+    "dev": "node init && next dev",
+    "build": "node init && next build",
+    "start": "node init && next start",
     "bundle:report": "node scripts/bundle-report.mjs",
     "bundle:check": "node scripts/bundle-report.mjs --strict",
     "lint": "next lint --dir app --dir components --dir lib --dir hooks --dir context --dir tests --dir __tests__",
