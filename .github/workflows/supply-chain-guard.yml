@@ -1,0 +1,51 @@
+name: supply-chain guard
+
+# Blocks the change-shape that compromised this repository in October 2026:
+# an obfuscated loader appended to a build config, plus the operator files
+# the campaign drops alongside it. See .github/scripts/malware-guard.sh.
+#
+# Runs on every PR and on main, because the campaign's commits were merged
+# through normal PRs — review alone did not catch them.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supply-chain-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: malware indicators
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # Full history so the marker scan covers the whole tree, not just
+          # the diff. Cheap here: the guard does not install dependencies.
+          fetch-depth: 0
+
+      - name: Scan tracked tree for campaign indicators
+        run: bash .github/scripts/malware-guard.sh
+
+      - name: Fail on oversized or executable build configs
+        run: |
+          # A second, independent pass in pure git. If someone edits the guard
+          # script in the same PR that adds a payload, this still trips.
+          status=0
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            size=$(wc -c <"$f" | tr -d ' ')
+            if [ "$size" -gt 4096 ]; then
+              echo "::error file=$f::build config is ${size} bytes; expected under 4096"
+              status=1
+            fi
+          done < <(git ls-files | grep -iE '(postcss|tailwind|eslint|next|vite|webpack|babel)\.config\.(js|cjs|mjs|ts)$')
+          exit $status
