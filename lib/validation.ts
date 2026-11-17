@@ -6,6 +6,31 @@
  */
 
 // =============================================================================
+// VALIDATION LIMITS
+// =============================================================================
+
+const LIMITS = {
+  EMAIL_MAX: 254,
+  NAME_MIN: 2,
+  NAME_MAX: 100,
+  ADDRESS_MIN: 5,
+  ADDRESS_MAX: 200,
+  CITY_MIN: 2,
+  CITY_MAX: 100,
+  POSTAL_MIN: 3,
+  POSTAL_MAX: 10,
+  PHONE_MIN: 7,
+  PHONE_MAX: 15,
+  PRODUCT_NAME_MIN: 2,
+  PRODUCT_NAME_MAX: 200,
+  PRICE_MAX: 1_000_000,
+  OTP_LENGTH: 6,
+  STELLAR_LENGTH: 56,
+  CARD_LENGTH_MIN: 13,
+  CARD_LENGTH_MAX: 19,
+} as const;
+
+// =============================================================================
 // TYPE DEFINITIONS
 // =============================================================================
 
@@ -52,7 +77,7 @@ export function validateEmail(email: string): ValidationResult {
     return { isValid: false, error: "Email is required" };
   }
 
-  if (sanitized.length > 254) {
+  if (sanitized.length > LIMITS.EMAIL_MAX) {
     return { isValid: false, error: "Email is too long" };
   }
 
@@ -77,11 +102,11 @@ export function validateName(name: string, fieldName = "Name"): ValidationResult
     return { isValid: false, error: `${fieldName} is required` };
   }
 
-  if (sanitized.length < 2) {
-    return { isValid: false, error: `${fieldName} must be at least 2 characters` };
+  if (sanitized.length < LIMITS.NAME_MIN) {
+    return { isValid: false, error: `${fieldName} must be at least ${LIMITS.NAME_MIN} characters` };
   }
 
-  if (sanitized.length > 100) {
+  if (sanitized.length > LIMITS.NAME_MAX) {
     return { isValid: false, error: `${fieldName} is too long` };
   }
 
@@ -111,11 +136,11 @@ export function validateAddress(address: string): ValidationResult {
     return { isValid: false, error: "Address is required" };
   }
 
-  if (sanitized.length < 5) {
+  if (sanitized.length < LIMITS.ADDRESS_MIN) {
     return { isValid: false, error: "Please enter a complete address" };
   }
 
-  if (sanitized.length > 200) {
+  if (sanitized.length > LIMITS.ADDRESS_MAX) {
     return { isValid: false, error: "Address is too long" };
   }
 
@@ -132,11 +157,11 @@ export function validateCity(city: string): ValidationResult {
     return { isValid: false, error: "City is required" };
   }
 
-  if (sanitized.length < 2) {
+  if (sanitized.length < LIMITS.CITY_MIN) {
     return { isValid: false, error: "Please enter a valid city" };
   }
 
-  if (sanitized.length > 100) {
+  if (sanitized.length > LIMITS.CITY_MAX) {
     return { isValid: false, error: "City name is too long" };
   }
 
@@ -154,7 +179,7 @@ export function validatePostalCode(code: string): ValidationResult {
   }
 
   // Allow various formats (US, UK, Canada, etc.)
-  const postalRegex = /^[A-Z0-9\s-]{3,10}$/;
+  const postalRegex = new RegExp(`^[A-Z0-9\\s-]{${LIMITS.POSTAL_MIN},${LIMITS.POSTAL_MAX}}$`);
   if (!postalRegex.test(sanitized)) {
     return { isValid: false, error: "Please enter a valid postal code" };
   }
@@ -178,7 +203,7 @@ export function validatePhone(phone: string): ValidationResult {
   }
 
   // Allow + for international prefix
-  const phoneRegex = /^\+?[0-9]{7,15}$/;
+  const phoneRegex = new RegExp(`^\\+?[0-9]{${LIMITS.PHONE_MIN},${LIMITS.PHONE_MAX}}$`);
   if (!phoneRegex.test(sanitized)) {
     return { isValid: false, error: "Please enter a valid phone number" };
   }
@@ -200,11 +225,11 @@ export function validateProductName(name: string): ValidationResult {
     return { isValid: false, error: "Product name is required" };
   }
 
-  if (sanitized.length < 2) {
-    return { isValid: false, error: "Product name must be at least 2 characters" };
+  if (sanitized.length < LIMITS.PRODUCT_NAME_MIN) {
+    return { isValid: false, error: `Product name must be at least ${LIMITS.PRODUCT_NAME_MIN} characters` };
   }
 
-  if (sanitized.length > 200) {
+  if (sanitized.length > LIMITS.PRODUCT_NAME_MAX) {
     return { isValid: false, error: "Product name is too long" };
   }
 
@@ -225,7 +250,7 @@ export function validatePrice(price: string | number): ValidationResult {
     return { isValid: false, error: "Price cannot be negative" };
   }
 
-  if (numPrice > 1000000) {
+  if (numPrice > LIMITS.PRICE_MAX) {
     return { isValid: false, error: "Price is too high" };
   }
 
@@ -248,8 +273,8 @@ export function validateOTP(otp: string): ValidationResult {
     return { isValid: false, error: "OTP code is required" };
   }
 
-  if (sanitized.length !== 6) {
-    return { isValid: false, error: "OTP must be 6 digits" };
+  if (sanitized.length !== LIMITS.OTP_LENGTH) {
+    return { isValid: false, error: `OTP must be ${LIMITS.OTP_LENGTH} digits` };
   }
 
   return { isValid: true, sanitized };
@@ -270,7 +295,7 @@ export function validateStellarAddress(address: string): ValidationResult {
   }
 
   // Stellar public keys start with G and are 56 characters (base32 encoded)
-  const stellarRegex = /^G[A-Z2-7]{55}$/;
+  const stellarRegex = new RegExp(`^G[A-Z2-7]{${LIMITS.STELLAR_LENGTH - 1}}$`);
   if (!stellarRegex.test(sanitized)) {
     return { isValid: false, error: "Please enter a valid Stellar address" };
   }
@@ -292,7 +317,9 @@ export function validateCardNumber(cardNumber: string, strictLength = true): Val
     return { isValid: false, error: "Card number is required" };
   }
 
-  const lengthRegex = strictLength ? /^\d{13,19}$/ : /^\d{8,19}$/;
+  const lengthRegex = strictLength
+    ? new RegExp(`^\\d{${LIMITS.CARD_LENGTH_MIN},${LIMITS.CARD_LENGTH_MAX}}$`)
+    : new RegExp(`^\\d{8,${LIMITS.CARD_LENGTH_MAX}}$`);
   if (!lengthRegex.test(sanitized)) {
     return { isValid: false, error: "Please enter a valid card number" };
   }
