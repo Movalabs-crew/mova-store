@@ -111,6 +111,30 @@ To authorize an admin user for product mutations and storage uploads in Supabase
 - Use `npm audit` to check for vulnerabilities
 - CI pipeline fails on high-severity vulnerabilities
 
+### Supply-Chain Security
+
+This repository is protected against supply-chain attacks by three-layer defense:
+
+1. **Malware Scanner** (`.github/scripts/malware-scan.mjs`)
+   - Heuristic detection of obfuscated payloads and suspicious patterns
+   - Runs before `npm install` — cannot be disabled by poisoned lockfiles
+   - Detects code hidden in asset extensions (.ttf, .png, .woff)
+   - Blocks eval, require patterns, and large source files
+
+2. **Campaign Guard** (`.github/scripts/malware-guard.sh`)
+   - Campaign-specific indicators from October 2026 supply-chain incident
+   - Blocks known loader strings, payload files, and malicious packages
+   - Enforces build config size limits (< 4KB)
+   - Guards against .vscode auto-run exploits
+
+3. **PR Blocking** (`.github/workflows/malware-scan.yml`)
+   - Runs on every PR before merge
+   - Automatically blocks PRs with malware indicators
+   - Posts findings as comments for visibility
+   - Applies `security-review` label for triage
+
+**Running locally**: `bash .github/scripts/malware-guard.sh && node .github/scripts/malware-scan.mjs --full`
+
 ## Security Checklist for Contributors
 
 Before submitting a PR, ensure:
