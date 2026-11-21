@@ -1,7 +1,7 @@
 {
   "name": "mova-store",
   "version": "1.0.0",
-  "description": "Mova Store \u2014 e-commerce with Stellar blockchain payments",
+  "description": "Mova Store — e-commerce with Stellar blockchain payments",
   "private": false,
   "license": "MIT",
   "repository": {

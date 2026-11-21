@@ -1,0 +1,33 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "ci/workflow-dispatch",
+    "fix/dead-amount-binding",
+    "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts",
+    "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts-r2",
+    "fix/issue-635-batch-11_20",
+    "fix/main-test-suite-mechanical",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "ci/workflow-dispatch": "main",
+    "fix/dead-amount-binding": "main",
+    "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts": "main",
+    "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts-r2": "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts",
+    "fix/issue-635-batch-11_20": "main",
+    "fix/main-test-suite-mechanical": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "ci/workflow-dispatch",
+    "fix/dead-amount-binding",
+    "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts",
+    "fix/issue-635-batch-11_20",
+    "fix/main-test-suite-mechanical",
+    "origin",
+    "fix/issue-1082-chore-seo-add-sitemap-ts-and-robots-ts-r2"
+  ]
+}
