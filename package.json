@@ -52,7 +52,7 @@
     "sharp": "^0.35.4"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^14.2.0",
     "@types/node": "^26.6.6",
     "@types/react": "^18",
